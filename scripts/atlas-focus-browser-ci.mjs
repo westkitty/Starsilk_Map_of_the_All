@@ -30,6 +30,19 @@ async function test(){await ready();browser=await chromium.launch({executablePat
    await page.screenshot({path:'atlas-qa-evidence/all-visible-'+name+'.png'});
    await page.locator('[data-drawer="nav"]').click();assert.equal(await page.locator('#leftPanel').isVisible(),true);
    assert.equal(await page.locator('#quality').isVisible(),true,'quality settings moved into Explore');
+   if(name==='desktop'){
+     const layers=page.locator('#layerControls input[type=checkbox]');
+     assert.equal(await layers.count(),11);
+     await page.locator('#allLayersBtn').click();
+     assert.equal(await page.locator('#layerControls input[type=checkbox]:checked').count(),11,'first master click enables mixed layer set');
+     await page.locator('#allLayersBtn').click();
+     assert.equal(await page.locator('#layerControls input[type=checkbox]:checked').count(),0,'second master click disables all layers');
+     await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+     const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('starsilk.map-of-the-all.draft.v1')));
+     assert.ok(Object.values(saved.layers).every(v=>v===false),'pagehide flushes pending edits');
+     await page.evaluate(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'h',ctrlKey:true,bubbles:true,cancelable:true})));
+     assert.equal(await page.locator('#atlas').evaluate(el=>el.classList.contains('focus-view')),false,'Ctrl+H stays a browser shortcut');
+   }
    await page.locator('[data-drawer="inspect"]').click();assert.equal(await page.locator('#rightPanel').isVisible(),true);
    assert.equal(await page.locator('#leftPanel').isVisible(),false);
    await page.keyboard.press('Escape');assert.equal(await page.locator('#rightPanel').isVisible(),false);
@@ -42,6 +55,28 @@ async function test(){await ready();browser=await chromium.launch({executablePat
    assert.ok(await page.locator('#drawCalls').textContent(),'GPU remains active after drawer transitions');
    await ctx.close();console.log('FOCUS_STAGE '+name+' '+JSON.stringify(geom));
  }
+ // A corrupt old draft must remain in browser storage until explicit replacement.
+ const rejected='{"broken":[';
+ const recoveryContext=await browser.newContext({viewport:{width:1280,height:800},acceptDownloads:true,reducedMotion:'reduce'});
+ await recoveryContext.addInitScript(raw=>localStorage.setItem('starsilk.map-of-the-all.draft.v1',raw),rejected);
+ const recovery=await recoveryContext.newPage();recovery.on('pageerror',e=>errors.push('recovery: '+e.message));
+ await recovery.goto(ROOT,{waitUntil:'domcontentloaded'});
+ await recovery.locator('[data-drawer="nav"]').click();
+ assert.equal(await recovery.locator('#atlasRecoveryTools').isVisible(),true,'recovery is discoverable in Explore');
+ await recovery.locator('#allLayersBtn').click();
+ assert.equal(await recovery.evaluate(()=>localStorage.getItem('starsilk.map-of-the-all.draft.v1')),rejected,'invalid raw draft is not overwritten by edits');
+ const [download]=await Promise.all([
+   recovery.waitForEvent('download'),
+   recovery.locator('#atlasRecoveryTools button').first().click()
+ ]);
+ assert.ok(download.suggestedFilename().includes('rejected-local-draft'));
+ assert.equal(await recovery.evaluate(()=>localStorage.getItem('starsilk.map-of-the-all.draft.v1')),rejected,'download never mutates original bytes');
+ recovery.once('dialog',dialog=>dialog.accept());
+ await recovery.locator('#atlasRecoveryTools button').last().click();
+ await recovery.waitForFunction(()=>{try{return JSON.parse(localStorage.getItem('starsilk.map-of-the-all.draft.v1')).version===1}catch{return false}});
+ assert.equal(await recovery.locator('#atlasRecoveryTools').count(),0,'explicit replacement clears recovery UI');
+ await recoveryContext.close();
+ console.log('FOCUS_STAGE recovery preserved-download-and-explicit-replace');
  assert.deepEqual(errors,[],'no page errors, including negative curve sampling');
  console.log('FOCUS_BROWSER_PASS noFirstFrameError=true drawers=6 views=3 graphics=true');
 }

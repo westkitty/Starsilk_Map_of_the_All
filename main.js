@@ -1,4 +1,5 @@
 import { AtlasEngine } from './atlas-engine.js';
+import {readDraft} from './draft-recovery.js';
 import {setupFullscreenAtlas} from './atlas-focus.js';
 import { TemporalLab } from './temporal-lab.js';
 import {ensureTimeline, syncEra, switchEra, cloneEra, writeEraNote} from './temporal-model.js';
@@ -17,19 +18,56 @@ const gui={
   source:$('sourceLinks'), layers:$('layerControls'), nodes:$('nodeList'), breadcrumb:$('breadcrumb'),
   form:$('objectForm'), search:$('search'), results:$('searchResults')
 };
-let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let allVisible=true;let saveTimer=null;let history=[];
+let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let rejectedDraftRaw=null;
 function message(text,error=false){const toast=el('div','toast'+(error?' error':''),text);$('notifications').append(toast);setTimeout(()=>toast.remove(),3500);}
 function bootstrapState(){
-  try{const json=localStorage.getItem(STORAGE_KEY);if(json){const data=JSON.parse(json);const errors=validateAtlas(data);if(!errors.length)return data;message('Saved draft rejected: '+errors[0],true);}}
-  catch(e){message('Local storage unavailable; use JSON export.',true);}
-  return seedAtlas();
+  let raw;
+  try{raw=localStorage.getItem(STORAGE_KEY);}
+  catch(e){message('Local storage unavailable; export your work as JSON.',true);return seedAtlas();}
+  const result=readDraft(raw);
+  if(result.rejectedRaw!==null){
+    rejectedDraftRaw=result.rejectedRaw;
+    $('savedStatus').textContent='RECOVERY REQUIRED';
+    message('Stored JSON rejected. Open EXPLORE to download the original before replacing it.',true);
+  }
+  return result.state;
 }
 state=bootstrapState();
 ensureTimeline(state);
-function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
-  try{state.updatedAt=new Date().toISOString();localStorage.setItem(STORAGE_KEY,JSON.stringify(state));$('savedStatus').textContent='DRAFT SAVED';}
-  catch(e){$('savedStatus').textContent='EXPORT REQUIRED';message('Storage blocked. Export your draft.',true);}
-},250);}
+function writeDraftNow(){
+  if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
+  try{state.updatedAt=new Date().toISOString();localStorage.setItem(STORAGE_KEY,JSON.stringify(state));$('savedStatus').textContent='DRAFT SAVED';return true;}
+  catch(e){$('savedStatus').textContent='EXPORT REQUIRED';message('Storage blocked. Export your draft.',true);return false;}
+}
+function flushPendingSave(){
+  if(saveTimer===null)return;
+  clearTimeout(saveTimer);saveTimer=null;writeDraftNow();
+}
+function persist(){
+  if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return;}
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{saveTimer=null;writeDraftNow();},250);
+}
+function setupRecoveryUI(){
+  if(rejectedDraftRaw===null)return;
+  const tools=el('section','atlas-recovery-tools');tools.id='atlasRecoveryTools';
+  tools.setAttribute('aria-label','Unreadable saved draft');
+  const note=el('p','small-note','The previous local draft could not be loaded. It has NOT been overwritten. Download its exact contents before starting another saved draft.');
+  const download=button('DOWNLOAD ORIGINAL JSON','button-outline',()=>{
+    if(rejectedDraftRaw===null)return;
+    const blob=new Blob([rejectedDraftRaw],{type:'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='starsilk-map-rejected-local-draft.json.txt';
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    message('Original bytes offered for download. Stored draft is still untouched.');
+  });
+  const replaceDraft=button('REPLACE WITH NEW DRAFT','button-outline',()=>{
+    if(!confirm('Replace the unreadable saved draft with the currently open draft? Download the original first if you need recovery.'))return;
+    rejectedDraftRaw=null;tools.remove();persist();
+    message('New draft selected. The old local data will be replaced.');
+  });
+  tools.append(note,download,replaceDraft);
+  gui.left.prepend(tools);
+}
 function change(mutator,{geometry=true}={}){
   const prior=JSON.stringify(state);
   try{mutator();syncEra(state);const errors=validateAtlas(state);if(errors.length)throw new Error(errors[0]);}
@@ -248,10 +286,12 @@ function commitNetworkLink({from,to,kind}){
 function exportAtlas(){syncEra(state);const data={...state,selected:null,updatedAt:new Date().toISOString()};const blob=new Blob([JSON.stringify(data,null,2)+'\n'],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='starsilk-map-of-the-all-draft-v'+VERSION+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);message('JSON atlas exported. No canon has been changed.');
 }
-async function importAtlas(file){if(!file)return;if(file.size>1200000){message('JSON exceeds 800 KB import limit.',true);return;}
+async function importAtlas(file){if(!file)return;if(file.size>1200000){message('JSON exceeds 1.2 MB import limit.',true);return;}
   try{const contents=await file.text();const parsed=sanitizeAtlas(JSON.parse(contents));const previous=JSON.stringify(state);
+    if(rejectedDraftRaw!==null&&!confirm('Importing this valid draft will replace the unreadable saved draft. Download the original JSON from EXPLORE if you need it. Continue?'))return;
     strategy?.cancelGesture();strategy?.cancelDrawing();
-    studio?.cancel();studio?.routeStop();state=parsed;ensureTimeline(state);history.push(previous);view={kind:'all',id:null};pendingRoute=null;engine?.setState(state,view);engine?.setView(view);updateUI();persist();message('Imported as draft: source status intentionally demoted.');
+    studio?.cancel();studio?.routeStop();state=parsed;ensureTimeline(state);history.push(previous);view={kind:'all',id:null};pendingRoute=null;engine?.setState(state,view);engine?.setView(view);updateUI();
+    rejectedDraftRaw=null;$('atlasRecoveryTools')?.remove();persist();message('Imported as draft: source status intentionally demoted.');
   }catch(e){message('Import refused: '+e.message,true);}
 }
 function undo(){if(!history.length){message('No changes to undo.');return;}strategy?.cancelGesture();strategy?.cancelDrawing();studio?.cancel();studio?.routeStop();pendingRoute=null;state=JSON.parse(history.pop());
@@ -269,7 +309,10 @@ function bind(){
   $('connectBtn').addEventListener('click',connectRoute);$('deleteBtn').addEventListener('click',removeOrFork);
   $('addNodeBtn').addEventListener('click',()=>addCurrentNode(view.kind==='all'?'galaxy':view.kind==='galaxy'?'system':'planet'));
   $('addAnnotationBtn').addEventListener('click',()=>addCurrentNode('annotation'));
-  $('allLayersBtn').addEventListener('click',()=>{allVisible=!allVisible;change(()=>{for(const [k] of LAYERS)state.layers[k]=allVisible;});});
+  $('allLayersBtn').addEventListener('click',()=>{
+    const enable=LAYERS.some(([key])=>!state.layers[key]);
+    change(()=>{for(const [key] of LAYERS)state.layers[key]=enable;});
+  });
   $('homeBtn').addEventListener('click',()=>enter('all',null));$('resetCameraBtn').addEventListener('click',resetCamera);
   $('topBtn').addEventListener('click',()=>{if(!engine)return;const d=engine.camera.position.distanceTo(engine.controls.target);engine.camera.position.set(engine.controls.target.x+.01,engine.controls.target.y+d,engine.controls.target.z+.01);engine.controls.update();});
   $('quality').addEventListener('change',ev=>change(()=>{state.quality=ev.target.value;}));
@@ -281,17 +324,22 @@ function bind(){
   $('fileInput').addEventListener('change',ev=>{importAtlas(ev.target.files?.[0]);ev.target.value='';});
   gui.search.addEventListener('input',showSearch);gui.search.addEventListener('focus',()=>{if(innerWidth<=620)gui.left.classList.add('expanded');});
   document.addEventListener('keydown',ev=>{
-    if(ev.target.matches('input,textarea,select')||$('helpDialog').open||$('sourceGraphDialog').open)return;
-    if(ev.key==='/'&&!ev.ctrlKey){ev.preventDefault();focusSearch();}
+    if(ev.target?.closest?.('input,textarea,select,[contenteditable]')||$('helpDialog').open||$('sourceGraphDialog').open)return;
+    if((ev.ctrlKey||ev.metaKey)&&!ev.altKey&&!ev.shiftKey&&ev.key.toLowerCase()==='z'){ev.preventDefault();undo();return;}
+    if(ev.ctrlKey||ev.metaKey||ev.altKey)return; // Preserve browser, OS and assistive-tech shortcuts.
+    if(ev.key==='/'){ev.preventDefault();focusSearch();}
     else if(ev.key.toLowerCase()==='h'){toggleFocus();}
     else if(ev.key.toLowerCase()==='f'){focusSelected();}
     else if(ev.key==='Escape'){ev.preventDefault();up();gui.right.classList.remove('mobile-open');}
     else if(ev.key==='Home'){enter('all',null);}
-    else if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='z'){ev.preventDefault();undo();}
   });
   const mobile=button('INSPECT OBJECT','mobile-inspect',()=>{gui.right.classList.toggle('mobile-open');gui.left.classList.remove('expanded');});
   gui.atlas.append(mobile);
-  document.addEventListener('visibilitychange',()=>{if(engine)engine.paused=document.hidden||!!networkLab?.opened||!!(strategy?.opened&&strategy.mode!=='pan')||['move','label'].includes(studio?.mode);});
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)flushPendingSave();
+    if(engine)engine.paused=document.hidden||!!networkLab?.opened||!!(strategy?.opened&&strategy.mode!=='pan')||['move','label'].includes(studio?.mode);
+  });
+  window.addEventListener('pagehide',flushPendingSave);
 }
 function init(){updateUI();bind();
   try{initSourceGraph();}catch(e){$('sourceGraphOpen').disabled=true;message('Source topology unavailable: '+e.message,true);}
@@ -321,3 +369,4 @@ function init(){updateUI();bind();
 }
 init();
 setupFullscreenAtlas();
+setupRecoveryUI();

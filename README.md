@@ -2,8 +2,8 @@
 
 **The Map of the All** is a standalone Three.js, 4X-inspired, source-aware, editable survey of the Starsilk universe.
 
-- **GitHub repository:** https://github.com/westkitty/Starsilk_Map_of_the_All
-- **Independent interactive map:** https://westkitty.github.io/Starsilk_Map_of_the_All/
+- **GitHub target (not published yet):** https://github.com/westkitty/Starsilk_Map_of_the_All
+- **Expected Pages URL (not yet live):** https://westkitty.github.io/Starsilk_Map_of_the_All/
 - **Orbital laboratory:** https://westkitty.github.io/Star_System_Planner/
 - **Lore authority (read-only):** https://github.com/westkitty/Starsilk_Character_Dossier
 
@@ -73,8 +73,10 @@ node --test tests/atlas-data.node-check.mjs
 node --check atlas-data.js
 node --check atlas-engine.js
 node --check main.js
-# From the parent repository root after adding this branch:
-npm run typecheck && npm run test && npm run build && npm run bundle:report
+# From the standalone repository root:
+npm run check
+npm run test:browser
+npm run bundle:report
 ```
 
 The Node checks prove the data model, editor markup and source integrity boundaries. Desktop Brave automation has exercised WebGL startup, layer toggles, full three-tier navigation, edits, persistence, export and the parent route. Tablet (1280×800) and phone (412×915) touch emulation have also passed. Physical Galaxy Tab S9/S Pen behavior, GPU frame rates, long sessions and GitHub Pages deployment remain unverified. See [QA evidence](docs/QA_EVIDENCE.md). The temporal lens remains editorial rather than a historical simulator.
@@ -86,7 +88,7 @@ The header's **SOURCE GRAPH** opens an offline, read-only relationship projectio
 
 Select a **draft stellar system** (or enter it), then choose **EXPORT SYSTEM .SSP** and **OPEN PLANNER**. Use the planner's existing **IMPORT** control to load the downloaded `.ssp.json`. The bridge generates explicitly hypothetical physical initial conditions with source status `unknown`; no atlas display distances become physical measurements, and no project is auto-imported or overwritten.
 
-See [Phase 2 design and risk boundary](docs/PHASE2_SOURCE_GRAPH_AND_HANDOFF.md). The Atlas Node tests run with `npm run test` from the repository root; the existing Vitest suite also contains an actual planner-importer compatibility test. The dedicated GitHub workflow verifies both test suites and the parent build on feature-branch pushes and PRs.
+See [Phase 2 design and risk boundary](docs/PHASE2_SOURCE_GRAPH_AND_HANDOFF.md). The standalone `npm run test` suite verifies the Atlas model and safe JSON handoff. The separate Planner once ran an importer compatibility test; this repository does not build that other app. Cross-repository compatibility requires verification against the deployed Planner.
 
 ## Future expansion roadmap
 
@@ -111,7 +113,7 @@ Design limits and regression contract: [Phase 3 Spatial Studio](docs/PHASE3_SPAT
 
 ## Phase 4: Strategic Atlas Laboratory
 
-Select **STRATEGY LAB ✥** in the header. In **GROUP**, Shift-select any two or more draft markers of the visible tier, marquee-select a collection, or choose **ALL VISIBLE**; drag the projected centroid handle or use accessible X/Z/Y nudge buttons. Group movement is bounded, snaps a single shared translation rather than distorting the constellation, and creates **one Undo entry** on release. Reference landmarks cannot be selected or moved.
+Open **REGIONS** in the six-tab Atlas rail. In **GROUP**, Shift-select any two or more draft markers of the visible tier, marquee-select a collection, or choose **ALL VISIBLE**; drag the projected centroid handle or use accessible X/Z/Y nudge buttons. Group movement is bounded, snaps a single shared translation rather than distorting the constellation, and creates **one Undo entry** on release. Reference landmarks cannot be selected or moved.
 
 In **REGIONS**, create a provisional sector from the current selection or draw a 3–24-point polygon with the pointer. Drag individual vertex handles, edit numeric X/Z coordinates, add/remove vertices, name and recolor the draft sector, and inspect its enclosed nodes plus internal/frontier corridor counts. Regions cannot overlap their way into canon: membership is strictly editorial, measured only in **display units**. Region data remains optional in the original JSON v1 save format, preserving old drafts; it can be imported, exported, undone or deleted without modifying source topology.
 
@@ -119,7 +121,7 @@ The original orbital laboratory, Phase 3 tools, WorldsVault source graph and ori
 
 ## Phase 5: Network Intelligence (draft connectivity)
 
-Open **NETWORK LAB** in the header at the All, galaxy or system tier. Select a corridor filter, two draft objects and **TRACE FEWEST HOPS** to highlight a route in the existing Three.js camera. A hop is *one proposed connection*, never light-years, transit time or travel permission. See the number of components, isolated nodes and cut corridors; toggle hypothetical outages to explore connectivity without modifying saved routes. **CLEAR OUTAGES** restores the view.
+Open **ROUTES** in the Atlas rail at the All, galaxy or system tier. Select a corridor filter, two draft objects and **TRACE FEWEST HOPS** to highlight a route in the existing Three.js camera. A hop is *one proposed connection*, never light-years, transit time or travel permission. See the number of components, isolated nodes and cut corridors; toggle hypothetical outages to explore connectivity without modifying saved routes. **CLEAR OUTAGES** restores the view.
 
 The **COMMIT ONE DRAFT CORRIDOR** button is optional and writes **only a new draft** route through the existing editor validation/Undo ledger. Canonical WorldsVault relationships cannot be navigated or edited as transport corridors. No new saved data fields, metric weights, servers, dependencies or second render loop.
 
@@ -127,16 +129,23 @@ See [Phase 5 architecture, comparison and acceptance criteria](docs/PHASE5_NETWO
 
 ## Phase 6: Independent era snapshots, comparison, and Pages launch
 
-The footer **EDIT / COMPARE ✧** opens the **Temporal Atlas**. It provides three independently editable editorial eras, an accessible three-position scrubber, per-era notes, draft snapshot comparison and 3D-projected change trails. Existing node positions, star systems, corridors, regions, layer toggles and saved labels are preserved independently per era. A named historical category is **not** a source-authored cosmic coordinate or timestamp.
+The **ERAS** pull-down tab opens the **Temporal Atlas**. It provides three independently editable editorial eras, an accessible three-position scrubber, per-era notes, draft snapshot comparison and 3D-projected change trails. Existing node positions, star systems, corridors, regions, layer toggles and saved labels are preserved independently per era. A named historical category is **not** a source-authored cosmic coordinate or timestamp.
 
 The `version:1` JSON and existing storage key remain compatible. Old saves without a timeline are expanded to separate equal draft snapshots. Snapshot copy into another era requires an explicit confirmation and creates one Undo step; comparison never changes saved data. On importing JSON, source-identity claims are demoted across every era.
 
 See [Phase 6 design, safeguards and release checks](docs/PHASE6_TEMPORAL_CARTOGRAPHY.md). Run all Atlas tests with `npm run test`. Browser acceptance lives in `scripts/phase6-browser-ci.mjs`.
 
-**After main deployment:** [System Planner](https://westkitty.github.io/Star_System_Planner/) · [Map of the All](https://westkitty.github.io/Starsilk_Map_of_the_All/). These addresses must be verified after the deployment job succeeds; source code alone does not establish publication.
+**Publication:** [System Planner](https://westkitty.github.io/Star_System_Planner/) is a separate live project. [Map of the All](https://westkitty.github.io/Starsilk_Map_of_the_All/) is the intended new URL but is **not yet published**. See [Uplift ×5 evidence](UPLIFT_X5_2026-10-17.md).
 
 ## Fullscreen-first visual repair
 
 The All is the default full-screen view. Six closed pull-down tabs provide EXPLORE, INSPECT, EDIT, REGIONS, ROUTES and ERAS. Existing controls remain connected in their respective drawers, including save/export, camera, timeline and source graph. Escape closes the active drawer. A minimal return-to-All control stays available.
 
 Published regression reproduced: WebGL initialized, but a negative first-frame curve parameter caused a getPointAt TypeError and prevented rendered draw calls. A clamped animation delta, wrapped curve phases and exception isolation for decorative particles fix this; new real Chromium CI asserts nonzero draw calls on desktop, tablet and phone layouts.
+
+
+## Uplift ×5 (2026-10-17)
+
+Five bounded repairs add corrupt-JSON recovery, page-exit autosave durability, master-layer and modifier-key fixes, safer pointer picking with reduced label-vector allocation, and a self-contained build with a separated Three.js vendor bundle and 225 KB JS/CSS compressed delivery budget.
+
+**Local proof:** 81 Node model tests, a full production build and five end-to-end Chromium journeys (desktop, emulated tablet/phone) passed. GitHub creation is blocked by an invalid CLI credential; neither new Pages publication nor actual Tab S9 S Pen operation has been verified.

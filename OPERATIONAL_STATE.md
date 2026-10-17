@@ -2,12 +2,12 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 9
+revision: 10
 
 ## Current baseline
 
-- Parent Git repository: `westkitty/Star_System_Planner`, not the read-only Dossier.
-- Artifact lives under `map-of-the-all/`; original parent `src/`, entrypoint, assets, simulation and canon snapshot are **protected**.
+- Current primary repository: `westkitty/Starsilk_Map_of_the_All` (local Git primary, pending successful GitHub creation/push). The character Dossier remains read-only.
+- The Atlas is at this repository root. The earlier embedded Planner map and the mature orbital simulator remain protected and unchanged.
 - Local canvas/page code and versioned JSON schema v1 exist.
 - 7 starting galaxies, 35 starting systems, 105 starting planets, 2 labeled source-identity landmarks, 10 proposed corridors. Every numeric coordinate is generated/editorial.
 - No physical distance/ephemeris or canonical territory is asserted.
@@ -100,3 +100,14 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - Source-linked Dossier topology remains read-only; coordinates, era lenses, corridor lengths and political boundaries are noncanonical drafts. Existing `.ssp.json` handoff targets the sibling Planner URL explicitly, with manual import.
 - Preserve the original localStorage key; both GitHub Pages project URLs share the `westkitty.github.io` web origin. Browser profiles, devices and alternate hosts do not share local drafts automatically.
 - The legacy validation and release claims above refer to their dated origin in the parent project. New independent CI/deploy and physical S Pen checks require separate evidence, not inference from source.
+
+
+## UPLIFT x5 — 2026-10-17
+
+- Loop 1 DATA RECOVERY: new read-only bootstrap evaluator, preserved original malformed localStorage bytes, visible original-JSON download and explicit replacement control. New Node and live-browser fixtures; never silently overwrite invalid stored work.
+- Loop 2 AUTOSAVE DURABILITY: pending writes are synchronously flushed on pagehide and hidden visibility; local save failure remains explicitly export-required. User-triggered draft import respects pending corrupt-data recovery.
+- Loop 3 EDITOR UX: master layer control now derives its action from actual layer state, instead of stale session-only toggle; Ctrl/Meta/Alt browser shortcuts do not activate map hotkeys, with intended Undo preserved.
+- Loop 4 POINTER/PERFORMANCE: disambiguate primary pointer identity, clear stale picks on pointer cancel/lost capture, reuse scratch vectors during frequent DOM-label projection updates.
+- Loop 5 RELEASE GATES: self-contained Three.js vendor chunk and compressed-asset delivery budget, preserved independent Planner link, enhanced real-browser regression tests. Build/runtime evidence must be recorded from actual executions.
+- The existing GitHub CLI credential is invalid (GitHub API returned HTTP 401 from the authorized MacBook SSH environment); creation and Pages publication remain BLOCKED until valid machine or provider authorization is available. The earlier GitHub 404 for the destination proves the remote had not been created at that check.
+- Source governance remains unchanged: numerical geometry/route lengths/territories are provisional, Dossier and WorldsVault are read-only, Blood Eclipse War lasted 170 years. The old Planner site is unchanged.

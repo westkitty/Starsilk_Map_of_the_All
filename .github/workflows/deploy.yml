@@ -28,6 +28,7 @@ jobs:
           node --check main.js
           node --check atlas-engine.js
           node --check atlas-data.js
+          node --check draft-recovery.js
           node --check spatial-studio.js
           node --check strategic-studio.js
           node --check temporal-lab.js

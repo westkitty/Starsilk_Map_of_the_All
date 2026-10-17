@@ -51,8 +51,17 @@ export class AtlasEngine {
     this.view={kind:'all',id:null};this.state=null;this.resizeObserver=new ResizeObserver(()=>this.resize());
     this.resizeObserver.observe(canvas.parentElement);
     this.pointerStart=null;
-    canvas.addEventListener('pointerdown',this._down=(ev)=>{this.pointerStart=[ev.clientX,ev.clientY];});
-    canvas.addEventListener('pointerup',this._up=(ev)=>{if(!this.pointerStart||Math.hypot(ev.clientX-this.pointerStart[0],ev.clientY-this.pointerStart[1])>8)return;this.pick(ev);this.pointerStart=null;});
+    canvas.addEventListener('pointerdown',this._down=ev=>{
+      if(!ev.isPrimary)return;
+      this.pointerStart={id:ev.pointerId,x:ev.clientX,y:ev.clientY};
+    });
+    canvas.addEventListener('pointerup',this._up=ev=>{
+      const start=this.pointerStart;this.pointerStart=null;
+      if(!start||!ev.isPrimary||start.id!==ev.pointerId||Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>8)return;
+      this.pick(ev);
+    });
+    canvas.addEventListener('pointercancel',this._cancel=()=>{this.pointerStart=null;});
+    canvas.addEventListener('lostpointercapture',this._cancel);
     canvas.addEventListener('dblclick',this._double=(ev)=>{this.pick(ev,true);});
     this.frame=0;this.last=performance.now();this.elapsed=0;this.paused=false;this.disposed=false;
     this.reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -356,8 +365,11 @@ export class AtlasEngine {
     const state=this.state;
     if(!state||!state.layers.labels){for(const node of this.labelNodes.values())node.remove();this.labelNodes.clear();return;}
     const candidates=[];const w=this.width,h=this.height;
+    // Reuse scratch vectors: projected labels can update 20 times per second.
+    const wp=this._labelWorldPos||(this._labelWorldPos=new THREE.Vector3());
+    const p=this._labelProjectedPos||(this._labelProjectedPos=new THREE.Vector3());
     for(const item of this.labelItems){const n=item.node;if(n.label?.show===false)continue;
-      const wp=new THREE.Vector3();item.obj.getWorldPosition(wp);const p=wp.project(this.camera);
+      item.obj.getWorldPosition(wp);p.copy(wp).project(this.camera);
       if(p.z< -1||p.z>1||Math.abs(p.x)>1.06||Math.abs(p.y)>1.06)continue;
       const x=(p.x*.5+.5)*w,y=(-p.y*.5+.5)*h;
       candidates.push({n,x,y,item,d:wp.distanceTo(this.camera.position)});
@@ -395,5 +407,5 @@ export class AtlasEngine {
     if(++this.frame%3===0)this.updateLabels();
   }
   info(){return {drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,geometries:this.renderer.info.memory.geometries,textures:this.renderer.info.memory.textures};}
-  dispose(){this.disposed=true;this.renderer.setAnimationLoop(null);this.resizeObserver.disconnect();this.canvas.removeEventListener('pointerdown',this._down);this.canvas.removeEventListener('pointerup',this._up);this.canvas.removeEventListener('dblclick',this._double);this.controls.dispose();disposeTree(this.group);disposeTree(this.bg);this.renderer.dispose();this.renderer.forceContextLoss();this.labelsRoot.replaceChildren();this.labelNodes.clear();}
+  dispose(){this.disposed=true;this.renderer.setAnimationLoop(null);this.resizeObserver.disconnect();this.canvas.removeEventListener('pointerdown',this._down);this.canvas.removeEventListener('pointerup',this._up);this.canvas.removeEventListener('pointercancel',this._cancel);this.canvas.removeEventListener('lostpointercapture',this._cancel);this.canvas.removeEventListener('dblclick',this._double);this.controls.dispose();disposeTree(this.group);disposeTree(this.bg);this.renderer.dispose();this.renderer.forceContextLoss();this.labelsRoot.replaceChildren();this.labelNodes.clear();}
 }
