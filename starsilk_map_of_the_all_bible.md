@@ -23,3 +23,5 @@ Observed proof: **81/81 Node model tests, production build/budget, five browser 
 Remote blocker: GH CLI stored token invalid (HTTP 401); new GitHub repository and Pages deployment remain unverified. Never claim publication without GitHub remote SHA and successful deployed public URL GET. Keep local Git and evidence intact until remote credentials are repaired. The original Planner and Dossier have no writes in this session.
 
 Start every future uplift with `OPERATIONAL_STATE.md`, this Bible and `docs/EXTRACTION_PROVENANCE.md`. Do not use `/Users/andrew/Star_System_Planner` without verifying its actual remote.
+
+Implementation commit: e8ba3499731cd1d042c7aa7471e25cd07c8ae4ab (five uplift passes, 81 model tests, five passing Chromium suites, vendor split, 186099 gzip bytes).
