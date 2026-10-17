@@ -1,32 +1,43 @@
-# THE MAP OF THE ALL — Starsilk Atlas Laboratory (Prototype 0.1)
+# Starsilk Map of the All
 
-A Three.js, 4X-inspired, source-aware **editable cosmological survey** in the `Star_System_Planner` ecosystem.
+**The Map of the All** is a standalone Three.js, 4X-inspired, source-aware, editable survey of the Starsilk universe.
 
-**Status:** interactive design prototype. Every generated galaxy name, coordinate, boundary, hookshot route, planet, stellar orbit, and territorial relationship is **provisional**. Worldsvault/Drakken/Mother source references are identity/topology references, never source-authored geographic positions.
+- **GitHub repository:** https://github.com/westkitty/Starsilk_Map_of_the_All
+- **Independent interactive map:** https://westkitty.github.io/Starsilk_Map_of_the_All/
+- **Orbital laboratory:** https://westkitty.github.io/Star_System_Planner/
+- **Lore authority (read-only):** https://github.com/westkitty/Starsilk_Character_Dossier
 
-## Access
+All generated galaxy positions, coordinates, routes, regions and example world locations remain **provisional drafts**, not canon. The published WorldsVault identity and relationship graph has no confirmed map coordinates.
 
-### From the existing repository (preferred)
+## Run independently
 
-```bash
-# Run from the Star_System_Planner repository root after obtaining this branch.
+Requires Node.js 22 or newer.
+
+~~~sh
+git clone https://github.com/westkitty/Starsilk_Map_of_the_All.git
+cd Starsilk_Map_of_the_All
 npm ci
 npm run dev
-# Visit http://localhost:5173/Star_System_Planner/map-of-the-all/
-```
+~~~
 
-The root Vite configuration includes an additional HTML entry, preserving the current Star System Planner at its original root URL. For publication through the existing GitHub Pages workflow, the atlas path is `https://westkitty.github.io/Star_System_Planner/map-of-the-all/` **only after a successful deployment**.
+Open the local Vite URL ending in `/Starsilk_Map_of_the_All/`. The development root, bundle, tests, published website and Git history are owned by **this repository**; nothing needs to be run from Star System Planner.
 
-### As a standalone source kit
+~~~sh
+npm run check
+npm run test:browser  # Chrome/Chromium with working WebGL
+~~~
 
-```bash
-cd map-of-the-all
-npm install
-npm run dev
-# Visit the localhost URL Vite prints.
-```
+`npm run build` creates the static deployment in `dist/`. GitHub Actions tests and deploys this repository to its own GitHub Pages project path, independently from the Planner.
 
-Running `index.html` via `file://` is unsupported; Vite resolves the local `three` package imports.
+## Project separation
+
+The Git history was extracted from `westkitty/Star_System_Planner/map-of-the-all/` with `git subtree split`, preserving the development lineage without importing the Planner's React app or physics runtime. The historical embedded Atlas URL remains available as a **compatibility snapshot**, but **future Atlas changes belong in this repository**.
+
+From the Atlas, select a draft stellar system and choose **EXPORT SYSTEM .SSP**, then **OPEN PLANNER**. This navigates to the separate orbital simulator; you manually import the generated `.ssp.json` file. The bridge creates hypothetical physics with source status unknown. Neither app changes the other's repository or upgrades drafts to official canon.
+
+Browser storage remains local under the existing key `starsilk.map-of-the-all.draft.v1`. Project paths on the same `westkitty.github.io` origin can read the same draft key, but different browsers, profiles or hosts do not automatically share drafts. **Export a JSON backup before switching sites or devices.**
+
+Historical phase notes below still describe some work performed when the Atlas was embedded under the Planner. Those are archival evidence, not current setup instructions; see `docs/EXTRACTION_PROVENANCE.md`.
 
 ## Interactions
 
@@ -41,7 +52,7 @@ Running `index.html` via `file://` is unsupported; Vite resolves the local `thre
 
 ## Preservation and integration
 
-This is intentionally a **second isolated Vite page**, not a refactor of the mature per-system simulator. Avoid copying the existing planner's physics engine into the cosmological rendering scale. The integration seam is the named child system: future deep dives may use a stable export/bridge into the mature `Star_System_Planner` system simulator instead of re-implementing n-body mechanics.
+This is an independent Vite app, not a refactor of the mature per-system simulator. Avoid copying the existing planner's physics engine into the cosmological rendering scale. The integration seam is the named child system: future deep dives may use a stable export/bridge into the mature `Star_System_Planner` system simulator instead of re-implementing n-body mechanics.
 
 `map-of-the-all/atlas-data.js` owns draft state + validation; `atlas-engine.js` owns Three.js WebGL scene, controls, level-of-detail, picking and animation; `main.js` owns semantic DOM + editing + persistence; `atlas.css` owns presentation. All objects are in display coordinates, not light years/AU or actual physical measurements. No root Dossier writes and no canon approval paths exist.
 
@@ -75,7 +86,7 @@ The header's **SOURCE GRAPH** opens an offline, read-only relationship projectio
 
 Select a **draft stellar system** (or enter it), then choose **EXPORT SYSTEM .SSP** and **OPEN PLANNER**. Use the planner's existing **IMPORT** control to load the downloaded `.ssp.json`. The bridge generates explicitly hypothetical physical initial conditions with source status `unknown`; no atlas display distances become physical measurements, and no project is auto-imported or overwritten.
 
-See [Phase 2 design and risk boundary](docs/PHASE2_SOURCE_GRAPH_AND_HANDOFF.md). The Atlas Node tests run with `node --test map-of-the-all/tests/*.node-check.mjs` from the repository root; the existing Vitest suite also contains an actual planner-importer compatibility test. The dedicated GitHub workflow verifies both test suites and the parent build on feature-branch pushes and PRs.
+See [Phase 2 design and risk boundary](docs/PHASE2_SOURCE_GRAPH_AND_HANDOFF.md). The Atlas Node tests run with `npm run test` from the repository root; the existing Vitest suite also contains an actual planner-importer compatibility test. The dedicated GitHub workflow verifies both test suites and the parent build on feature-branch pushes and PRs.
 
 ## Future expansion roadmap
 
@@ -95,7 +106,7 @@ The top editing rail supplies **ORBIT**, **MOVE**, **ROUTE** and **TYPE**. Move:
 
 Three **presentation-only** lenses—Survey, Signal and Cartographer—change appearance without altering coordinates, canon or the current draft state. Overall type scale is adjustable. Published source identities are read-only in every editing mode.
 
-Design limits and regression contract: [Phase 3 Spatial Studio](docs/PHASE3_SPATIAL_STUDIO.md). Node checks: `node --test map-of-the-all/tests/*.node-check.mjs` from the repository root; real browser acceptance: `node scripts/spatial-studio-browser-ci.mjs` after install and build on a Chromium-capable runner.
+Design limits and regression contract: [Phase 3 Spatial Studio](docs/PHASE3_SPATIAL_STUDIO.md). Node checks: `npm run test` from the repository root; real browser acceptance: `node scripts/spatial-studio-browser-ci.mjs` after install and build on a Chromium-capable runner.
 
 
 ## Phase 4: Strategic Atlas Laboratory
@@ -104,7 +115,7 @@ Select **STRATEGY LAB ✥** in the header. In **GROUP**, Shift-select any two or
 
 In **REGIONS**, create a provisional sector from the current selection or draw a 3–24-point polygon with the pointer. Drag individual vertex handles, edit numeric X/Z coordinates, add/remove vertices, name and recolor the draft sector, and inspect its enclosed nodes plus internal/frontier corridor counts. Regions cannot overlap their way into canon: membership is strictly editorial, measured only in **display units**. Region data remains optional in the original JSON v1 save format, preserving old drafts; it can be imported, exported, undone or deleted without modifying source topology.
 
-The original orbital laboratory, Phase 3 tools, WorldsVault source graph and original planner app remain isolated. No official faction ownership, star metric, territorial border or travel-time claim is made. See [Phase 4 scope, safeguards and QA](docs/PHASE4_STRATEGIC_ATLAS.md). Run `node --test map-of-the-all/tests/*.node-check.mjs`; dedicated Chromium QA is `node scripts/phase4-browser-ci.mjs` once the browser driver is installed in a disposable QA environment.
+The original orbital laboratory, Phase 3 tools, WorldsVault source graph and original planner app remain isolated. No official faction ownership, star metric, territorial border or travel-time claim is made. See [Phase 4 scope, safeguards and QA](docs/PHASE4_STRATEGIC_ATLAS.md). Run `npm run test`; dedicated Chromium QA is `node scripts/phase4-browser-ci.mjs` once the browser driver is installed in a disposable QA environment.
 
 ## Phase 5: Network Intelligence (draft connectivity)
 
@@ -112,7 +123,7 @@ Open **NETWORK LAB** in the header at the All, galaxy or system tier. Select a c
 
 The **COMMIT ONE DRAFT CORRIDOR** button is optional and writes **only a new draft** route through the existing editor validation/Undo ledger. Canonical WorldsVault relationships cannot be navigated or edited as transport corridors. No new saved data fields, metric weights, servers, dependencies or second render loop.
 
-See [Phase 5 architecture, comparison and acceptance criteria](docs/PHASE5_NETWORK_INTELLIGENCE.md). Model tests: `node --test map-of-the-all/tests/*.node-check.mjs`. The real Chromium route journey is checked by `scripts/phase5-browser-ci.mjs` on feature-branch CI.
+See [Phase 5 architecture, comparison and acceptance criteria](docs/PHASE5_NETWORK_INTELLIGENCE.md). Model tests: `npm run test`. The real Chromium route journey is checked by `scripts/phase5-browser-ci.mjs` on feature-branch CI.
 
 ## Phase 6: Independent era snapshots, comparison, and Pages launch
 
@@ -120,9 +131,9 @@ The footer **EDIT / COMPARE ✧** opens the **Temporal Atlas**. It provides thre
 
 The `version:1` JSON and existing storage key remain compatible. Old saves without a timeline are expanded to separate equal draft snapshots. Snapshot copy into another era requires an explicit confirmation and creates one Undo step; comparison never changes saved data. On importing JSON, source-identity claims are demoted across every era.
 
-See [Phase 6 design, safeguards and release checks](docs/PHASE6_TEMPORAL_CARTOGRAPHY.md). Run all Atlas tests with `node --test map-of-the-all/tests/*.node-check.mjs`. Browser acceptance lives in `scripts/phase6-browser-ci.mjs`.
+See [Phase 6 design, safeguards and release checks](docs/PHASE6_TEMPORAL_CARTOGRAPHY.md). Run all Atlas tests with `npm run test`. Browser acceptance lives in `scripts/phase6-browser-ci.mjs`.
 
-**After main deployment:** [System Planner](https://westkitty.github.io/Star_System_Planner/) · [Map of the All](https://westkitty.github.io/Star_System_Planner/map-of-the-all/). These addresses must be verified after the deployment job succeeds; source code alone does not establish publication.
+**After main deployment:** [System Planner](https://westkitty.github.io/Star_System_Planner/) · [Map of the All](https://westkitty.github.io/Starsilk_Map_of_the_All/). These addresses must be verified after the deployment job succeeds; source code alone does not establish publication.
 
 ## Fullscreen-first visual repair
 

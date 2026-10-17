@@ -1,9 +1,22 @@
 {
-  "name": "starsilk-map-of-the-all-prototype",
+  "name": "starsilk-map-of-the-all",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": {"dev": "vite --host 127.0.0.1", "build": "vite build", "preview": "vite preview", "test": "node --test tests/*.node-check.mjs"},
-  "dependencies": {"three": "0.174.0"},
-  "devDependencies": {"vite": "6.2.0"}
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.node-check.mjs",
+    "test:browser": "node scripts/atlas-focus-browser-ci.mjs && node scripts/spatial-studio-browser-ci.mjs && node scripts/phase4-browser-ci.mjs && node scripts/phase5-browser-ci.mjs && node scripts/phase6-browser-ci.mjs",
+    "check": "npm run test && npm run build"
+  },
+  "dependencies": {
+    "three": "0.174.0"
+  },
+  "devDependencies": {
+    "vite": "6.2.0",
+    "playwright-core": "1.56.1"
+  },
+  "description": "Standalone editable, non-canonical Three.js survey of the Starsilk All"
 }

@@ -1,3 +1,7 @@
+# HISTORICAL: parent Vite integration (superseded by standalone extraction)
+
+The notes below apply to the pre-extraction Planner embedding. The independent Atlas is now built from this repository root via its own Vite configuration; do not apply this patch to the new repository.
+
 # Minimal parent Vite change
 
 The existing `Star_System_Planner/vite.config.ts` must include both HTML entrypoints under `defineConfig`:

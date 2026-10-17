@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 8
+revision: 9
 
 ## Current baseline
 
@@ -90,3 +90,13 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - Public Pages browser reproduction: HTML 200 and WebGL context available, but route particle exception in first animation frame caused zero GPU draw calls. Fixed nonnegative bounded frame delta and curve phase normalization; decorated particles cannot crash render loop.
 - Atlas now starts fullscreen with six closed pull-down control tabs. Removed permanently visible large opaque inspector, navigator, timeline, and editing tool bars. Existing content/draft schema/source canon unchanged.
 - Added direct render/drawer browser acceptance suite and updated previous editor smoke paths for new collapsed UI. Physical Galaxy Tab S Pen validation remains outstanding.
+
+
+## Standalone repository migration — 2026-10-17
+
+- New canonical code owner: `westkitty/Starsilk_Map_of_the_All`, initialized from path-filtered Git history of `map-of-the-all/` in `westkitty/Star_System_Planner`. Extraction source commit: `05bf20257dca7d51d8a2531c633cdbf8d5ccdadd`; extracted tip: `93dbc3bcaf1606153ddd1ac2f41c393f09aeb4aa`.
+- Own Vite base `/Starsilk_Map_of_the_All/`, package lock, standalone Node tests, adapted desktop/tablet/phone browser journeys and GitHub Pages workflow.
+- Original `/Star_System_Planner/` and legacy embedded `/Star_System_Planner/map-of-the-all/` stay intact; no deletion, rewrite or silent sync. The new repo is authoritative for NEW Atlas changes; historical Planner route can remain as compatibility.
+- Source-linked Dossier topology remains read-only; coordinates, era lenses, corridor lengths and political boundaries are noncanonical drafts. Existing `.ssp.json` handoff targets the sibling Planner URL explicitly, with manual import.
+- Preserve the original localStorage key; both GitHub Pages project URLs share the `westkitty.github.io` web origin. Browser profiles, devices and alternate hosts do not share local drafts automatically.
+- The legacy validation and release claims above refer to their dated origin in the parent project. New independent CI/deploy and physical S Pen checks require separate evidence, not inference from source.

@@ -1,0 +1,88 @@
+name: Publish Starsilk Map of the All
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: starsilk-map-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Validate standalone models and build
+        run: npm run check
+      - name: Check Atlas JavaScript
+        run: |
+          node --check main.js
+          node --check atlas-engine.js
+          node --check atlas-data.js
+          node --check spatial-studio.js
+          node --check strategic-studio.js
+          node --check temporal-lab.js
+      - name: Verify standalone production routing
+        run: |
+          set -euo pipefail
+          grep -q 'id="spaceCanvas"' dist/index.html
+          grep -q '/Starsilk_Map_of_the_All/assets/' dist/index.html
+          grep -q 'https://westkitty.github.io/Star_System_Planner/' dist/index.html
+      - name: Verify rendered universe and collapsed controls
+        run: node scripts/atlas-focus-browser-ci.mjs
+      - name: Verify Spatial Studio
+        run: node scripts/spatial-studio-browser-ci.mjs
+      - name: Verify Strategic Region Studio
+        run: node scripts/phase4-browser-ci.mjs
+      - name: Verify Network Intelligence
+        run: node scripts/phase5-browser-ci.mjs
+      - name: Verify Temporal Atlas
+        run: node scripts/phase6-browser-ci.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: starsilk-atlas-browser-evidence
+          path: atlas-qa-evidence/*.png
+          if-no-files-found: ignore
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
+      - name: Verify published Atlas and bundled assets
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          BASE="${PAGES_URL%/}"
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 5 --retry-all-errors --max-time 25 "$BASE/?release=$GITHUB_SHA" -o /tmp/starsilk-map.html
+          grep -q 'THE MAP OF THE ALL' /tmp/starsilk-map.html
+          grep -q 'id="spaceCanvas"' /tmp/starsilk-map.html
+          grep -q 'https://westkitty.github.io/Star_System_Planner/' /tmp/starsilk-map.html
+          JS_ASSET="$(grep -oE '/Starsilk_Map_of_the_All/assets/[^"]+\.js' /tmp/starsilk-map.html | head -n 1)"
+          CSS_ASSET="$(grep -oE '/Starsilk_Map_of_the_All/assets/[^"]+\.css' /tmp/starsilk-map.html | head -n 1)"
+          test -n "$JS_ASSET" && test -n "$CSS_ASSET"
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 4 --max-time 25 "https://westkitty.github.io$JS_ASSET" -o /tmp/starsilk-map.js
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 4 --max-time 25 "https://westkitty.github.io$CSS_ASSET" -o /tmp/starsilk-map.css
+          test -s /tmp/starsilk-map.js && test -s /tmp/starsilk-map.css
+          printf 'MAP_PUBLISHED_VERIFIED url=%s/ sha=%s\n' "$BASE" "$GITHUB_SHA"

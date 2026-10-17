@@ -114,5 +114,5 @@ test('source dialog, safe orbital handoff and provenance affordances are wired',
   assert.ok(main.includes('createPlannerHandoff(state,system.id)'));
   assert.ok(main.includes('validateHandoff(project)'));
   assert.ok(ui.includes('validateSourceTopology()'));
-  assert.ok(html.includes('href="../"'));
+  assert.ok(html.includes('href="https://westkitty.github.io/Star_System_Planner/"'));
 });
