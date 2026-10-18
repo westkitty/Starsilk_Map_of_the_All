@@ -81,14 +81,19 @@
     <div class="network-endpoints"><label>ORIGIN<select id="networkFrom"></select></label><label>DESTINATION<select id="networkTo"></select></label></div>
     <div class="network-actions"><button id="networkTrace" type="button" class="network-primary">TRACE FEWEST HOPS</button><button id="networkReset" type="button">CLEAR OUTAGES</button></div>
     <output id="networkPath" class="network-outcome" aria-live="polite">Choose two draft objects to analyze connectivity.</output>
+    <div id="networkBypass" class="network-bypass-box" hidden></div>
+    <div class="network-steps-container"><span class="network-subhead">ROUTE HOPS (CLICK TO FOCUS IN 3D):</span><div id="networkStepsList" class="network-steps-list"></div></div>
     <h3>PROPOSE AN EXTRA CORRIDOR</h3>
     <label>NEW DRAFT TYPE<select id="networkNewKind"><option value="hookshot">HOOKSHOT / PROPOSED</option><option value="starsilk">AZURE / PROPOSED</option></select></label>
     <button id="networkCommit" type="button" disabled class="network-primary">+ COMMIT ONE DRAFT CORRIDOR</button>
     <h3>TEMPORARY CORRIDOR CLOSURES</h3>
     <p id="networkOutageInfo" class="network-impact">All draft corridors active. Closures are analysis-only.</p>
     <div class="network-closures" id="networkRouteList" aria-label="Hypothetical disabled corridors"></div>
-    <h3>SINGLE-CORRIDOR FAILURE POINTS</h3>
-    <ul id="networkBridgeList" class="network-bridges"></ul>
+    <h3>CRITICAL NETWORK BOTTLENECKS</h3>
+    <div class="network-bottlenecks-grid">
+      <div><span class="network-subhead">CUT EDGES (BRIDGES)</span><ul id="networkBridgeList" class="network-bridges"></ul></div>
+      <div><span class="network-subhead">CHOKEPOINT HUBS</span><ul id="networkArticulationList" class="network-bridges"></ul></div>
+    </div>
     <p class="network-foot">LOCAL HYPOTHESIS ONLY / The Dossier's sourced WorldsVault edges are a separate read-only topology. Closing a corridor here cannot alter your saved map or Starsilk canon.</p>
   </section>
   <section class="strategic-panel" id="strategyPanel" aria-label="Strategic Studio — draft 4X cartography" hidden>

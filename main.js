@@ -19,7 +19,7 @@ const gui={
   source:$('sourceLinks'), layers:$('layerControls'), nodes:$('nodeList'), breadcrumb:$('breadcrumb'),
   form:$('objectForm'), search:$('search'), results:$('searchResults')
 };
-let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let rejectedDraftRaw=null;
+let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let rejectedDraftRaw=null;let sourceGraphInstance=null;
 function message(text,error=false){const toast=el('div','toast'+(error?' error':''),text);$('notifications').append(toast);setTimeout(()=>toast.remove(),3500);}
 function bootstrapState(){
   let raw;
@@ -199,6 +199,16 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
 function updateSources(){
   const frag=document.createDocumentFragment();const n=nodeById(state,state.selected);
   const canonMatch=n?(findCanonEntity(n.id)||findCanonEntity(n.name)):null;
+  if(n&&(n.status==='reference'||n.id==='worldsvault'||n.id==='mother'||canonMatch)){
+    const graphBtn=el('button','source-graph-launch-btn','VIEW IN WORLDSVAULT GRAPH ↗');
+    graphBtn.type='button';
+    graphBtn.title='Open published WorldsVault topology dialog';
+    graphBtn.addEventListener('click',()=>{
+      if(sourceGraphInstance)sourceGraphInstance.open(n.id);
+      else $('sourceGraphOpen')?.click();
+    });
+    frag.append(graphBtn);
+  }
   const entries=[];
   if(n?.sourceUrl){
     entries.push({name:n.name,description:'Source-backed identity; position on this map is draft.',url:n.sourceUrl});
@@ -429,7 +439,20 @@ function bind(){
   window.addEventListener('pagehide',flushPendingSave);
 }
 function init(){updateUI();bind();
-  try{initSourceGraph();}catch(e){$('sourceGraphOpen').disabled=true;message('Source topology unavailable: '+e.message,true);}
+  try{
+    sourceGraphInstance=initSourceGraph({
+      onInspect3D:(id)=>{
+        const targetNode=state.nodes.find(n=>n.id===id||n.name.toLowerCase()===id.toLowerCase());
+        if(targetNode){
+          select(targetNode.id);
+          if(engine){
+            engine.focusOn(targetNode);
+            message('Focused 3D camera on '+targetNode.name+'.');
+          }
+        }
+      }
+    });
+  }catch(e){$('sourceGraphOpen').disabled=true;message('Source topology unavailable: '+e.message,true);}
   try{engine=new AtlasEngine(gui.canvas,gui.labels,{onSelect:select,onViewChanged:updateUI});engine.setState(state,view);
     studio=new SpatialStudio({canvas:gui.canvas,labelsRoot:gui.labels,atlas:gui.atlas,panel:$('studioPanel'),
       getState:()=>state,getView:()=>view,onMove:moveDraftNode,onLabelCommit:moveDraftLabel,

@@ -35,11 +35,24 @@
 .network-bridges{margin:0;max-height:100px;overflow:auto;padding:9px 8px 9px 20px;border:1px solid #2c566c;background:#051826;color:#a9d0de;font-size:9px}
 .network-bridges li{margin:0 0 6px}
 .network-empty{font-size:10px;color:#85a4b4}
-.network-foot{margin-top:auto;border-top:1px solid #355365;padding-top:11px;font-size:9px;color:#779fae;line-height:1.5}
+.network-bypass-box{padding:8px 10px;font-size:9.5px;line-height:1.45;border-radius:3px;border:1px solid #3d7990;background:#062332;color:#a3efff}
+.network-bypass-box.critical{border-color:#b56a52;background:#2b140cd4;color:#ffb8a3}
+.network-bypass-box.available{border-color:#3ea97d;background:#09281dd4;color:#9effce}
+.network-steps-container{display:flex;flex-direction:column;gap:5px;border-top:1px dashed #2d5569;padding-top:8px}
+.network-subhead{font-size:8.5px;letter-spacing:.09em;color:#8ab0c1;display:block;margin-bottom:3px}
+.network-steps-list{display:flex;flex-wrap:wrap;gap:4px}
+.network-step-chip{display:inline-flex;align-items:center;gap:4px;background:#0a2a3b;border:1px solid #3e6d81;color:#d8f4ff;padding:4px 8px;font-size:9.5px;border-radius:3px;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
+.network-step-chip:hover{background:#164e69;border-color:#74eaff;color:#fff}
+.network-step-num{color:#76d6f2;font-size:8px;font-weight:700}
+.network-bottlenecks-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .network-path-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;overflow:visible}
 .network-path-overlay[hidden]{display:none!important}
-.network-highlight-line{fill:none;stroke:#63e6ff;stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 7px #00caff)}
+.network-highlight-line{fill:none;stroke:#5de8ff;stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 7px #00caff)}
+.network-highlight-line.starsilk{stroke:#26dfff;stroke-width:3.5;filter:drop-shadow(0 0 10px #26dfff)}
+.network-highlight-line.hookshot{stroke:#b6c8d6;stroke-width:2.5;stroke-dasharray:6 4;filter:drop-shadow(0 0 5px #7b9aaa)}
 .network-highlight-node{fill:#fff0ca;stroke:#0be5ff;stroke-width:2;filter:drop-shadow(0 0 7px #00caff)}
+.network-path-badge-text{font:700 10px var(--mono);fill:#041521;text-anchor:middle;dominant-baseline:central}
+.network-path-badge-circle{fill:#6ae6ff;stroke:#041724;stroke-width:1.5}
 @media(max-width:850px){
   .header-actions #networkOpen{display:inline-flex!important;align-items:center;justify-content:center;min-height:40px;padding:7px 8px;font-size:9px}
   .network-panel{top:96px;bottom:119px;right:10px;width:min(350px,calc(100vw - 20px))}

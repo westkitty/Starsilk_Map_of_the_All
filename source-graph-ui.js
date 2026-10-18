@@ -6,7 +6,8 @@ const SVG_NS='http://www.w3.org/2000/svg';
 const svg=(tag,attrs)=>{const node=document.createElementNS(SVG_NS,tag);for(const [k,v] of Object.entries(attrs))node.setAttribute(k,String(v));return node;};
 const makeSourceLink=(url,label)=>{const a=el('a','source-citation',label);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;};
 
-export function initSourceGraph(){
+export function initSourceGraph(options={}){
+  const {onInspect3D}=options;
   const failures=validateSourceTopology();
   if(failures.length)throw new Error('WorldsVault snapshot rejected: '+failures.join('; '));
   const dialog=$('sourceGraphDialog');if(!dialog)throw new Error('Source graph dialog missing');
@@ -58,6 +59,16 @@ export function initSourceGraph(){
       makeSourceLink(n.graphUrl,'OPEN PUBLISHED GRAPH RECORD ↗'),
       makeSourceLink(n.sourceUrl,'OPEN AUTHORED EVIDENCE ↗')
     );
+    if(onInspect3D && (id==='worldsvault'||id==='mother')){
+      const inspectBtn=el('button','source-handoff-btn','INSPECT IN 3D ATLAS ⛶');
+      inspectBtn.type='button';
+      inspectBtn.title=`Focus 3D camera on ${n.label} landmark`;
+      inspectBtn.addEventListener('click',()=>{
+        dialog.close();
+        onInspect3D(id);
+      });
+      details.append(inspectBtn);
+    }
     const matches=linksForNode(id);
     if(!matches.length)details.append(el('p','source-caveat','No published relationship edge is listed for this node. Nothing further should be inferred.'));
     for(const edge of matches){
@@ -101,5 +112,11 @@ export function initSourceGraph(){
   $('sourceGraphOpen').addEventListener('click',()=>{dialog.showModal();select(selected);});
   $('sourceGraphClose').addEventListener('click',()=>dialog.close());
   select(selected);
-  return {sourceSha:TOPOLOGY.sourceSha,open:()=>dialog.showModal()};
+  return {
+    sourceSha:TOPOLOGY.sourceSha,
+    open:(id)=>{
+      dialog.showModal();
+      if(id&&TOPOLOGY.nodes.some(x=>x.id===id))select(id);
+    }
+  };
 }
