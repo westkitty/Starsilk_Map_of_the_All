@@ -92,7 +92,7 @@
     <p class="network-foot">LOCAL HYPOTHESIS ONLY / The Dossier's sourced WorldsVault edges are a separate read-only topology. Closing a corridor here cannot alter your saved map or Starsilk canon.</p>
   </section>
   <section class="strategic-panel" id="strategyPanel" aria-label="Strategic Studio — draft 4X cartography" hidden>
-    <header class="strategy-header"><div><span class="eyebrow">SURVEY / PHASE 04</span><h2>THE STRATEGIC ATLAS</h2><p>Editable hypotheses, not jurisdictions or physical distances.</p></div><button id="strategyClose" type="button" aria-label="Close strategic studio">×</button></header>
+    <header class="strategy-header"><div><span class="eyebrow">SURVEY / STRATEGIC CARTOGRAPHY</span><h2>THE STRATEGIC ATLAS</h2><p>Editable hypotheses, not jurisdictions or physical distances.</p><div class="strategy-banner-notice"><span class="strategy-badge">SURVEY 4X OVERLAY</span> <span class="strategy-disclaimer">PROVISIONAL HYPOTHESES · STRICTLY NON-CANONICAL</span></div></div><button id="strategyClose" type="button" aria-label="Close strategic studio">×</button></header>
     <div class="strategy-modebar" role="group" aria-label="Strategic instrument"><button type="button" id="strategyModeGroup" aria-pressed="true">GROUP</button><button type="button" id="strategyModeRegion" aria-pressed="false">REGIONS</button><button type="button" id="strategyModePan" aria-pressed="false">ORBIT</button></div>
     <div id="strategyGroupTools" class="strategy-group-tools">
       <div class="strategy-inline"><strong><output id="strategyCount">0</output> SELECTED</strong><button type="button" id="strategySelectAll">ALL VISIBLE</button><button type="button" id="strategyClear">CLEAR</button></div>
@@ -108,12 +108,16 @@
       <div id="strategyRegionList" class="strategy-region-list" aria-label="Draft region list"></div>
       <p id="strategyRegionEmpty">Select a region to inspect its vertices. Shape data never implies faction sovereignty.</p>
       <form id="strategyRegionForm" hidden>
+        <div class="strategy-inline"><button type="button" id="strategySelectEnclosed" class="strategy-secondary">SELECT ENCLOSED NODES</button><button type="button" id="strategyFrameRegion" class="strategy-secondary">FRAME BOUNDARY ⛶</button></div>
+        <div id="strategyRegionPosture" class="strategy-posture-badge" role="status">TOPOLOGICAL POSTURE: PENDING</div>
+        <div id="strategyRegionLandmarks" class="strategy-landmarks-box" hidden></div>
         <label>REGION NAME <input id="strategyRegionName" maxlength="100" required/></label>
         <label>AFFILIATION NOTE / PROVISIONAL <input id="strategyRegionAffiliation" maxlength="100"/></label>
         <label>DISPLAY COLOR <input id="strategyRegionColor" type="color"/></label>
         <div class="strategy-inline"><strong>BOUNDARY VERTICES</strong><button type="button" id="strategyAddVertex">+ VERTEX</button></div>
         <div id="strategyVertexList" class="strategy-vertex-list"></div>
         <output id="strategyRegionMetrics">0 nodes</output>
+        <div class="strategy-enclosed-container"><span class="strategy-subhead">ENCLOSED OBJECTS</span><div id="strategyEnclosedList" class="strategy-enclosed-list"></div></div>
         <div class="strategy-inline"><button type="submit" class="strategy-primary">SAVE DRAFT</button><button type="button" id="strategyDeleteRegion" class="strategy-danger">DELETE</button></div>
       </form>
     </div>

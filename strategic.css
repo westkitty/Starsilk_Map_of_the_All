@@ -61,10 +61,29 @@
  color:#edfbff;background:#08202de8;border:1px solid #66cde9;font:11px var(--mono)}
 .node-btn.strategy-selected,.world-label.strategy-selected{color:#ebfdff!important;border-color:#7beaff!important;text-shadow:0 0 12px #9ff6ff!important}
 .atlas.strategic-open #spaceCanvas{touch-action:none}
+.strategy-banner-notice{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+.strategy-badge{font-size:9px;background:#0d394d;border:1px solid #58ccf2;color:#d5f4ff;padding:2px 5px;border-radius:3px;letter-spacing:.08em}
+.strategy-disclaimer{font-size:8.5px;color:#84b5c7;letter-spacing:.05em}
+.strategy-secondary{background:#082537!important;border:1px solid #376f87!important;color:#bfe9fa!important;font-size:9.5px!important;padding:6px 9px!important;min-height:36px!important}
+.strategy-secondary:hover{background:#113c54!important;border-color:#5ed5f6!important;color:#fff!important}
+.strategy-posture-badge{padding:6px 9px;border:1px solid #357692;background:#072433;color:#8bf2ff;font-size:9.5px;letter-spacing:.06em;font-weight:600;border-radius:3px}
+.strategy-landmarks-box{padding:7px 9px;border:1px solid #c29547;background:#2d1e08d6;color:#ffe299;font-size:9.5px;line-height:1.45;border-radius:3px}
+.strategy-enclosed-container{display:flex;flex-direction:column;gap:5px;border-top:1px dashed #2a5266;padding-top:8px}
+.strategy-subhead{font-size:9px;letter-spacing:.08em;color:#86b1c2}
+.strategy-enclosed-list{display:flex;flex-wrap:wrap;gap:4px;max-height:95px;overflow-y:auto;padding-right:2px}
+.strategy-chip{display:inline-flex;align-items:center;background:#072130;border:1px solid #3a687d;color:#d2f0fb;font-size:9px;padding:3px 7px;border-radius:3px;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
+.strategy-chip:hover{background:#17465c;border-color:#65deff;color:#fff}
+.strategy-group-hull{fill:#38cbf815;stroke:#69e4ff;stroke-width:1.8;stroke-dasharray:5 4;filter:drop-shadow(0 0 6px #3ec4f488);vector-effect:non-scaling-stroke}
+.strategy-region-labels-layer{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden}
+.strategy-region-badge{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;display:flex;flex-direction:column;align-items:center;padding:4px 8px;background:rgba(4,18,29,.85);border:1px solid #4a849d;border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.7);backdrop-filter:blur(6px);transition:transform .15s,border-color .15s,background .15s}
+.strategy-region-badge:hover,.strategy-region-badge.active{background:rgba(8,38,58,.95);border-color:#74eaff;box-shadow:0 0 20px rgba(50,200,255,.45);transform:translate(-50%,-50%) scale(1.05)}
+.region-badge-name{font:600 10.5px/1.2 var(--display);letter-spacing:.08em;color:#f0faff}
+.region-badge-sub{font:8px/1.2 var(--mono);letter-spacing:.05em;color:#83b8cc}
+.strategy-region-badge.active .region-badge-name{color:#a8f5ff;text-shadow:0 0 8px #5ee3ff}
 @media(max-width:1050px){.strategic-panel{top:118px;right:10px;width:min(330px,40vw)}}
 @media(max-width:620px){.strategic-entry{font-size:9px!important}.strategic-panel{top:171px;right:9px;left:9px;bottom:auto;width:auto;max-height:min(56vh,490px);padding:12px;z-index:20}
 .strategy-header h2{font-size:18px}.strategy-nudge button{min-height:48px}}
-@media(prefers-reduced-motion:reduce){.strategy-group-handle,.strategy-vertex{transition:none}}
+@media(prefers-reduced-motion:reduce){.strategy-group-handle,.strategy-vertex,.strategy-region-badge{transition:none}}
 /* Existing breakpoint hid the first header button; preserve the new entry instead. */
 @media(max-width:850px){
  .header-actions #strategyOpen{display:inline-flex!important;align-items:center;min-height:39px;padding:7px 8px}
@@ -75,3 +94,4 @@
  .header-actions #strategyOpen{font-size:8px!important;min-height:40px;padding:7px 6px;letter-spacing:.02em}
  .top-bar .branding h1{font-size:14px;letter-spacing:.04em}
 }
+

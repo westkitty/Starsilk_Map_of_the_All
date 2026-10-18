@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {eligibleGroup,translatedGroup,regionFromGroup,validatePolygon,regionReport,pointInPolygon,MAX_REGIONS,MAX_VERTICES} from './strategic-model.js';
+import {eligibleGroup,translatedGroup,regionFromGroup,validatePolygon,regionReport,pointInPolygon,polygonCentroid,polygonBounds,strategicPosture,convexHull,MAX_REGIONS,MAX_VERTICES} from './strategic-model.js';
 
 /**
  * Phase 4: one bounded 3D editorial inspector. Main.js alone owns state/Undo;
@@ -17,6 +17,8 @@ export class StrategicStudio {
     this.selectHandle.hidden=true;canvas.parentElement.append(this.selectHandle);
     this.vertexLayer=document.createElement('div');this.vertexLayer.id='strategyVertexLayer';this.vertexLayer.className='strategy-vertex-layer';
     canvas.parentElement.append(this.vertexLayer);
+    this.badgeLayer=document.createElement('div');this.badgeLayer.id='strategyRegionBadgeLayer';this.badgeLayer.className='strategy-region-labels-layer';
+    canvas.parentElement.append(this.badgeLayer);
     this.overlay=document.createElementNS('http://www.w3.org/2000/svg','svg');this.overlay.id='strategyGuides';this.overlay.classList.add('strategy-guides');
     this.overlay.setAttribute('aria-hidden','true');canvas.parentElement.append(this.overlay);
     this.readout=document.createElement('output');this.readout.className='strategy-gesture-readout';this.readout.hidden=true;canvas.parentElement.append(this.readout);
@@ -36,6 +38,8 @@ export class StrategicStudio {
     this.$('strategyRegionForm').addEventListener('submit',e=>this.saveRegion(e));
     this.$('strategyAddVertex').addEventListener('click',()=>this.addVertex());
     this.$('strategyDeleteRegion').addEventListener('click',()=>this.deleteRegion());
+    this.$('strategySelectEnclosed')?.addEventListener('click',()=>this.selectEnclosed());
+    this.$('strategyFrameRegion')?.addEventListener('click',()=>this.frameRegion());
     this.selectHandle.addEventListener('pointerdown',e=>this.startGroupDrag(e));
     this.selectHandle.addEventListener('pointermove',e=>this.moveGroupDrag(e));
     this.selectHandle.addEventListener('pointerup',e=>this.endGroupDrag(e));
@@ -73,7 +77,7 @@ export class StrategicStudio {
     this.sync();
   }
   open(){if(this.opened)return;this.opened=true;this.panel.hidden=false;this.atlas.classList.add('strategic-open');this.setMode('group');this.sync();}
-  close(){this.cancelGesture();this.cancelDrawing();this.opened=false;this.panel.hidden=true;this.atlas.classList.remove('strategic-open');this.selectHandle.hidden=true;this.vertexLayer.replaceChildren();this.overlay.replaceChildren();if(this.engine){this.engine.controls.enabled=true;this.engine.paused=document.hidden;}this.regionId=null;this.groupIds=[];}
+  close(){this.cancelGesture();this.cancelDrawing();this.opened=false;this.panel.hidden=true;this.atlas.classList.remove('strategic-open');this.selectHandle.hidden=true;this.vertexLayer.replaceChildren();this.badgeLayer.replaceChildren();this.overlay.replaceChildren();if(this.engine){this.engine.controls.enabled=true;this.engine.paused=document.hidden;}this.regionId=null;this.groupIds=[];}
   setMode(mode){if(!['group','region','pan'].includes(mode))return;
     this.cancelGesture();this.cancelDrawing();this.mode=mode;
     for(const key of ['group','region','pan'])this.$('strategyMode'+key[0].toUpperCase()+key.slice(1)).setAttribute('aria-pressed',String(key===mode));
@@ -133,15 +137,44 @@ export class StrategicStudio {
     return chosen.reduce((p,n)=>p.map((x,i)=>x+n.position[i]/chosen.length),[0,0,0]);
   }
   updateGuides(){
-    this.selectHandle.hidden=true;this.vertexLayer.replaceChildren();this.overlay.replaceChildren();
+    this.selectHandle.hidden=true;this.vertexLayer.replaceChildren();this.badgeLayer.replaceChildren();this.overlay.replaceChildren();
     if(!this.opened||!this.engine)return;
     if(this.mode==='group'){
       const centre=this.groupCentre(),p=centre&&this.project(centre);
       if(p){this.selectHandle.hidden=false;this.selectHandle.style.left=p.x+'px';this.selectHandle.style.top=p.y+'px';}
+      if(this.groupIds.length>1){
+        const valid=this.eligibleVisible(),chosen=this.groupIds.map(id=>valid.find(n=>n.id===id)).filter(Boolean);
+        if(chosen.length>1){
+          const hull=convexHull(chosen.map(n=>[n.position[0],n.position[2]]));
+          const screenPts=hull.map(pt=>this.project([pt[0],this.planeY(),pt[1]])).filter(Boolean);
+          if(screenPts.length>=3){
+            const hullSvg=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+            hullSvg.setAttribute('points',screenPts.map(pt=>pt.x+','+pt.y).join(' '));
+            hullSvg.setAttribute('class','strategy-group-hull');
+            this.overlay.append(hullSvg);
+          }
+        }
+      }
       if(this.gesture?.type==='marquee'){const d=this.gesture;const b=document.createElementNS('http://www.w3.org/2000/svg','rect');
         b.setAttribute('x',String(Math.min(d.start[0],d.current[0])));b.setAttribute('y',String(Math.min(d.start[1],d.current[1])));
         b.setAttribute('width',String(Math.abs(d.start[0]-d.current[0])));b.setAttribute('height',String(Math.abs(d.start[1]-d.current[1])));
         b.setAttribute('class','strategy-marquee');this.overlay.append(b);}
+    }
+    if(this.getView().kind!=='system'&&this.getState().layers?.territories){
+      for(const r of this.visibleRegions()){
+        const c=polygonCentroid(r.points);
+        const pos=this.project([c[0],this.planeY(),c[1]]);
+        if(pos){
+          const badge=document.createElement('div');
+          badge.className='strategy-region-badge'+(r.id===this.regionId?' active':'');
+          badge.style.left=pos.x+'px';badge.style.top=pos.y+'px';
+          const nSpan=document.createElement('span');nSpan.className='region-badge-name';nSpan.textContent=r.name;
+          const aSpan=document.createElement('span');aSpan.className='region-badge-sub';aSpan.textContent=`PROVISIONAL · ${r.affiliation||'UNASSIGNED'}`;
+          badge.append(nSpan,aSpan);
+          badge.addEventListener('click',e=>{e.stopPropagation();this.setMode('region');this.selectRegion(r.id);});
+          this.badgeLayer.append(badge);
+        }
+      }
     }
     if(this.mode!=='region')return;
     const region=this.visibleRegions().find(r=>r.id===this.regionId);
@@ -167,16 +200,25 @@ export class StrategicStudio {
     if(!this.getState().layers.territories)return;
     const regions=this.visibleRegions();if(!regions.length)return;
     const group=new THREE.Group();group.name='editorial-draft-regions';group.renderOrder=-1;this.regionGroup=group;
+    const floorY=-19;
     for(const r of regions){
       if(r.points.length<3)continue;
+      const isSelected=r.id===this.regionId;
       const shape=new THREE.Shape();shape.moveTo(r.points[0][0],-r.points[0][1]);
       for(const [x,z] of r.points.slice(1))shape.lineTo(x,-z);shape.closePath();
       const g=new THREE.ShapeGeometry(shape);g.rotateX(-Math.PI/2);
-      const fill=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:r.color,side:THREE.DoubleSide,transparent:true,opacity:r.id===this.regionId?.21:.10,depthWrite:false,depthTest:true}));
+      const fill=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:r.color,side:THREE.DoubleSide,transparent:true,opacity:isSelected?.24:.11,depthWrite:false,depthTest:true}));
       fill.position.y=this.planeY();fill.renderOrder=-1;group.add(fill);
       const coords=r.points.map(([x,z])=>new THREE.Vector3(x,this.planeY()+.08,z));coords.push(coords[0].clone());
-      const border=new THREE.Line(new THREE.BufferGeometry().setFromPoints(coords),new THREE.LineBasicMaterial({color:r.color,transparent:true,opacity:r.id===this.regionId?.97:.7,depthWrite:false}));
+      const border=new THREE.Line(new THREE.BufferGeometry().setFromPoints(coords),new THREE.LineBasicMaterial({color:r.color,transparent:true,opacity:isSelected?.98:.75,depthWrite:false}));
       border.renderOrder=1;group.add(border);
+      for(const [vx,vz] of r.points){
+        const pinPts=[new THREE.Vector3(vx,this.planeY(),vz),new THREE.Vector3(vx,floorY,vz)];
+        const pinLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pinPts),new THREE.LineBasicMaterial({color:r.color,transparent:true,opacity:isSelected?.45:.22,depthWrite:false}));
+        pinLine.renderOrder=0;group.add(pinLine);
+        const anchor=new THREE.Mesh(new THREE.RingGeometry(.7,1.1,16),new THREE.MeshBasicMaterial({color:r.color,side:THREE.DoubleSide,transparent:true,opacity:isSelected?.6:.25,depthWrite:false}));
+        anchor.rotation.x=-Math.PI/2;anchor.position.set(vx,floorY+.05,vz);anchor.renderOrder=0;group.add(anchor);
+      }
     }
     this.engine.group.add(group);
   }
@@ -205,6 +247,31 @@ export class StrategicStudio {
     });list.replaceChildren(frag);
     const report=regionReport(this.getState(),r);
     this.$('strategyRegionMetrics').textContent=`${report.count} nodes · ${report.internal} internal corridors · ${report.frontier} frontier links · ${report.displayArea.toFixed(1)} display²`;
+    const postureEl=this.$('strategyRegionPosture');
+    if(postureEl)postureEl.textContent=`TOPOLOGICAL POSTURE: ${report.posture}`;
+    const landmarksEl=this.$('strategyRegionLandmarks');
+    if(landmarksEl){
+      if(report.referenceLandmarks?.length){
+        landmarksEl.hidden=false;
+        landmarksEl.textContent=`CANONICAL LANDMARK DETECTED: ${report.referenceLandmarks.join(', ')} · IMMUTABLE REFERENCE (CANNOT BE CLAIMED OR TRANSLATED)`;
+      }else{landmarksEl.hidden=true;}
+    }
+    const enclosedList=this.$('strategyEnclosedList');
+    if(enclosedList){
+      enclosedList.replaceChildren();
+      const stateNodes=this.getState().nodes;
+      for(const id of report.memberIds){
+        const node=stateNodes.find(n=>n.id===id);if(!node)continue;
+        const chip=document.createElement('button');chip.type='button';chip.className='strategy-chip';
+        chip.textContent=node.name;chip.title=`Draft node [${node.name}]. Click to inspect in group mode.`;
+        chip.addEventListener('click',()=>{this.setMode('group');this.applyGroup([id]);});
+        enclosedList.append(chip);
+      }
+      if(!report.memberIds.length){
+        const emptySpan=document.createElement('span');emptySpan.style.color='#7298a8';emptySpan.style.fontSize='9px';
+        emptySpan.textContent='No draft nodes enclosed in perimeter.';enclosedList.append(emptySpan);
+      }
+    }
   }
   readVertices(){return [...this.$('strategyVertexList').querySelectorAll('.strategy-vertex-row')].map(row=>[Number(row.querySelector('input[data-axis="x"]').value),Number(row.querySelector('input[data-axis="z"]').value)]);}
   saveRegion(e){e.preventDefault();const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
@@ -225,6 +292,23 @@ export class StrategicStudio {
   deleteRegion(){const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
     if(!window.confirm('Delete this editorial draft sector? Undo restores it.'))return;
     this.onChange(s=>{s.regions=s.regions.filter(x=>x.id!==r.id);});this.regionId=null;this.sync();
+  }
+  selectEnclosed(){
+    const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
+    const report=regionReport(this.getState(),r);
+    if(!report.memberIds.length){this.onMessage('No draft nodes enclosed in this region perimeter.',true);return;}
+    this.setMode('group');this.applyGroup(report.memberIds);
+    this.onMessage(`Selected ${report.memberIds.length} enclosed draft node(s). Move with handle or nudge.`);
+  }
+  frameRegion(){
+    const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r||!this.engine)return;
+    const bounds=polygonBounds(r.points);
+    const maxDim=Math.max(bounds.width,bounds.depth,20);
+    const distance=Math.max(maxDim*1.4,45);
+    const targetPos=new THREE.Vector3(bounds.centerX,this.planeY(),bounds.centerZ);
+    const camPos=new THREE.Vector3(bounds.centerX,this.planeY()+distance*.85,bounds.centerZ+distance*1.05);
+    this.engine.transitionCamera(camPos,targetPos,700);
+    this.onMessage(`Framed boundary of ${r.name}.`);
   }
   createFromGroup(){try{
     const item=regionFromGroup(this.getState(),this.groupIds,this.getView());
@@ -329,6 +413,6 @@ export class StrategicStudio {
     this.canvas.removeEventListener('pointerup',this._up);this.canvas.removeEventListener('pointercancel',this._cancel);
     if(this.engine)this.engine.controls.removeEventListener('change',this._onCamera);
     window.removeEventListener('resize',this._resize);document.removeEventListener('keydown',this._keys,true);
-    this.selectHandle.remove();this.vertexLayer.remove();this.overlay.remove();this.readout.remove();
+    this.selectHandle.remove();this.vertexLayer.remove();this.badgeLayer.remove();this.overlay.remove();this.readout.remove();
     if(this.regionGroup){this.regionGroup.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});this.regionGroup.removeFromParent();}}
 }

@@ -112,8 +112,53 @@ export function pointInPolygon([x,z],points) {
   }
   return inside;
 }
+export function polygonCentroid(points) {
+  if (!Array.isArray(points) || points.length < 3) return [0, 0];
+  let cx = 0, cz = 0, area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i], q = points[(i + 1) % points.length];
+    const f = p[0] * q[1] - q[0] * p[1];
+    area += f;
+    cx += (p[0] + q[0]) * f;
+    cz += (p[1] + q[1]) * f;
+  }
+  area = area * 3;
+  if (Math.abs(area) < 1e-6) {
+    return [
+      points.reduce((sum, p) => sum + p[0], 0) / points.length,
+      points.reduce((sum, p) => sum + p[1], 0) / points.length
+    ];
+  }
+  return [cx / area, cz / area];
+}
+export function polygonBounds(points) {
+  if (!Array.isArray(points) || !points.length) return { minX: 0, maxX: 0, minZ: 0, maxZ: 0, centerX: 0, centerZ: 0, width: 0, depth: 0 };
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const p of points) {
+    if (p[0] < minX) minX = p[0];
+    if (p[0] > maxX) maxX = p[0];
+    if (p[1] < minZ) minZ = p[1];
+    if (p[1] > maxZ) maxZ = p[1];
+  }
+  return {
+    minX, maxX, minZ, maxZ,
+    centerX: (minX + maxX) / 2,
+    centerZ: (minZ + maxZ) / 2,
+    width: maxX - minX,
+    depth: maxZ - minZ
+  };
+}
+export function strategicPosture(internal, frontier, count) {
+  if (count === 0) return 'UNINHABITED SECTOR';
+  if (frontier === 0 && internal === 0) return 'ISOLATED CLUSTER';
+  if (frontier === 0) return 'AUTONOMOUS / DEFENSIBLE';
+  if (internal === 0) return 'CHOKEPOINT / BUFFER POCKET';
+  if (internal >= frontier) return 'CORE NETWORK HUB';
+  return 'CONTESTED / FRONTIER MARGIN';
+}
 export function regionReport(state,region) {
   const members=state.nodes.filter(n=>n.status==='draft'&&n.parentId===region.parentId&&['galaxy','system','planet'].includes(n.kind)&&pointInPolygon([n.position[0],n.position[2]],region.points));
+  const referenceLandmarks=state.nodes.filter(n=>n.status==='reference'&&n.parentId===region.parentId&&pointInPolygon([n.position[0],n.position[2]],region.points)).map(n=>n.name||n.id);
   const seen=new Set(members.map(n=>n.id));
   let internal=0,frontier=0;
   for(const r of state.routes) {
@@ -121,5 +166,6 @@ export function regionReport(state,region) {
     if(insideA&&insideB)internal++;
     else if(insideA||insideB)frontier++;
   }
-  return {count:members.length, internal, frontier, displayArea:polygonArea(region.points), memberIds:members.map(n=>n.id)};
+  const posture=strategicPosture(internal,frontier,members.length);
+  return {count:members.length, internal, frontier, displayArea:polygonArea(region.points), memberIds:members.map(n=>n.id), referenceLandmarks, posture};
 }
