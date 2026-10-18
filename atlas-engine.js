@@ -227,6 +227,12 @@ export class AtlasEngine {
     };
   }
   transitionEra(durationMs=350){
+    if(this.state?.epoch&&this.scene?.fog){
+      const ep=this.state.epoch;
+      if(ep==='war'){this.scene.fog.color.setHex(0x0c0406);this.scene.fog.density=0.0014;}
+      else if(ep==='locking'){this.scene.fog.color.setHex(0x020812);this.scene.fog.density=0.0013;}
+      else{this.scene.fog.color.setHex(0x010408);this.scene.fog.density=0.0010;}
+    }
     if(this.reducedMotion||!this.canvas)return;
     this.canvas.style.transition='opacity 0.12s ease-out';
     this.canvas.style.opacity='0.68';
@@ -238,6 +244,12 @@ export class AtlasEngine {
     },120);
   }
   rebuild(){if(!this.state)return;
+    if(this.state?.epoch&&this.scene?.fog){
+      const ep=this.state.epoch;
+      if(ep==='war'){this.scene.fog.color.setHex(0x0c0406);this.scene.fog.density=0.0014;}
+      else if(ep==='locking'){this.scene.fog.color.setHex(0x020812);this.scene.fog.density=0.0013;}
+      else{this.scene.fog.color.setHex(0x010408);this.scene.fog.density=0.0010;}
+    }
     disposeTree(this.group);this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];
     if(this.view.kind==='all')this.buildAll();
     if(this.view.kind==='galaxy')this.buildGalaxy();

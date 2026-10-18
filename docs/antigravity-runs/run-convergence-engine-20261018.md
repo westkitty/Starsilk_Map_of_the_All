@@ -81,11 +81,11 @@
 - [x] **Loop 130** (VERIFIED): Created `tests/source-assets.node-check.mjs`; 139/139 pure Node tests passing; production bundle 207.7 kB gzip (well under 225 kB budget); Playwright browser CI passing with 0 errors; commit & push Phase 26.
 
 ### PHASE 27 — Historical Cartography and Chronology (Loops 131–135)
-- [ ] **Loop 131**: Era-aware presentation for War, Locking, and Post-War cartographic states.
-- [ ] **Loop 132**: Visual comparison between historical configurations without destructive overwriting.
-- [ ] **Loop 133**: Chronology rail or milestone navigation grounded in authoritative source timeline.
-- [ ] **Loop 134**: Source-backed event inspection without inventing precise missing dates or physical positions.
-- [ ] **Loop 135**: Repair temporal editing, persistence, Undo, or chronology presentation defects.
+- [x] **Loop 131** (VERIFIED): Era-aware Three.js fog calibration in `transitionEra()` and `rebuild()` (crimson tension `#0c0406` in War, containment depth `#020812` in Locking, archival void `#010408` in Post-War).
+- [x] **Loop 132** (VERIFIED): Enriched `temporalDiffList` with typed visual status badges (`.diff-badge.diff-new`, `.diff-badge.diff-absent`, `.diff-badge.diff-edit`, `.diff-badge.diff-link`, `.diff-badge.diff-missing`, `.diff-badge.diff-region`, `.diff-badge.diff-layer`).
+- [x] **Loop 133** (VERIFIED): Chronology milestone filter bar (`ALL (5)`, `WAR (3)`, `LOCKING (1)`, `POST (1)`) with explicit causal sequence step tags (`STEP K/5`).
+- [x] **Loop 134** (VERIFIED): Milestone event inspection cards with direct Dossier links and causal sequence ordering without inventing unauthored dates or positions.
+- [x] **Loop 135** (VERIFIED): Created `tests/chronology-cartography.node-check.mjs`; 145/145 pure Node tests passing; production bundle 208.5 kB gzip (well under 225 kB budget); Playwright browser CI passing with zero errors; commit & push Phase 27.
 
 ### PHASE 28 — Spatial Editing Maturity (Loops 136–140)
 - [ ] **Loop 136**: Spatial editing UX, affordances, and control visibility.

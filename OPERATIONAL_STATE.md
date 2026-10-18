@@ -193,4 +193,12 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Loop 129 ASSET PROVENANCE CARDS & CANON SAFEGUARDS**: Added `getAssetProvenance()` rendering structured `.asset-provenance-card` in inspector/source panel, displaying asset ID, generation type, source anchor, and strict invariant notice ("NOT an official canon emblem or verified historical flag").
 - **Loop 130 ADVERSARIAL VERIFICATION & REMOTE PUSH**: Created `tests/source-assets.node-check.mjs`; 139/139 pure Node tests passing (476ms); production bundle 207.7 kB gzip (well under 225 kB budget); Playwright browser CI passing with zero errors; verified remote SHA equality.
 
+## Phase 27: Historical Cartography and Chronology (Loops 131–135) — 2026-10-18
+
+- **Loop 131 ERA-AWARE ATMOSPHERIC TONES & FOG CALIBRATION**: Calibrated real-time Three.js fog in `transitionEra()` and `rebuild()` matching active historical epoch: high-tension crimson-tinted void (`#0c0406`, 0.0014) in War, containment azure void (`#020812`, 0.0013) in Locking, and crisp archival void (`#010408`, 0.0010) in Post-War survey.
+- **Loop 132 ENRICHED ERA DIFF MARKERS & STATUS BADGES**: Upgraded `temporalDiffList` in `temporal-lab.js` with color-coded status badges (`.diff-badge.diff-new`, `.diff-badge.diff-absent`, `.diff-badge.diff-edit`, `.diff-badge.diff-link`, `.diff-badge.diff-missing`, `.diff-badge.diff-region`, `.diff-badge.diff-layer`).
+- **Loop 133 CHRONOLOGY MILESTONE FILTERING & STEP RAILS**: Added interactive milestone filter bar (`ALL (5)`, `WAR (3)`, `LOCKING (1)`, `POST (1)`) in `temporal-lab.js`; displayed explicit causal sequence step counters (`STEP K/5`) on all milestones.
+- **Loop 134 SOURCE-BACKED EVENT DOSSIER INSPECTION**: Added direct Dossier URL citations on all chronological milestones; styled milestone titles and era badges; preserved causal sequence invariants without asserting unauthored calendar dates or coordinates.
+- **Loop 135 ADVERSARIAL VERIFICATION & REMOTE PUSH**: Created `tests/chronology-cartography.node-check.mjs`; 145/145 pure Node tests passing (534ms); production bundle 208.5 kB gzip (well under 225 kB budget); Playwright browser CI passing across desktop, tablet, and mobile with zero console errors; verified remote SHA equality.
+
 

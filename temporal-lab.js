@@ -13,7 +13,7 @@ const labelFor=id=>EPOCHS.find(e=>e.id===id)?.title||id;
 export class TemporalLab {
   constructor({canvas,atlas,panel,getState,getView,message,onSwitch,onCopy,onNote}) {
     Object.assign(this,{canvas,atlas,panel,getState,getView,message,onSwitch,onCopy,onNote});
-    this.opened=false;this.engine=null;this.baseline='war';this.showGhosts=true;
+    this.opened=false;this.engine=null;this.baseline='war';this.showGhosts=true;this.milestoneFilter='all';
     this.svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
     this.svg.classList.add('temporal-overlay');this.svg.setAttribute('aria-hidden','true');
     this.svg.hidden=true;canvas.parentElement.append(this.svg);
@@ -77,9 +77,9 @@ export class TemporalLab {
       const cell=elem('div','temporal-metric');cell.append(elem('strong','',String(count)),elem('span','',name));metrics.append(cell);
     }$('temporalMetrics').replaceChildren(metrics);
     const list=document.createDocumentFragment();
-    const add=(kind,item,detail)=>{
+    const add=(kind,item,detail,statusClass='diff-edit')=>{
       const div=elem('div','temporal-entry');
-      div.append(elem('b','',kind),elem('span','',`${item.name||item.id||item.after?.name||'Unnamed'} · ${detail}`));
+      div.append(elem('b',`diff-badge ${statusClass}`,kind),elem('span','',`${item.name||item.id||item.after?.name||'Unnamed'} · ${detail}`));
       const targetId = item.id || item.after?.id || item.before?.id;
       if (targetId) {
         div.title = `Click to focus on ${item.name || item.after?.name || targetId} in 3D`;
@@ -93,30 +93,55 @@ export class TemporalLab {
       }
       list.append(div);
     };
-    for(const n of diff.nodes.added.slice(0,12))add('NEW',n,'object in active draft');
-    for(const n of diff.nodes.removed.slice(0,12))add('ABSENT',n,'present in baseline');
-    for(const item of diff.nodes.modified.slice(0,20))add('EDIT',item.after,'attributes or position');
-    for(const r of diff.routes.added.slice(0,6))add('LINK',r,'new draft corridor');
-    for(const r of diff.routes.removed.slice(0,6))add('MISSING LINK',r,'baseline corridor absent');
-    for(const reg of diff.regions.modified.slice(0,6))add('REGION',reg.after,'draft boundary changed');
-    for(const k of diff.layers)add('LAYER',{name:k},'display toggle differs');
+    for(const n of diff.nodes.added.slice(0,12))add('NEW',n,'object in active draft','diff-new');
+    for(const n of diff.nodes.removed.slice(0,12))add('ABSENT',n,'present in baseline','diff-absent');
+    for(const item of diff.nodes.modified.slice(0,20))add('EDIT',item.after,'attributes or position','diff-edit');
+    for(const r of diff.routes.added.slice(0,6))add('LINK',r,'new draft corridor','diff-link');
+    for(const r of diff.routes.removed.slice(0,6))add('MISSING LINK',r,'baseline corridor absent','diff-missing');
+    for(const reg of diff.regions.modified.slice(0,6))add('REGION',reg.after,'draft boundary changed','diff-region');
+    for(const k of diff.layers)add('LAYER',{name:k},'display toggle differs','diff-layer');
     if(!list.childNodes.length)list.append(elem('p','temporal-empty','These two independently editable eras currently share the same draft layout.'));
     $('temporalDiffList').replaceChildren(list);
 
     const milestonesRoot = $('temporalMilestonesList');
     if (milestonesRoot) {
       const frag = document.createDocumentFragment();
-      for (const m of CANON_CHRONOLOGY_MILESTONES) {
+      const filterBar = elem('div', 'milestone-filter-bar');
+      const filters = [
+        ['all', 'ALL (5)'],
+        ['war', 'WAR (3)'],
+        ['locking', 'LOCKING (1)'],
+        ['post', 'POST (1)']
+      ];
+      for (const [fId, fLabel] of filters) {
+        const btn = elem('button', 'milestone-filter-btn' + (this.milestoneFilter === fId ? ' active' : ''), fLabel);
+        btn.type = 'button';
+        btn.addEventListener('click', () => {
+          this.milestoneFilter = fId;
+          this.sync();
+        });
+        filterBar.append(btn);
+      }
+      frag.append(filterBar);
+
+      const filtered = CANON_CHRONOLOGY_MILESTONES.filter(m => this.milestoneFilter === 'all' || m.eraId === this.milestoneFilter);
+      for (const m of filtered) {
+        const globalIdx = CANON_CHRONOLOGY_MILESTONES.indexOf(m);
         const item = elem('div', 'temporal-milestone-item');
         if (m.eraId === state.epoch) item.style.borderLeftColor = '#8be7ff';
         const head = elem('div', 'temporal-milestone-head');
-        head.append(elem('span', 'temporal-milestone-year', m.timeframe + ' · ' + m.title));
+        head.append(
+          elem('span', 'temporal-milestone-year', `STEP ${globalIdx + 1}/5 · ${m.timeframe}`),
+          elem('span', 'milestone-era-tag', m.eraId.toUpperCase())
+        );
+        const titleRow = elem('div', 'temporal-milestone-title-row');
+        titleRow.append(elem('strong', 'temporal-milestone-title', m.title));
         const link = elem('a', 'temporal-milestone-link', 'DOSSIER ↗');
         link.href = m.url;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        head.append(link);
-        item.append(head, elem('span', 'temporal-milestone-desc', m.detail));
+        titleRow.append(link);
+        item.append(head, titleRow, elem('span', 'temporal-milestone-desc', m.detail));
         frag.append(item);
       }
       milestonesRoot.replaceChildren(frag);
