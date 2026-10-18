@@ -10,6 +10,7 @@ import { validateCorridor } from './studio-math.js';
 import { initSourceGraph } from './source-graph-ui.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename } from './planner-handoff.js';
 import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
+import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS } from './canon-registry.js';
 
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
@@ -185,9 +186,27 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
   $('deleteBtn').textContent=readOnly?'FORK AS DRAFT':'DELETE DRAFT';
   $('connectBtn').disabled=readOnly||!['galaxy','system','planet'].includes(n.kind);
 }
-function updateSources(){const frag=document.createDocumentFragment();const n=nodeById(state,state.selected);
-  const entries=n?.sourceUrl?[{name:n.name,description:'Source-backed identity; position on this map is draft.',url:n.sourceUrl},...RESEARCH_ANCHORS.slice(0,2)]:RESEARCH_ANCHORS;
-  for(const a of entries){const link=el('a','source-item');link.href=a.url;link.target='_blank';link.rel='noopener noreferrer';link.append(el('strong','',a.name),el('span','',a.description));frag.append(link);}
+function updateSources(){
+  const frag=document.createDocumentFragment();const n=nodeById(state,state.selected);
+  const canonMatch=n?(findCanonEntity(n.id)||findCanonEntity(n.name)):null;
+  const entries=[];
+  if(n?.sourceUrl){
+    entries.push({name:n.name,description:'Source-backed identity; position on this map is draft.',url:n.sourceUrl});
+  }else if(canonMatch){
+    entries.push({name:canonMatch.name+' (DOSSIER ↗)',description:'Canonical figure from '+canonMatch.sourcePath+' (unauthored coordinates).',url:canonMatch.humanUrl});
+  }
+  for(const a of RESEARCH_ANCHORS.slice(0,entries.length?2:3))entries.push(a);
+  for(const a of entries){
+    const link=el('a','source-item');link.href=a.url;link.target='_blank';link.rel='noopener noreferrer';
+    link.append(el('strong','',a.name),el('span','',a.description));frag.append(link);
+  }
+  if(canonMatch){
+    const repair=CANON_REPAIR_HIGHLIGHTS.find(r=>r.subject.toLowerCase().includes(canonMatch.id)||r.subject.toLowerCase().includes(canonMatch.name.toLowerCase()));
+    if(repair)frag.append(el('div','source-notice-chip','CANON INVARIANT ['+repair.id+']: '+repair.subject));
+  }
+  const rev=el('div','source-revision-footer');
+  rev.append(el('span','','DOSSIER REF: 862bc476 · 127 STABLE IDS'),el('span','','CANON: 170-YR BLOOD ECLIPSE WAR'));
+  frag.append(rev);
   gui.source.replaceChildren(frag);
 }
 function updateCounts(){ $('countGalaxy').textContent=String(state.nodes.filter(n=>n.kind==='galaxy').length).padStart(2,'0');
@@ -236,11 +255,56 @@ function updateUI(){updateBreadcrumb();updateLayers();updateNodeList();updateRou
   studio?.sync();strategy?.sync();networkLab?.sync();temporal?.sync();
 }
 function focusSearch(){gui.search.focus();if(innerWidth<=620)gui.left.classList.add('expanded');}
+function inspectCanonEntity(c){
+  state.selected=null;
+  fillInspector();
+  $('inspectorTitle').textContent=c.name;
+  $('inspectorKind').textContent=c.group.toUpperCase()+' / CANON DOSSIER IDENTIFIER';
+  $('inspectorDescription').textContent='Canonical figure/record from '+c.sourcePath+'. As an authoritative identity, it possesses no authored map coordinates in Starsilk canon.';
+  $('inspectorStatus').textContent='CANONICAL IDENTITY / UNPLACED RECORD';
+  $('objectSigil').style.borderColor='#8beaff';
+  gui.form.hidden=true;
+  const frag=document.createDocumentFragment();
+  const mainLink=el('a','source-item');mainLink.href=c.humanUrl;mainLink.target='_blank';mainLink.rel='noopener noreferrer';
+  mainLink.append(el('strong','',c.name+' ↗'),el('span','','Open authoritative Dossier record ('+c.sourcePath+')'));
+  frag.append(mainLink);
+  const repair=CANON_REPAIR_HIGHLIGHTS.find(r=>r.subject.toLowerCase().includes(c.id)||r.subject.toLowerCase().includes(c.name.toLowerCase()));
+  if(repair)frag.append(el('div','source-notice-chip','CANON INVARIANT ['+repair.id+']: '+repair.subject));
+  for(const a of RESEARCH_ANCHORS.slice(0,2)){
+    const link=el('a','source-item');link.href=a.url;link.target='_blank';link.rel='noopener noreferrer';
+    link.append(el('strong','',a.name),el('span','',a.description));frag.append(link);
+  }
+  const rev=el('div','source-revision-footer');
+  rev.append(el('span','','DOSSIER REF: 862bc476 · 127 STABLE IDS'),el('span','','CANON: 170-YR BLOOD ECLIPSE WAR'));
+  frag.append(rev);
+  gui.source.replaceChildren(frag);
+  if(innerWidth<=850)gui.right.classList.add('mobile-open');
+  const pullTab=document.querySelector('[data-drawer="inspect"]');
+  if(pullTab&&pullTab.getAttribute('aria-expanded')==='false')pullTab.click();
+  message('Inspecting canonical record: '+c.name+' (unplaced).');
+}
 function showSearch(){const q=gui.search.value.toLowerCase().trim();const frag=document.createDocumentFragment();if(q){
-  const hits=state.nodes.filter(n=>n.name.toLowerCase().includes(q)||n.description.toLowerCase().includes(q)).slice(0,16);
-  for(const n of hits){const b=button(n.name,'search-result',()=>{gui.search.value='';gui.results.hidden=true;select(n.id);});
-    b.append(el('small','',n.kind+' / '+(n.parentId||'THE ALL')));frag.append(b);}
-  if(!hits.length)frag.append(el('div','search-result','No objects found'));
+  const hits=state.nodes.filter(n=>n.name.toLowerCase().includes(q)||n.description.toLowerCase().includes(q)).slice(0,12);
+  const canonHits=searchCanonEntities(q).slice(0,10);
+  if(hits.length){
+    frag.append(el('div','search-category-header','MAP OBJECTS (VIEWPORT)'));
+    for(const n of hits){const b=button(n.name,'search-result',()=>{gui.search.value='';gui.results.hidden=true;select(n.id);});
+      b.append(el('small','',n.kind+' / '+(n.parentId||'THE ALL')));frag.append(b);}
+  }
+  if(canonHits.length){
+    frag.append(el('div','search-category-header','CANON DOSSIER (127 STABLE IDS)'));
+    for(const c of canonHits){
+      const b=button(c.name,'search-result canon-result',()=>{
+        gui.search.value='';gui.results.hidden=true;
+        const mapMatch=state.nodes.find(n=>n.id===c.id||n.name.toLowerCase()===c.name.toLowerCase());
+        if(mapMatch)select(mapMatch.id);
+        else inspectCanonEntity(c);
+      });
+      b.append(el('small','',c.group.toUpperCase()+' / CANONICAL IDENTITY (UNPLACED)'));
+      frag.append(b);
+    }
+  }
+  if(!hits.length&&!canonHits.length)frag.append(el('div','search-result','No objects found'));
 }
   gui.results.replaceChildren(frag);gui.results.hidden=!q;
 }

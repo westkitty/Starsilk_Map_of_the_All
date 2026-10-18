@@ -1,5 +1,5 @@
-/** Documented relationship explorer. Topology is not metric cartography. */
 import { TOPOLOGY, conceptualLayout, linksForNode, validateSourceTopology } from './source-topology.js';
+import { searchCanonEntities } from './canon-registry.js';
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
 const SVG_NS='http://www.w3.org/2000/svg';
@@ -70,7 +70,33 @@ export function initSourceGraph(){
     for(const line of lineLayer.querySelectorAll('.source-edge'))line.classList.toggle('active',line.getAttribute('data-from')===id||line.getAttribute('data-to')===id);
     for(const b of relationships.children)b.classList.toggle('active',b.dataset.linked?.split(' ').includes(id));
   }
-  function filter(){const q=search.value.trim().toLowerCase();for(const [id,b] of btns){const n=TOPOLOGY.nodes.find(x=>x.id===id);b.classList.toggle('dimmed',!!q&&!([n.label,n.kind,n.id].some(v=>v.toLowerCase().includes(q))));}}
+  function filter(){
+    const q=search.value.trim().toLowerCase();
+    let directMatches=0;
+    for(const [id,b] of btns){
+      const n=TOPOLOGY.nodes.find(x=>x.id===id);
+      const match=!q||[n.label,n.kind,n.id].some(v=>v.toLowerCase().includes(q));
+      b.classList.toggle('dimmed',!match);
+      if(match&&q)directMatches++;
+    }
+    if(q&&directMatches===0){
+      const canonHits=searchCanonEntities(q).slice(0,6);
+      if(canonHits.length){
+        details.replaceChildren(
+          el('div','source-eyebrow','CANON DOSSIER 127 REGISTRY / MATCHES'),
+          el('h3','','CANONICAL EVIDENCE FOUND'),
+          el('p','source-warning','The query matches authoritative character/strain records from the Dossier. These entities are canonical identities with unauthored spatial coordinates.')
+        );
+        for(const c of canonHits){
+          const row=el('div','source-linked-edge');
+          row.append(el('span','source-evidence-chip',c.group.toUpperCase()),el('span','',c.name),makeSourceLink(c.humanUrl,'DOSSIER ↗'));
+          details.append(row);
+        }
+      }
+    }else if(!q){
+      select(selected);
+    }
+  }
   search.addEventListener('input',filter);
   $('sourceGraphOpen').addEventListener('click',()=>{dialog.showModal();select(selected);});
   $('sourceGraphClose').addEventListener('click',()=>dialog.close());

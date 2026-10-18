@@ -2,26 +2,24 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 10
+revision: 12
 
 ## Current baseline
 
-- Current primary repository: `westkitty/Starsilk_Map_of_the_All` (local Git primary, pending successful GitHub creation/push). The character Dossier remains read-only.
+- Current primary repository: `westkitty/Starsilk_Map_of_the_All` on branch `feature/omni-uplift-100`.
 - The Atlas is at this repository root. The earlier embedded Planner map and the mature orbital simulator remain protected and unchanged.
 - Local canvas/page code and versioned JSON schema v1 exist.
 - 7 starting galaxies, 35 starting systems, 105 starting planets, 2 labeled source-identity landmarks, 10 proposed corridors. Every numeric coordinate is generated/editorial.
+- 127 authoritative stable identities from the Character Dossier are indexed in read-only `canon-registry.js` with unauthored coordinates.
 - No physical distance/ephemeris or canonical territory is asserted.
 - The UI separates read-only source-linked landmarks from editable drafts; imports demote any source-identity claim.
 - The advanced planet simulator is not coupled or replaced.
 
 ## Verification states
 
-- VERIFIED (2026-10-17): Node atlas schema, safety and editor-markup tests; JavaScript syntax.
-- VERIFIED (2026-10-17): parent TypeScript checks; 230/230 pre-existing Vitest tests; Vite production multi-page build, bundle/PWA budget.
-- VERIFIED (desktop Brave): WebGL viewport, projected labels, 11 layer toggles, rename and local autosave through reload, All-to-galaxy-to-system navigation, added planet/annotation, JSON export, parent entrypoint HTTP 200, zero observed runtime page exceptions or HTTP failures.
-- VERIFIED (emulated touch): 1280x800 tablet and 412x915 phone viewports, no page errors or horizontal overflow; inspector dismissal and hidden unselected edit form.
+- VERIFIED (2026-10-17 / Campaign Phase 01): Circular point shader starfield, label truncation fixed, drawer shortcuts [1]-[6], All-framing optimization, 125 draw calls, 81/81 tests pass. Commit SHA: `a2d442781f1871b3b6023401051c920417edea60`.
+- VERIFIED (2026-10-17 / Campaign Phase 02): 127 stable Dossier identities indexed, canon search across Principal, Peripheral, Drakken and Foundational groups, unplaced canonical inspector UI with Dossier links, repair alerts (AT-001, AT-010), source revision footer (`862bc476`), 86/86 Node tests pass, Playwright browser test pass (125 desktop / 125 tablet / 77 phone draw calls, 0 console errors), production build within budget.
 - NOT VERIFIED: Galaxy Tab S9/S Pen physical behavior, hardware frame rates and thermals, long-session reliability, production GitHub Pages publication, canonical map coordinates.
-- After committing, confirm the remote feature-branch commit and push against GitHub evidence. This state file is not proof of publication.
 
 See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 
