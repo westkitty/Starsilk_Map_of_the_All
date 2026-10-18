@@ -164,29 +164,31 @@ export class AtlasEngine {
   }
   initBackground(){
     const rnd=rng(1106),p=[],colors=[],sizes=[],alphas=[];
-    for(let i=0;i<1900;i++){
+    for(let i=0;i<1300;i++){
       const x=(rnd()-.5)*1450,y=(rnd()-.5)*780,z=(rnd()-.5)*1050;
-      if(z < -110)continue; // The area beyond the Siege Wall is deliberately starless.
+      if(z < -110)continue;
+      if(x > -30 && z < -72)continue; // Strictly starless in Siege Wall devouring void
       p.push(x,y,z);
       const t=rnd();
       const c = t > 0.85 ? new THREE.Color('#ffd29d') : t < 0.25 ? new THREE.Color('#93e6ff') : new THREE.Color('#ffffff');
       colors.push(c.r,c.g,c.b);
-      sizes.push(.75+Math.pow(rnd(),3)*2.4);
-      alphas.push(.4+rnd()*.55);
+      sizes.push(.65+Math.pow(rnd(),3)*1.8);
+      alphas.push(.3+rnd()*.45);
     }
-    for(let i=0;i<1100;i++){
+    for(let i=0;i<700;i++){
       const fAngle=rnd()*Math.PI*2;
-      const fRadius=340+rnd()*460;
-      const fTilt=(rnd()-.5)*260;
-      const x=Math.cos(fAngle)*fRadius+(rnd()-.5)*130;
-      const y=fTilt+(rnd()-.5)*70;
-      const z=Math.sin(fAngle)*fRadius+(rnd()-.5)*130;
-      if(z < -110)continue; // Siege Wall black-hole containment lattice: strictly starless
+      const fRadius=320+rnd()*440;
+      const fTilt=(rnd()-.5)*240;
+      const x=Math.cos(fAngle)*fRadius+(rnd()-.5)*100;
+      const y=fTilt+(rnd()-.5)*60;
+      const z=Math.sin(fAngle)*fRadius+(rnd()-.5)*100;
+      if(z < -110)continue;
+      if(x > -30 && z < -72)continue;
       p.push(x,y,z);
       const c=new THREE.Color('#7ca0c4').lerp(new THREE.Color('#b3c3db'),rnd());
       colors.push(c.r,c.g,c.b);
-      sizes.push(1.6+rnd()*1.8);
-      alphas.push(.18+rnd()*.22);
+      sizes.push(1.2+rnd()*1.4);
+      alphas.push(.14+rnd()*.18);
     }
     const g=new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
@@ -322,7 +324,7 @@ export class AtlasEngine {
    * mesh, and its luminous stars live in one GPU particle batch. This is
    * editorial cartography, never a real astrometric reconstruction.
    */
-  makeDropStem(parent,pos,gridY=-19,color=0x2f6485,size=1.0,isReference=false){
+  makeDropStem(parent,pos,gridY=-22,color=0x2f6485,size=1.0,isReference=false){
     const [x,y,z]=pos;
     if(Math.abs(y-gridY)<1.2)return;
     const pts=[new THREE.Vector3(x,y,z),new THREE.Vector3(x,gridY,z)];
@@ -481,7 +483,7 @@ export class AtlasEngine {
         const tiltX=((hash(n.id)%19)-9)*.012,tiltZ=((hash(n.id+'z')%19)-9)*.012;
         group.rotation.set(tiltX,0,tiltZ);
         this.group.add(group);
-        if(s.layers.grid)this.makeDropStem(this.group,n.position,-19,0x2f6485,n.size,n.status==='reference');
+        if(s.layers.grid)this.makeDropStem(this.group,n.position,-22,0x2f6485,n.size,n.status==='reference');
         const level=s.quality==='cinematic'?2000:s.quality==='battery'?420:1150;
         const morph=getGalaxyMorphology(n);
         this.galaxyDisk(group,n.id,n.size*22,n.color,morph);
@@ -506,7 +508,7 @@ export class AtlasEngine {
     if(s.layers.worldsvault){
       for(const n of childNodes(s,null).filter(n=>n.kind==='landmark')){
         const group=new THREE.Group();group.position.copy(V(n.position));this.group.add(group);
-        if(s.layers.grid)this.makeDropStem(this.group,n.position,-19,0x6bbfe8,n.size,true);
+        if(s.layers.grid)this.makeDropStem(this.group,n.position,-22,0x6bbfe8,n.size,true);
         const crystal=new THREE.Mesh(new THREE.IcosahedronGeometry(4*n.size,1),new THREE.MeshStandardMaterial({color:n.color,wireframe:true,transparent:true,opacity:.75,emissive:n.color,emissiveIntensity:1.25}));group.add(crystal);
         this.addGlow(group,13,n.color,.6);this.addRing(group,7,n.color,.55);
         this.createPickTarget(7,n,group);
@@ -586,8 +588,29 @@ export class AtlasEngine {
     dust.name='continental-nebula-bed';
     this.group.add(dust);
   }
-  makeGrid(size,step){for(let x=-size/2;x<=size/2;x+=step)this.group.add(lines([new THREE.Vector3(x,-19,-size/2),new THREE.Vector3(x,-19,size/2)],0x2d6581,.16));
-    for(let z=-size/2;z<=size/2;z+=step)this.group.add(lines([new THREE.Vector3(-size/2,-19,z),new THREE.Vector3(size/2,-19,z)],0x2d6581,.16));}
+  makeGrid(size=360,step=24){
+    const halfX=180,halfZ=110;
+    const gridY=-22;
+    for(let x=-halfX;x<=halfX;x+=step){
+      this.group.add(lines([new THREE.Vector3(x,gridY,-halfZ),new THREE.Vector3(x,gridY,halfZ)],0x1c445c,.16));
+    }
+    for(let z=-halfZ;z<=halfZ;z+=step){
+      this.group.add(lines([new THREE.Vector3(-halfX,gridY,z),new THREE.Vector3(halfX,gridY,z)],0x1c445c,.16));
+    }
+    this.makeRimDropStems(gridY);
+  }
+  makeRimDropStems(gridY=-22){
+    const rimPoints = [
+      [-128,4,-10],[-118,-4,18],[-104,-12,48],[-72,-10,58],[-36,-8,64],
+      [4,-6,62],[42,-5,58],[82,-8,62],[118,-12,56],[142,-15,48],
+    ];
+    for(const [x,y,z] of rimPoints){
+      const pts=[new THREE.Vector3(x,y,z),new THREE.Vector3(x,gridY,z)];
+      this.group.add(lines(pts,0x245878,0.28,true));
+      const tickPts=[new THREE.Vector3(x-1.5,gridY,z),new THREE.Vector3(x+1.5,gridY,z)];
+      this.group.add(lines(tickPts,0x38bdf8,0.45));
+    }
+  }
   makeTerritories(){
     for(const n of childNodes(this.state,null,'galaxy')){
       const c=new THREE.Color(n.color);
