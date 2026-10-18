@@ -126,7 +126,7 @@ export class StrategicStudio {
       +'\nOnly the current era changes. Undo restores the entire selection in one step.';
     if(!window.confirm(warning))return;
     this.cancelGesture();
-    if(this.onChange(state=>deleteObjects(state,targets))){
+    if(this.onChange(state=>deleteObjects(state,targets),{immediate:true})){
       this.groupIds=[];this.sync();
       this.onMessage('Deleted '+plan.nodeCount+' draft node(s), '+plan.routeCount+' corridor(s), '+plan.regionCount+' region(s). One Undo restores all.');
     }
@@ -352,7 +352,7 @@ export class StrategicStudio {
   }
   deleteRegion(){const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
     if(!window.confirm('Delete this editorial draft sector? Undo restores it.'))return;
-    this.onChange(s=>deleteObject(s,r.id,{type:'region'}));this.regionId=null;this.sync();
+    this.onChange(s=>deleteObject(s,r.id,{type:'region'}),{immediate:true});this.regionId=null;this.sync();
   }
   selectEnclosed(){
     const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;

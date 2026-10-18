@@ -123,3 +123,8 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
 .source-integrity-grid{font:8.5px/1.4 var(--mono);color:#93c5fd;margin-bottom:4px}
 .source-integrity-notice{font:7.5px/1.2 var(--mono);color:#64748b;letter-spacing:.02em;line-height:1.35}
 .source-repair-badge{color:#f59e0b;font-weight:600}
+
+/* Recovery tools live in the existing Explore drawer; they never hide source data. */
+.atlas-recovery-tools{display:grid;gap:8px;padding:11px;border:1px solid #5a8e9b;background:#071d2beF;border-radius:5px;margin:10px 0}
+.atlas-recovery-tools .small-note{margin:0;color:#d1eaf0;line-height:1.55}
+.atlas-recovery-tools button{min-height:42px;white-space:normal;text-align:center}
