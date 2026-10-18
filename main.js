@@ -13,6 +13,7 @@ import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, 
 import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations } from './canon-registry.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
+import { getNodeSigilSvg, getAssetProvenance } from './source-assets.js';
 
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
@@ -198,7 +199,8 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
   gui.form.hidden=!n;
   if(!n){$('inspectorTitle').textContent=view.kind==='all'?'A UNIVERSE IN REVISION':'INSPECT THE UNKNOWN';$('inspectorKind').textContent=view.kind.toUpperCase()+' / OBSERVATORY';
     intro.textContent=view.kind==='all'?'Many galaxies, one continuum. Choose a luminous node to open its evidence and editable draft geometry.':'Select a luminous marker to inspect it; double-click to descend one cosmic scale.';
-    $('inspectorStatus').textContent='SOURCE / VISUALIZATION SEPARATED';$('objectSigil').style.borderColor='rgba(120,201,231,.4)';return;}
+    $('inspectorStatus').textContent='SOURCE / VISUALIZATION SEPARATED';$('objectSigil').style.borderColor='rgba(120,201,231,.4)';
+    $('objectSigil').innerHTML='<span>&#10023;</span>';return;}
   $('inspectorTitle').textContent=n.name;$('inspectorKind').textContent=n.kind.toUpperCase()+' / '+(n.status==='reference'?'CANON CONCEPT':'EDITORIAL DRAFT');
   if(n.kind==='galaxy'){
     const morph=getGalaxyMorphology(n);
@@ -226,6 +228,7 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
   }
   $('inspectorStatus').textContent=n.status==='reference'?'SOURCE IDENTITY / READ ONLY':'DRAFT COORDINATE / NOT CANON';
   $('objectSigil').style.borderColor=n.color;
+  $('objectSigil').innerHTML=getNodeSigilSvg(n);
   $('objName').value=n.name;$('objDescription').value=n.description;
   for(const [axis,index] of [['X',0],['Y',1],['Z',2]])$('obj'+axis).value=String(n.position[index]);
   $('objColor').value=n.color;$('objSize').value=n.size;
@@ -332,6 +335,18 @@ function updateSources(){
   if(canonMatch){
     const repair=CANON_REPAIR_HIGHLIGHTS.find(r=>r.subject.toLowerCase().includes(canonMatch.id)||r.subject.toLowerCase().includes(canonMatch.name.toLowerCase()));
     if(repair)frag.append(el('div','source-notice-chip','CANON INVARIANT ['+repair.id+']: '+repair.subject));
+  }
+  if(n){
+    const prov=getAssetProvenance(n);
+    if(prov){
+      const card=el('div','asset-provenance-card');
+      card.append(
+        el('div','provenance-title',`CARTOGRAPHIC VECTOR ASSET · ${prov.assetId.toUpperCase()}`),
+        el('div','provenance-grid',`TYPE: ${prov.provenanceType} · SOURCE: ${prov.sourceAnchor}`),
+        el('div','provenance-notice',`NOTICE: ${prov.authorityNotice}`)
+      );
+      frag.append(card);
+    }
   }
   const rev=el('div','source-revision-footer');
   rev.append(el('span','','DOSSIER REF: 862bc476 · 127 STABLE IDS'),el('span','','CANON: 170-YR BLOOD ECLIPSE WAR'));

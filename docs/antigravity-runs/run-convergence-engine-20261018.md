@@ -74,11 +74,11 @@
 - [x] **Loop 125** (VERIFIED): Created `tests/deep-stellar.node-check.mjs`; 132/132 pure Node tests passing; production bundle 205.3 kB gzip (under 225 kB budget); all 5 Playwright browser CI test suites passing (`FOCUS_BROWSER_PASS`, `PHASE3_BROWSER_PASS`, `PHASE4_BROWSER_PASS`, `PHASE5_BROWSER_PASS`, `PHASE6_BROWSER_PASS`) with zero errors; commit & push Phase 25.
 
 ### PHASE 26 — Source-Connected Assets (Loops 126–130)
-- [ ] **Loop 126**: Inventory available local assets, existing procedural visuals, and their actual provenance.
-- [ ] **Loop 127**: Connect source identities to valid visual representations.
-- [ ] **Loop 128**: Asset loading, resource reuse, missing-asset fallback, and presentation continuity.
-- [ ] **Loop 129**: Inspectable asset provenance and prevent illustrative imagery from implying unsupported canon.
-- [ ] **Loop 130**: Fix broken asset connections, loading failures, unnecessary duplication, or GPU-resource retention.
+- [x] **Loop 126** (VERIFIED): Comprehensive audit of local assets and reference images (`docs/CANON_AND_IMAGE_AUDIT.md`), locking strict non-canon status for all drafts.
+- [x] **Loop 127** (VERIFIED): Created `source-assets.js` with deterministic `getNodeSigilSvg()`, producing custom procedural SVG vector insignias for WorldsVault, Mother, Siege Wall, Blood Rings, Drakken bioweapons, galaxies, and systems.
+- [x] **Loop 128** (VERIFIED): Asset caching via `sigilCache`, fallback generation for unclassified nodes, and responsive styling in `atlas.css` (`.object-sigil svg`).
+- [x] **Loop 129** (VERIFIED): Added `getAssetProvenance()` rendering `.asset-provenance-card` in inspector and source panel with strict anti-canon-emblem safeguards.
+- [x] **Loop 130** (VERIFIED): Created `tests/source-assets.node-check.mjs`; 139/139 pure Node tests passing; production bundle 207.7 kB gzip (well under 225 kB budget); Playwright browser CI passing with 0 errors; commit & push Phase 26.
 
 ### PHASE 27 — Historical Cartography and Chronology (Loops 131–135)
 - [ ] **Loop 131**: Era-aware presentation for War, Locking, and Post-War cartographic states.

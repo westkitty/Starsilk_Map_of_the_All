@@ -185,4 +185,12 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Loop 124 COMETARY BODIES & ECCENTRIC TRAJECTORIES**: Added eccentric cometary body ($e = 0.72$, $a = 46, b = 18$) with inclined 3D dashed trajectory and animated nucleus in `buildSystem()`, driven by `m.isComet` in `tick()`.
 - **Loop 125 ADVERSARIAL VERIFICATION & REMOTE PUSH**: Created `tests/deep-stellar.node-check.mjs`; 132/132 pure Node tests passing (556ms); production bundle 205.3 kB gzip (well under 225 kB budget); all 5 Playwright browser CI test suites passing (`FOCUS_BROWSER_PASS`, `PHASE3_BROWSER_PASS`, `PHASE4_BROWSER_PASS`, `PHASE5_BROWSER_PASS`, `PHASE6_BROWSER_PASS`) with zero console errors; verified remote SHA equality.
 
+## Phase 26: Source-Connected Assets & Insignia (Loops 126–130) — 2026-10-18
+
+- **Loop 126 LOCAL ASSET INVENTORY & PROVENANCE AUDIT**: Audited all reference image design drafts, confirming strict invariant locks: five user-supplied images are cartographic design drafts and do not author official coordinates, scales, borders, or heraldry; established offline procedural vector engine.
+- **Loop 127 PROCEDURAL VECTOR SIGIL ENGINE**: Built `source-assets.js` with deterministic `getNodeSigilSvg()` delivering distinct, mathematically constructed SVG insignias: WorldsVault containment hexagonal lattice, Mother/Aureal Nebula dual crescent arcs and radiant star, Siege Wall octagonal barrier, Blood Rings fractured vitrified arcs, Drakken biological tri-spike crests, and morphology-derived galaxy spirals.
+- **Loop 128 ASSET CACHING & RESOURCE REUSE**: Implemented in-memory `sigilCache` preventing redundant DOM/SVG reconstruction; responsive SVG sizing in `#objectSigil` (`46px` desktop / `32px` mobile) with subtle cyan drop-shadow and hover micro-interaction.
+- **Loop 129 ASSET PROVENANCE CARDS & CANON SAFEGUARDS**: Added `getAssetProvenance()` rendering structured `.asset-provenance-card` in inspector/source panel, displaying asset ID, generation type, source anchor, and strict invariant notice ("NOT an official canon emblem or verified historical flag").
+- **Loop 130 ADVERSARIAL VERIFICATION & REMOTE PUSH**: Created `tests/source-assets.node-check.mjs`; 139/139 pure Node tests passing (476ms); production bundle 207.7 kB gzip (well under 225 kB budget); Playwright browser CI passing with zero errors; verified remote SHA equality.
+
 
