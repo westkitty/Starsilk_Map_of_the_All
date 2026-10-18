@@ -137,3 +137,11 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Loop 043 CANONICAL CHRONOLOGY EVIDENCE**: Added authoritative causal sequence milestones from the Dossier (Year 0 Outbreak, Year 3 Blood Rings, Year 121 Ruby Eclipse in Pharos, Year 170 Heliocide & Siege Wall Locking, Post-Year 170 Hookshot Survey) with outbound Dossier links.
 - **Loop 044 ERA TRANSITION TWEENING**: Implemented `transitionEra()` in `atlas-engine.js` with subtle opacity ease over 350ms to indicate temporal shift without blocking interaction or exceeding frame budgets.
 - **Loop 045 VERIFICATION & TEST SUITE**: Added `tests/temporal-cartography.node-check.mjs`; 105/105 pure Node tests passing; production build at 198.7 kB gzip; Playwright browser CI passing across desktop, tablet, and mobile (132/132/81 draws, 0 errors).
+
+## Phase 10: Starsilk Visual Identity & Cosmic Atmospheric FX (Loops 046–050) — 2026-10-17
+
+- **Loop 046 STARSILK CURRENT DUAL-LAYER VEIL**: Enhanced major Starsilk current and corridors with dual-layer ethereal filament geometry (deep azure outer veil + luminous cyan inner core + glowing core line) and flowing particle pulses adhering strictly to programmable non-living substrate ontology.
+- **Loop 047 SIEGE WALL BLACK-HOLE LATTICE**: Elevated Siege Wall rendering with vertical lattice lines dropping to anchor depth (`y = -36`), micro-singularity containment nodes (`#526573` and `#38bdf8`), and total light-absorption void sheet along `z < -110`.
+- **Loop 048 BLOOD RING REMNANTS**: Upgraded remnant rings to fractured vitrified crimson discs with obsidian cores, concentric dust trails, ambient rotational motion, and reference badges.
+- **Loop 049 COSMIC ATMOSPHERIC FOG**: Introduced calibrated `FogExp2` atmospheric depth (`0.0012`) receding distant horizons without clipping near stars or degrading frame performance.
+- **Loop 050 PHASE 10 VERIFICATION**: Added `tests/visual-identity.node-check.mjs`; 109 pure Node tests passing; production build 198.8 kB gzip; Playwright browser CI passing across desktop, tablet, and mobile (149/149/91 draws, 0 errors); clean git checkpoint.

@@ -33,6 +33,7 @@ export class AtlasEngine {
   constructor(canvas,labelsRoot,callbacks){
     this.canvas=canvas;this.labelsRoot=labelsRoot;this.callbacks=callbacks;
     this.scene=new THREE.Scene();this.scene.background=new THREE.Color(PALETTE.void);
+    this.scene.fog=new THREE.FogExp2(0x02070d, 0.0012);
     this.camera=new THREE.PerspectiveCamera(48,1,.1,5000);
     this.camera.position.set(0,215,280);
     this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
@@ -423,20 +424,27 @@ export class AtlasEngine {
   }
   makeWall(){
     const pts=[];const coords=[[-215,-90],[-170,-94],[-138,-77],[-113,-75],[-85,-82],[-56,-70],[-25,-90],[16,-85],[55,-94],[82,-96],[112,-105],[155,-110],[225,-95]];
-    for(const [x,z] of coords)pts.push(new THREE.Vector3(x,3+Math.sin(x*.06)*4,z));
-    this.group.add(lines(pts,0xb0b9c6,.5));
+    for(const [x,z] of coords){
+      const py = 3+Math.sin(x*.06)*4;
+      pts.push(new THREE.Vector3(x,py,z));
+      this.group.add(lines([new THREE.Vector3(x,py,z),new THREE.Vector3(x,-36,z)],0x1c3852,0.32,true));
+    }
+    this.group.add(lines(pts,0x8ba6b8,.65));
     const shape=new THREE.Shape();shape.moveTo(-250,-220);shape.lineTo(250,-220);shape.lineTo(250,-95);
     for(let i=coords.length-1;i>=0;i--)shape.lineTo(coords[i][0],coords[i][1]);shape.lineTo(-250,-90);shape.closePath();
     const geom=new THREE.ShapeGeometry(shape);geom.rotateX(-Math.PI/2);
-    const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color:0x000001,side:THREE.DoubleSide,depthWrite:true}));mesh.position.y=-10;this.group.add(mesh);
-    const rnd=rng(606);const debris=[];
-    for(let i=0;i<110;i++){
+    const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide,depthWrite:true}));mesh.position.y=-10;this.group.add(mesh);
+    const rnd=rng(606);const debris=[];const latticeNodes=[];
+    for(let i=0;i<120;i++){
       const seg=rnd()*(coords.length-1);const k=Math.floor(seg);const a=coords[k],b=coords[Math.min(k+1,coords.length-1)],t=seg-k;
       const x=a[0]+(b[0]-a[0])*t, z=a[1]+(b[1]-a[1])*t;
       debris.push(x+(rnd()-.5)*10,(rnd()-.5)*12,z+(rnd()-.5)*9);
+      if(i%2===0)latticeNodes.push(x+(rnd()-.5)*4,(rnd()-.5)*8,z+(rnd()-.5)*4);
     }
     const p=new THREE.BufferGeometry();p.setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
-    this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0xa9a9a9,size:.45,transparent:true,opacity:.6})));
+    this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0x526573,size:.55,transparent:true,opacity:.7})));
+    const lp=new THREE.BufferGeometry();lp.setAttribute('position',new THREE.Float32BufferAttribute(latticeNodes,3));
+    this.group.add(new THREE.Points(lp,new THREE.PointsMaterial({color:0x38bdf8,size:.65,transparent:true,opacity:.55})));
     const wallLabel={id:'wall-concept',name:'THE SIEGE WALL',status:'reference',label:{show:true,size:19,color:'#d1d6de',family:'display'}};
     const o=new THREE.Object3D();o.position.set(35,10,-103);this.group.add(o);this.labelItems.push({node:wallLabel,obj:o,subtitle:'BLACK-HOLE LATTICE / ABSENCE'});
   }
@@ -447,26 +455,42 @@ export class AtlasEngine {
       const p=V(a.position),q=V(b.position),m=p.clone().add(q).multiplyScalar(.5);m.y+=9;
       const c=new THREE.QuadraticBezierCurve3(p,m,q);
       const samples=c.getPoints(48);const azure=r.kind==='starsilk';
-      this.group.add(lines(samples,azure?0x26dfff:0xb6c8d6,azure?.7:.26,!azure));
+      this.group.add(lines(samples,azure?0x60ebff:0xb6c8d6,azure?.82:.26,!azure));
       if(azure){
-        const halo=new THREE.Mesh(new THREE.TubeGeometry(c,54,.30,5,false),new THREE.MeshBasicMaterial({color:0x18bfff,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false}));this.group.add(halo);
+        const halo=new THREE.Mesh(new THREE.TubeGeometry(c,54,.32,5,false),new THREE.MeshBasicMaterial({color:0x0ea5e9,transparent:true,opacity:.22,blending:THREE.AdditiveBlending,depthWrite:false}));this.group.add(halo);
         for(let i=0;i<5;i++){
-          const particle=this.addGlow(this.group,3,'#6cefff',.65);
+          const particle=this.addGlow(this.group,3.2,'#78f0ff',.7);
           this.routeParticles.push({obj:particle,curve:c,phase:i/5,speed:.055});
         }
       }
     }
     if(parentId===null&&this.state.layers.starsilk){
       const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-158,-11,65),new THREE.Vector3(-90,-9,77),new THREE.Vector3(-35,-15,87),new THREE.Vector3(30,-8,72),new THREE.Vector3(95,-10,80),new THREE.Vector3(152,-7,65)]);
-      this.group.add(new THREE.Mesh(new THREE.TubeGeometry(curve,128,1.1,7,false),new THREE.MeshBasicMaterial({color:0x13cfff,transparent:true,opacity:.36,blending:THREE.AdditiveBlending,depthWrite:false})));
-      this.group.add(lines(curve.getPoints(128),0x9cf6ff,.68));
-      for(let i=0;i<14;i++){const particle=this.addGlow(this.group,i%3?2.5:4,'#3bdeff',.65);this.routeParticles.push({obj:particle,curve,phase:i/14,speed:.04});}
+      const outerVeil=new THREE.Mesh(new THREE.TubeGeometry(curve,128,2.2,7,false),new THREE.MeshBasicMaterial({color:0x0284c7,transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false}));
+      const innerCore=new THREE.Mesh(new THREE.TubeGeometry(curve,128,0.95,7,false),new THREE.MeshBasicMaterial({color:0x06b6d4,transparent:true,opacity:.38,blending:THREE.AdditiveBlending,depthWrite:false}));
+      this.group.add(outerVeil,innerCore);
+      this.group.add(lines(curve.getPoints(128),0xbaf3ff,.78));
+      for(let i=0;i<16;i++){
+        const particle=this.addGlow(this.group,i%3?2.8:4.5,'#38bdf8',.72);
+        this.routeParticles.push({obj:particle,curve,phase:i/16,speed:.042});
+      }
     }
   }
-  makeRemnantRings(){const pos=[[-70,-12,48],[63,5,49]];for(const [x,y,z] of pos){
-    const g=new THREE.Group();g.position.set(x,y,z);this.group.add(g);
-    const m=new THREE.Mesh(new THREE.TorusGeometry(5,.22,7,65),new THREE.MeshBasicMaterial({color:0x9e4834,transparent:true,opacity:.8}));m.rotation.x=.48;g.add(m);
-  }}
+  makeRemnantRings(){
+    const pos=[[-70,-12,48],[63,5,49]];
+    for(const [x,y,z] of pos){
+      const g=new THREE.Group();g.position.set(x,y,z);this.group.add(g);
+      const outerRing=new THREE.Mesh(new THREE.RingGeometry(4.2,5.5,64),new THREE.MeshBasicMaterial({color:0xb91c1c,side:THREE.DoubleSide,transparent:true,opacity:.65,depthWrite:false}));
+      outerRing.rotation.x=0.48;
+      const core=new THREE.Mesh(new THREE.SphereGeometry(0.75,16,16),new THREE.MeshStandardMaterial({color:0x3b070c,emissive:0x7f1d1d,roughness:.8}));
+      const dustRing=new THREE.Mesh(new THREE.RingGeometry(6.0,6.3,48),new THREE.MeshBasicMaterial({color:0xef4444,side:THREE.DoubleSide,transparent:true,opacity:.28,depthWrite:false}));
+      dustRing.rotation.x=0.48;
+      g.add(outerRing,core,dustRing);
+      this.motionObjects.push({obj:g,speed:0.00028});
+      const ringLabel={id:'remnant-'+x,name:'BLOOD RING REMNANT',status:'reference',label:{show:true,size:10,color:'#fca5a5',family:'mono'}};
+      this.labelItems.push({node:ringLabel,obj:g,subtitle:'YEAR 3 WAR DEBRIS'});
+    }
+  }
   makeAnnotations(parentId){for(const n of childNodes(this.state,parentId,'annotation')){
     const g=new THREE.Group();g.position.copy(V(n.position));this.group.add(g);
     const o=new THREE.Mesh(new THREE.OctahedronGeometry(1.8),new THREE.MeshBasicMaterial({color:n.color,wireframe:true}));g.add(o);this.hitTarget(n,o);
