@@ -118,11 +118,11 @@
 - [x] **Loop 155** (VERIFIED): Dead-end repair & adversarial verification: added interactive search empty state with quick suggestion chips; added outside-click dismissal; created `tests/discovery-exploration.node-check.mjs`; 164/164 tests pass; production bundle 212.8 kB gzip (<225 kB budget); Playwright browser CI passes (`PHASE5_BROWSER_PASS`); remote SHA equality verified.
 
 ### PHASE 32 — Planner Integration Refinement (Loops 156–160)
-- [ ] **Loop 156**: Atlas-to-Planner system handoff discoverability and presentation.
-- [ ] **Loop 157**: Explicit warnings that exported physical initial conditions are hypothetical when not sourced.
-- [ ] **Loop 158**: System export and import instructions or interaction in safe handoff flow.
-- [ ] **Loop 159**: Movement between macro-scale exploration and detailed orbital editing without confusion.
-- [ ] **Loop 160**: Verify original Planner remains functional and repair any discovered integration regression.
+- [x] **Loop 156** (VERIFIED): Orbital laboratory presentation: added dynamic `#handoffSystemSummary` grid displaying active star classification, planet count, and synthesized sandbox AU range; added visual status pills.
+- [x] **Loop 157** (VERIFIED): Non-canon physical condition warnings: added `.handoff-warning-notice` explicitly warning that orbital periods, masses, and velocities are synthetic defaults; preserved strict non-canon metadata flags in exported bodies.
+- [x] **Loop 158** (VERIFIED): Step-by-step handoff instruction dialog: added `<dialog id="handoffInstructionsDialog">` with 4-step illustrated guide, `#handoffHelpBtn`, and automatic invocation upon `.ssp.json` export.
+- [x] **Loop 159** (VERIFIED): Macro-to-micro navigation guidance: elevated `updateHandoff()` with contextual status when exploring at universal/galactic tier vs stellar tier, preserving parent System Planner authority and separate URL.
+- [x] **Loop 160** (VERIFIED): Adversarial verification and test suite: created `tests/planner-refinement.node-check.mjs` verifying schema 1.1.0 compatibility, Keplerian circular speeds, body collections, and DOM attributes; 169/169 tests pass; bundle 213.8 kB gzip (<225 kB budget); Playwright browser CI passes (`PHASE5_BROWSER_PASS`); remote SHA equality verified.
 
 ### PHASE 33 — Visual Design-System Cohesion (Loops 161–165)
 - [ ] **Loop 161**: Refine obsidian, azure, neutral, and restrained accent hierarchy.

@@ -68,8 +68,18 @@
     </form>
     <section class="orbital-handoff" aria-label="Orbital handoff to system planner">
       <div class="panel-heading"><span>ORBITAL LABORATORY</span><small>NON-CANON</small></div>
+      <div class="handoff-pill-bar"><span class="handoff-pill pill-hypo">HYPOTHETICAL SANDBOX</span><span class="handoff-pill pill-schema">SCHEMA 1.1.0</span></div>
+      <div id="handoffSystemSummary" class="handoff-summary-grid"></div>
       <p id="plannerHandoffInfo">Select a draft stellar system to create a hypothetical orbital laboratory file. Atlas display coordinates never become physical measurements.</p>
-      <div class="handoff-actions"><button type="button" id="handoffExportBtn" class="button-outline" disabled>EXPORT SYSTEM .SSP ↗</button><a id="handoffOpenPlanner" class="button-outline" href="https://westkitty.github.io/Star_System_Planner/" target="_blank" rel="noopener noreferrer">OPEN PLANNER ↗</a></div>
+      <div class="handoff-warning-notice">
+        <span class="handoff-warn-icon" aria-hidden="true">⚠️</span>
+        <span class="handoff-warn-text">NON-CANON SANDBOX: Orbital radii, masses, and Keplerian velocities are synthetic defaults. Starsilk canon authors NO planetary masses or orbital periods.</span>
+      </div>
+      <div class="handoff-actions">
+        <button type="button" id="handoffExportBtn" class="button-outline" disabled>EXPORT SYSTEM .SSP ↗</button>
+        <button type="button" id="handoffHelpBtn" class="button-outline faint">IMPORT GUIDE ℹ</button>
+        <a id="handoffOpenPlanner" class="button-outline" href="https://westkitty.github.io/Star_System_Planner/" target="_blank" rel="noopener noreferrer">OPEN PLANNER ↗</a>
+      </div>
     </section>
     <div class="source-section"><div class="panel-heading"><span>CANON PROVENANCE</span><small>READ ONLY</small></div><div id="sourceLinks" class="source-list"></div></div>
     <div class="panel-heading"><span>INSTRUMENTATION</span><small>GPU / LIVE</small></div>
@@ -217,6 +227,37 @@
     <p class="source-license-note">Read-only projection · Dossier machine publication SHA 862bc476fb8165784704151eed35c915cbf31bf4. No atlas editor action changes these records.</p>
   </dialog>
   <dialog id="helpDialog" class="help-dialog"><h2>THE CARTOGRAPHER'S DESK</h2><p>This is a spatial hypothesis, not a canonical star chart. Every starting point and corridor is editable draft geometry. Only verified names and relationships should be promoted through separate canon governance.</p><div class="help-grid"><div><b>EXPLORATION</b><p>Drag or swipe to orbit. Pinch or scroll to zoom. Select a marker. Double-click a galaxy to explore its systems; double-click a system to inspect planets.</p></div><div><b>AUTHORING</b><p>Use Spatial Studio: ORBIT for camera movement, MOVE to drag editable draft markers in XZ or Y, ROUTE to connect same-tier draft objects, TYPE to drag editable labels. Press Escape to cancel an active gesture. The inspector also supports precise XYZ and typography values. Edits are saved in this browser and can be exported as JSON.</p></div><div><b>NETWORK INTELLIGENCE</b><p>Trace minimal corridor hops, inspect disconnected clusters and cut edges, simulate temporary closures, and optionally create one explicit draft link. No real travel metrics.</p></div><div><b>THE TEMPORAL ATLAS</b><p>Use EDIT / COMPARE by the era selector to switch independent draft periods, inspect added/moved/removed objects, and save editorial era notes. Change trails are schematic. No historical dates or canonical coordinates are inferred.</p></div><div><b>STRATEGY LAB</b><p>Select draft objects into groups, drag the centroid handle or use nudge controls; draw or edit validated polygon boundaries; inspect corridor connectivity. Undo is one atomic edit per release.</p></div><div><b>KEYBOARD</b><p>H: hide HUD. /: search. Escape: up one scale. F: focus selection. Home: return to the All.</p></div><div><b>CANON BOUNDARY</b><p>WorldsVault identities and documented relationships have references. None of the map's coordinates, proposed regions, displayed routes, or exemplary planetary orbits is established lore.</p></div></div><button id="closeHelp" class="primary-button">CLOSE INSTRUMENT</button></dialog>
+  <dialog id="handoffInstructionsDialog" class="help-dialog" aria-labelledby="handoffDialogHeading">
+    <h2 id="handoffDialogHeading">ATLAS → STAR SYSTEM PLANNER HANDOFF</h2>
+    <div class="dialog-badge-bar"><span class="dialog-badge">STANDALONE COMPATIBILITY</span><span class="dialog-badge">SCHEMA 1.1.0</span><span class="dialog-badge">NON-CANON INITIAL CONDITIONS</span></div>
+    <p>Map of the All handles macro-scale cosmological cartography. The sibling <strong>Star System Planner</strong> owns detailed 60 FPS gravitational n-body physics.</p>
+    <div class="handoff-step-grid">
+      <div class="handoff-step-card">
+        <div class="step-num">01</div>
+        <b>EXPORT HYPOTHETICAL .SSP.JSON</b>
+        <p>In Map of the All, enter any draft stellar system and click <strong>EXPORT SYSTEM .SSP</strong>. This creates an authorized <code>.ssp.json</code> file with Keplerian circular orbits.</p>
+      </div>
+      <div class="handoff-step-card">
+        <div class="step-num">02</div>
+        <b>OPEN STAR SYSTEM PLANNER</b>
+        <p>Open the sibling <a href="https://westkitty.github.io/Star_System_Planner/" target="_blank" rel="noopener noreferrer">Star System Planner simulator ↗</a> in a separate tab. Your current Map of the All session stays open.</p>
+      </div>
+      <div class="handoff-step-card">
+        <div class="step-num">03</div>
+        <b>IMPORT FILE INTO SIMULATOR</b>
+        <p>In the Planner's top-left controls, click <strong>IMPORT</strong> and select the downloaded file. The simulator will load the system into its isolated physics engine.</p>
+      </div>
+      <div class="handoff-step-card">
+        <div class="step-num">04</div>
+        <b>EXPLORE GRAVITATIONAL ORBITS</b>
+        <p>Tweak planetary masses, simulate Lagrange points, plot delta-v maneuvers, or observe resonance stability. Edits in the simulator never overwrite Atlas cartography.</p>
+      </div>
+    </div>
+    <div class="help-actions">
+      <a class="primary-button" href="https://westkitty.github.io/Star_System_Planner/" target="_blank" rel="noopener noreferrer">OPEN PLANNER IN NEW TAB ↗</a>
+      <button type="button" id="closeHandoffInstructions" class="button-outline">CLOSE GUIDE</button>
+    </div>
+  </dialog>
   <div class="notifications" id="notifications" aria-live="polite"></div>
   <div class="loading" id="loading"><div class="loading-symbol">S</div><div>CHARTING THE ALL</div><small>INITIALIZING THE OBSERVATORY</small></div>
 </div>

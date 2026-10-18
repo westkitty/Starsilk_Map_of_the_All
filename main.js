@@ -8,7 +8,7 @@ import { NetworkLab } from './network-lab.js';
 import { SpatialStudio } from './spatial-studio.js';
 import { validateCorridor } from './studio-math.js';
 import { initSourceGraph } from './source-graph-ui.js';
-import { createPlannerHandoff, validateHandoff, makeHandoffFilename } from './planner-handoff.js';
+import { createPlannerHandoff, validateHandoff, makeHandoffFilename, getHandoffSystemMetadata } from './planner-handoff.js';
 import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
 import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations } from './canon-registry.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
@@ -383,19 +383,35 @@ function currentHandoffSystem(){
 function updateHandoff(){
   const system=currentHandoffSystem();
   $('handoffExportBtn').disabled=!system;
-  $('plannerHandoffInfo').textContent=system
-    ? `Prepare ${system.name} and its draft planets as a hypothetical system. Orbital distances, star mass and planetary properties use sandbox defaults; these are NOT measurements of this atlas.`
-    : 'Select a draft system or enter its system view. Export creates a hypothetical .ssp.json, not canon coordinates.';
+  const summaryEl=$('handoffSystemSummary');
+  if(system){
+    const meta=getHandoffSystemMetadata(state,system.id);
+    if(summaryEl&&meta){
+      summaryEl.hidden=false;
+      summaryEl.replaceChildren(
+        el('div','handoff-summary-item',null),
+        el('div','handoff-summary-item',null)
+      );
+      summaryEl.children[0].append(el('span','','PRIMARY STAR'),el('strong','',meta.primaryMassSolar));
+      summaryEl.children[1].append(el('span','','ORBITAL CORRIDOR'),el('strong','',`${meta.planetCount} PLANETS (${meta.orbitalSpanAu})`));
+    }
+    $('plannerHandoffInfo').textContent=`Ready to export ${system.name} (${childNodes(state,system.id,'planet').length} planets) as Schema 1.1.0 initial conditions.`;
+  }else{
+    if(summaryEl)summaryEl.hidden=true;
+    $('plannerHandoffInfo').textContent='Select a draft stellar system or enter its system view. Export creates a hypothetical .ssp.json for the orbital simulator, not canon star coordinates.';
+  }
 }
 function exportPlannerHandoff(){
   const system=currentHandoffSystem();if(!system){message('Select a draft system before orbital export.',true);return;}
   try{
     const project=createPlannerHandoff(state,system.id);
     const errors=validateHandoff(project);if(errors.length)throw new Error(errors.join('; '));
+    const filename=makeHandoffFilename(project);
     const file=new Blob([JSON.stringify(project,null,2)+'\n'],{type:'application/json'});
-    const url=URL.createObjectURL(file),anchor=el('a');anchor.href=url;anchor.download=makeHandoffFilename(project);
+    const url=URL.createObjectURL(file),anchor=el('a');anchor.href=url;anchor.download=filename;
     document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    message('Hypothetical system exported. Open System Planner and use IMPORT; nothing has been auto-loaded.');
+    message(`Exported ${filename}. Click "OPEN PLANNER ↗" and select IMPORT in the simulator.`);
+    $('handoffInstructionsDialog')?.showModal();
   }catch(e){message('Orbital export refused: '+e.message,true);}
 }
 function updateScaleGauge(){
@@ -738,6 +754,8 @@ function bind(){
   $('presentBtn').addEventListener('click',toggleFocus);
   $('helpBtn').addEventListener('click',()=>$('helpDialog').showModal());$('closeHelp').addEventListener('click',()=>$('helpDialog').close());
   $('handoffExportBtn').addEventListener('click',exportPlannerHandoff);
+  $('handoffHelpBtn')?.addEventListener('click',()=>$('handoffInstructionsDialog')?.showModal());
+  $('closeHandoffInstructions')?.addEventListener('click',()=>$('handoffInstructionsDialog')?.close());
   $('exportBtn').addEventListener('click',exportAtlas);$('importBtn').addEventListener('click',()=>$('fileInput').click());
   $('fileInput').addEventListener('change',ev=>{importAtlas(ev.target.files?.[0]);ev.target.value='';});
   gui.search.addEventListener('input',showSearch);

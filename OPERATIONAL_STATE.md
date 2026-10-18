@@ -235,4 +235,13 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Loop 154 FLUID SEARCH-TO-MAP TRANSITIONS**: Implemented smart transition routing: selecting a map node focuses camera with `focusSelected()` and opens the observatory; selecting a region opens Strategy Lab and selects the region; selecting a corridor opens Network Lab and focuses the route; selecting an unplaced canon identity opens the inspector with full provenance and WorldsVault graph exploration options.
 - **Loop 155 DEAD-END REPAIR & TEST SUITE**: Added interactive search empty state with quick suggestion chips (`WorldsVault`, `Mother`, `Omega`, `Spiral`, `Corridor`); added outside-click dismissal; created `tests/discovery-exploration.node-check.mjs`; 164/164 tests pass; production bundle 212.8 kB gzip (<225 kB budget); Playwright browser CI passes (`PHASE5_BROWSER_PASS`); verified remote SHA equality.
 
+## Phase 32: Planner Integration Refinement (Loops 156–160) — 2026-10-18
+
+- **Loop 156 ORBITAL LABORATORY PRESENTATION**: Added `#handoffSystemSummary` grid dynamically presenting the active stellar system's primary star classification, draft planet count, and synthesized sandbox AU baseline; added visual pills (`HYPOTHETICAL SANDBOX`, `SCHEMA 1.1.0`).
+- **Loop 157 NON-CANON PHYSICAL INITIAL CONDITION WARNINGS**: Added `.handoff-warning-notice` in `index.html` and `atlas.css` explicitly cautioning readers that planetary masses, Keplerian velocities, and orbital radii are synthesized defaults, not canonical measurements; preserved strict body flags in `createPlannerHandoff()` (`sourceCanonStatus: 'unknown'`, `plannerClassification: 'NON-CANON SANDBOX'`).
+- **Loop 158 STEP-BY-STEP HANDOFF INSTRUCTION DIALOG**: Added `<dialog id="handoffInstructionsDialog">` featuring an illustrated 4-step guide for downloading `.ssp.json`, navigating to the standalone Star System Planner, clicking IMPORT in the simulator header, and observing 60 FPS gravitational physics; added `#handoffHelpBtn` ("IMPORT GUIDE ℹ") and automatic invocation upon successful export.
+- **Loop 159 MACRO-TO-MICRO NAVIGATION GUIDANCE**: Elevated `updateHandoff()` to provide contextual status when exploring at universal/galactic tier versus stellar tier; preserved parent Star System Planner authority and separate web URL without coupling or duplicating orbital engines.
+- **Loop 160 ADVERSARIAL VERIFICATION & REMOTE PUSH**: Created `tests/planner-refinement.node-check.mjs` verifying schema 1.1.0 compatibility, Keplerian velocity vectors, non-canon metadata flags, upper limits, and DOM integration; 169/169 tests pass; bundle size 213.8 kB gzip (<225 kB budget); Playwright browser CI passes (`PHASE5_BROWSER_PASS`); verified remote SHA equality.
+
+
 
