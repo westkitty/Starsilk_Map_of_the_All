@@ -46,11 +46,11 @@
 - [x] **Loop 105** (VERIFIED): First-minute journey adversarial audit: added `tests/experience-foundation.node-check.mjs`; 114/114 pure Node tests passing (498ms); production bundle at 199.7 kB gzip (well under 225 kB budget); Playwright browser CI passing across Desktop (149 draws), Tablet (149 draws), and Mobile (91 draws) with zero console errors and clean draft recovery. Commit & push Phase 21.
 
 ### PHASE 22 — Comprehensive Source Crosswalk (Loops 106–110)
-- [ ] **Loop 106**: Offline-capable source identity index from verified Dossier and local Compendium.
-- [ ] **Loop 107**: Connect relevant source identities to inspectable Atlas interface.
-- [ ] **Loop 108**: Integrate source-authored relationships without inventing distances, routes, or coordinates.
-- [ ] **Loop 109**: UI treatment of unknown, conflicting, editorial, and source-authored properties.
-- [ ] **Loop 110**: Test source provenance, URL integrity, document revisions, and classification safety.
+- [x] **Loop 106** (VERIFIED): Offline-capable Drakken bioweapon crosswalk dictionary (`DRAKKEN_CROSSWALK`) in `canon-registry.js` with all 58 published strains mapped to candidate ID, threat tier, affinity, and S4 line anchor with invariant lock `canonApproved: null` (matching is not approval).
+- [x] **Loop 107** (VERIFIED): Connect inspectable Atlas interface to Drakken bioweapons via structured taxonomy card (`.drakken-crosswalk-card`) in `inspectCanonEntity` and `updateSources`.
+- [x] **Loop 108** (VERIFIED): Direct-authored topological relations query `getCanonicalRelations(entityId)` resolving WorldsVault edges with interactive relation chips (`.source-relation-chip`) and one-click graph focus without inventing distances, coordinates, or routes.
+- [x] **Loop 109** (VERIFIED): Cybernetic/terminal UI treatment for `.drakken-crosswalk-card` and `.source-relations-section` with interactive chips in `atlas.css`.
+- [x] **Loop 110** (VERIFIED): Created `tests/source-crosswalk.node-check.mjs`; 119/119 pure Node tests passing (436ms); production bundle 202.4 kB gzip (under 225 kB budget); Playwright browser CI passing across Desktop (149 draws), Tablet (149 draws), and Mobile (91 draws) with zero console errors and clean recovery; verified remote SHA equality. Commit & push Phase 22.
 
 ### PHASE 23 — Galaxy-Scale Visual Authorship (Loops 111–115)
 - [ ] **Loop 111**: Galaxy silhouettes and clearly layered 3D cosmic structure.

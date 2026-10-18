@@ -10,7 +10,7 @@ import { validateCorridor } from './studio-math.js';
 import { initSourceGraph } from './source-graph-ui.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename } from './planner-handoff.js';
 import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
-import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS } from './canon-registry.js';
+import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations } from './canon-registry.js';
 
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
@@ -220,6 +220,33 @@ function updateSources(){
     const link=el('a','source-item');link.href=a.url;link.target='_blank';link.rel='noopener noreferrer';
     link.append(el('strong','',a.name),el('span','',a.description));frag.append(link);
   }
+  const relId=n?.id||canonMatch?.id;
+  const rels=relId?getCanonicalRelations(relId):[];
+  if(rels.length){
+    const relSec=el('div','source-relations-section');
+    relSec.append(el('div','source-relations-title','DIRECT-AUTHORED RELATIONS (TOPOLOGY ONLY)'));
+    for(const r of rels){
+      const chip=el('button','source-relation-chip',`${r.relation.toUpperCase()}: ${r.targetName}`);
+      chip.type='button';
+      chip.title='Inspect relation in WorldsVault graph';
+      chip.addEventListener('click',()=>{
+        if(sourceGraphInstance)sourceGraphInstance.open(relId);
+        else $('sourceGraphOpen')?.click();
+      });
+      relSec.append(chip);
+    }
+    frag.append(relSec);
+  }
+  if(canonMatch?.drakkenMetadata){
+    const d=canonMatch.drakkenMetadata;
+    const card=el('div','drakken-crosswalk-card');
+    card.append(
+      el('div','crosswalk-title','DRAKKEN BIO-WEAPON TAXONOMY · '+d.sourceAnchor),
+      el('div','crosswalk-grid',`CANDIDATE: ${d.candidateId} · TIER: ${d.threatTier} · AFFINITY: ${d.affinity}`),
+      el('div','crosswalk-foot',`MATCHING: ${d.matchingState} · CANON APPROVAL: NONE (MATCHING IS NOT APPROVAL)`)
+    );
+    frag.append(card);
+  }
   if(canonMatch){
     const repair=CANON_REPAIR_HIGHLIGHTS.find(r=>r.subject.toLowerCase().includes(canonMatch.id)||r.subject.toLowerCase().includes(canonMatch.name.toLowerCase()));
     if(repair)frag.append(el('div','source-notice-chip','CANON INVARIANT ['+repair.id+']: '+repair.subject));
@@ -305,6 +332,32 @@ function inspectCanonEntity(c){
   const mainLink=el('a','source-item');mainLink.href=c.humanUrl;mainLink.target='_blank';mainLink.rel='noopener noreferrer';
   mainLink.append(el('strong','',c.name+' ↗'),el('span','','Open authoritative Dossier record ('+c.sourcePath+')'));
   frag.append(mainLink);
+  if(c.drakkenMetadata){
+    const d=c.drakkenMetadata;
+    const card=el('div','drakken-crosswalk-card');
+    card.append(
+      el('div','crosswalk-title','DRAKKEN BIO-WEAPON TAXONOMY · '+d.sourceAnchor),
+      el('div','crosswalk-grid',`CANDIDATE: ${d.candidateId} · TIER: ${d.threatTier} · AFFINITY: ${d.affinity}`),
+      el('div','crosswalk-foot',`MATCHING: ${d.matchingState} · CANON APPROVAL: NONE (MATCHING IS NOT APPROVAL)`)
+    );
+    frag.append(card);
+  }
+  const rels=getCanonicalRelations(c.id);
+  if(rels.length){
+    const relSec=el('div','source-relations-section');
+    relSec.append(el('div','source-relations-title','DIRECT-AUTHORED RELATIONS (TOPOLOGY ONLY)'));
+    for(const r of rels){
+      const chip=el('button','source-relation-chip',`${r.relation.toUpperCase()}: ${r.targetName}`);
+      chip.type='button';
+      chip.title='Inspect relation in WorldsVault graph';
+      chip.addEventListener('click',()=>{
+        if(sourceGraphInstance)sourceGraphInstance.open(c.id);
+        else $('sourceGraphOpen')?.click();
+      });
+      relSec.append(chip);
+    }
+    frag.append(relSec);
+  }
   const repair=CANON_REPAIR_HIGHLIGHTS.find(r=>r.subject.toLowerCase().includes(c.id)||r.subject.toLowerCase().includes(c.name.toLowerCase()));
   if(repair)frag.append(el('div','source-notice-chip','CANON INVARIANT ['+repair.id+']: '+repair.subject));
   for(const a of RESEARCH_ANCHORS.slice(0,2)){
