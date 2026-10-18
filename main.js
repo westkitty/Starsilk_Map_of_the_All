@@ -85,6 +85,9 @@ function enter(viewKind,id){
   view={kind:viewKind,id:viewKind==='all'?null:id};
   state.selected=null;engine?.setView(view);updateUI();
   const name=n?.name||'THE ALL';$('savedStatus').textContent='VIEW / '+name.slice(0,14);
+  if(viewKind==='galaxy'&&n)message('Entered '+n.name+': '+childNodes(state,n.id,'system').length+' provisional stellar systems mapped.');
+  else if(viewKind==='system'&&n)message('Entered '+n.name+': '+childNodes(state,n.id,'planet').length+' draft planetary bodies.');
+  else if(viewKind==='all')message('Ascended to The All: 7 galaxies and cosmic landmarks.');
 }
 function enterSelected(){const n=nodeById(state,state.selected);
   if(n?.kind==='galaxy')enter('galaxy',n.id);
@@ -119,7 +122,7 @@ function select(id,autoEnter=false,ev=null){
   if(autoEnter)enterSelected();
   if(innerWidth<=620)gui.right.classList.add('mobile-open');
 }
-function focusSelected(){const n=nodeById(state,state.selected);if(n)engine?.focusOn(n);}
+function focusSelected(){const n=nodeById(state,state.selected);if(n){engine?.focusOn(n);message('Camera focused on '+n.name+'. Orbit to inspect.');}}
 function button(text,cls,action){const b=el('button',cls,text);b.type='button';b.addEventListener('click',action);return b;}
 function updateBreadcrumb(){const frag=document.createDocumentFragment();frag.append(button('THE ALL','',()=>enter('all',null)));
   if(view.kind!=='all')for(const n of ancestry(state,view.id)){

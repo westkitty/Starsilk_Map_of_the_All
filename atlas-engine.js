@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { frameDelta,wrapCurvePhase } from './frame-clock.js';
+import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { childNodes, nodeById } from './atlas-data.js';
 
@@ -52,6 +52,11 @@ export class AtlasEngine {
     this.view={kind:'all',id:null};this.state=null;this.resizeObserver=new ResizeObserver(()=>this.resize());
     this.resizeObserver.observe(canvas.parentElement);
     this.pointerStart=null;
+    this.viewMemory=new Map();
+    this.cameraTransition=null;
+    this.hoveredId=null;
+    this.reticle=this.createSelectionReticle();
+    this.scene.add(this.reticle);
     canvas.addEventListener('pointerdown',this._down=ev=>{
       if(!ev.isPrimary)return;
       this.pointerStart={id:ev.pointerId,x:ev.clientX,y:ev.clientY};
@@ -61,6 +66,20 @@ export class AtlasEngine {
       if(!start||!ev.isPrimary||start.id!==ev.pointerId||Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>8)return;
       this.pick(ev);
     });
+    canvas.addEventListener('pointermove',this._move=ev=>{
+      if(this.pointerStart)return;
+      const rect=this.canvas.getBoundingClientRect();
+      this.pointer.set(((ev.clientX-rect.left)/rect.width)*2-1,1-((ev.clientY-rect.top)/rect.height)*2);
+      this.raycaster.setFromCamera(this.pointer,this.camera);
+      const hits=this.raycaster.intersectObjects(this.pickables,false);
+      const hitId=hits[0]?.object?.userData?.atlasId;
+      this.canvas.style.cursor=hitId?'pointer':'';
+      this.setHovered(hitId||null);
+    });
+    canvas.addEventListener('pointerleave',this._leave=()=>{
+      this.canvas.style.cursor='';
+      this.setHovered(null);
+    });
     canvas.addEventListener('pointercancel',this._cancel=()=>{this.pointerStart=null;});
     canvas.addEventListener('lostpointercapture',this._cancel);
     canvas.addEventListener('dblclick',this._double=(ev)=>{this.pick(ev,true);});
@@ -68,6 +87,28 @@ export class AtlasEngine {
     this.reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.initBackground();this.resize();
     this.renderer.setAnimationLoop(t=>this.tick(t));
+  }
+  setHovered(id){
+    if(this.hoveredId===id)return;
+    this.hoveredId=id;
+    for(const [nodeId,elem] of this.labelNodes){
+      elem.classList.toggle('hovered',nodeId===id);
+    }
+  }
+  createSelectionReticle(){
+    const group=new THREE.Group();group.name='selection-reticle';group.visible=false;
+    const ring=new THREE.Mesh(new THREE.RingGeometry(1,1.09,36),new THREE.MeshBasicMaterial({color:0x52deff,side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));
+    ring.rotation.x=-Math.PI/2;group.add(ring);
+    const tickGeom=new THREE.ConeGeometry(.14,.35,4);
+    const tickMat=new THREE.MeshBasicMaterial({color:0x9ef0ff,side:THREE.DoubleSide,transparent:true,opacity:.9,depthWrite:false});
+    for(let i=0;i<4;i++){
+      const angle=(i*Math.PI)/2;
+      const tick=new THREE.Mesh(tickGeom,tickMat);
+      tick.position.set(Math.cos(angle)*1.35,0,Math.sin(angle)*1.35);
+      tick.rotation.y=-angle-Math.PI/2;
+      group.add(tick);
+    }
+    return group;
   }
   initBackground(){
     const rnd=rng(1106),p=[],colors=[],sizes=[],alphas=[];
@@ -133,12 +174,40 @@ export class AtlasEngine {
     this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();
   }
   setState(state,view=this.view){this.state=state;this.view=view;this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();}
-  setView(view){this.view=view;this.rebuild();
-    const camera=view.kind==='all'?[0,215,280]:view.kind==='galaxy'?[0,55,110]:[0,38,82];
-    const target=view.kind==='all'?[0,-4,-12]:[0,0,0];
-    this.controls.target.set(...target);this.camera.position.set(...camera);this.controls.update();
-    this.camera.updateMatrixWorld();this.updateLabels();
-    this.callbacks.onViewChanged?.(view);
+  setView(view,smooth=true){
+    const prevKey=this.view.kind==='all'?'all':`${this.view.kind}:${this.view.id}`;
+    this.viewMemory.set(prevKey,{camera:this.camera.position.clone(),target:this.controls.target.clone()});
+    this.view=view;this.rebuild();
+    const nextKey=view.kind==='all'?'all':`${view.kind}:${view.id}`;
+    let targetCamera,targetControls;
+    if(this.viewMemory.has(nextKey)){
+      const saved=this.viewMemory.get(nextKey);
+      targetCamera=saved.camera;targetControls=saved.target;
+    }else{
+      const cam=view.kind==='all'?[0,215,280]:view.kind==='galaxy'?[0,55,110]:[0,38,82];
+      const tgt=view.kind==='all'?[0,-4,-12]:[0,0,0];
+      targetCamera=new THREE.Vector3(...cam);targetControls=new THREE.Vector3(...tgt);
+    }
+    if(smooth&&!this.reducedMotion){
+      this.transitionCamera(targetCamera,targetControls,650,()=>{
+        this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
+      });
+    }else{
+      this.controls.target.copy(targetControls);this.camera.position.copy(targetCamera);this.controls.update();
+      this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
+    }
+  }
+  transitionCamera(targetCam,targetTarget,durationMs=650,onComplete=null){
+    if(this.reducedMotion){
+      this.controls.target.copy(targetTarget);this.camera.position.copy(targetCam);
+      this.controls.update();this.camera.updateMatrixWorld();this.updateLabels();onComplete?.();return;
+    }
+    this.cameraTransition={
+      startTime:performance.now(),duration:Math.max(100,durationMs),
+      startCam:this.camera.position.clone(),endCam:targetCam.clone(),
+      startTarget:this.controls.target.clone(),endTarget:targetTarget.clone(),
+      onComplete
+    };
   }
   rebuild(){if(!this.state)return;
     disposeTree(this.group);this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];
@@ -403,8 +472,12 @@ export class AtlasEngine {
     const id=hits[0].object.userData.atlasId;if(id)this.callbacks.onSelect?.(id,enter,ev);
   }
   focusOn(node){const obj=this.labelItems.find(p=>p.node.id===node.id)?.obj;if(!obj)return;
-    const p=new THREE.Vector3();obj.getWorldPosition(p);const delta=p.clone().sub(this.controls.target);
-    this.camera.position.add(delta);this.controls.target.copy(p);this.controls.update();
+    const p=new THREE.Vector3();obj.getWorldPosition(p);
+    const dist=node.kind==='galaxy'?68:node.kind==='system'?28:10;
+    const dir=this.camera.position.clone().sub(this.controls.target).normalize();
+    if(dir.lengthSq()<0.001)dir.set(0,.6,.8).normalize();
+    const newCam=p.clone().add(dir.multiplyScalar(dist));
+    this.transitionCamera(newCam,p,600);
   }
   updateLabels(){
     const state=this.state;
@@ -446,6 +519,32 @@ export class AtlasEngine {
   }
   tick(now){if(this.disposed)return;const elapsed=frameDelta(now,this.last);if(Number.isFinite(now))this.last=now;
     this.elapsed+=elapsed;
+    if(this.cameraTransition){
+      const {startTime,duration,startCam,endCam,startTarget,endTarget,onComplete}=this.cameraTransition;
+      const progress=Math.min(1,Math.max(0,(performance.now()-startTime)/duration));
+      const t=easeInOutCubic(progress);
+      this.camera.position.lerpVectors(startCam,endCam,t);
+      this.controls.target.lerpVectors(startTarget,endTarget,t);
+      this.controls.update();
+      if(progress>=1){
+        this.cameraTransition=null;
+        onComplete?.();
+      }
+    }
+    if(this.state?.selected){
+      const selectedItem=this.labelItems.find(item=>item.node.id===this.state.selected);
+      if(selectedItem?.obj){
+        this.reticle.visible=true;
+        const wp=this._scratchWorldPos||(this._scratchWorldPos=new THREE.Vector3());
+        selectedItem.obj.getWorldPosition(wp);
+        this.reticle.position.copy(wp);
+        const baseSize=(selectedItem.node.size||1);
+        const scale=baseSize*(this.view.kind==='all'?2.2:this.view.kind==='galaxy'?2.4:1.6);
+        const pulse=1+Math.sin(this.elapsed*0.003)*0.06;
+        this.reticle.scale.set(scale*pulse,scale*pulse,scale*pulse);
+        this.reticle.rotation.y+=elapsed*0.0006;
+      }else{this.reticle.visible=false;}
+    }else{this.reticle.visible=false;}
     const motion=this.state?.motion&&!this.reducedMotion&&!this.paused;
     if(motion){
       for(const m of this.motionObjects){if(m.orbit){const a=m.phase+this.elapsed*m.speed;m.obj.position.set(Math.cos(a)*m.orbit,0,Math.sin(a)*m.orbit);}else m.obj.rotation.y+=elapsed*m.speed;}
@@ -455,5 +554,5 @@ export class AtlasEngine {
     if(++this.frame%3===0)this.updateLabels();
   }
   info(){return {drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,geometries:this.renderer.info.memory.geometries,textures:this.renderer.info.memory.textures};}
-  dispose(){this.disposed=true;this.renderer.setAnimationLoop(null);this.resizeObserver.disconnect();this.canvas.removeEventListener('pointerdown',this._down);this.canvas.removeEventListener('pointerup',this._up);this.canvas.removeEventListener('pointercancel',this._cancel);this.canvas.removeEventListener('lostpointercapture',this._cancel);this.canvas.removeEventListener('dblclick',this._double);this.controls.dispose();disposeTree(this.group);disposeTree(this.bg);this.renderer.dispose();this.renderer.forceContextLoss();this.labelsRoot.replaceChildren();this.labelNodes.clear();}
+  dispose(){this.disposed=true;this.renderer.setAnimationLoop(null);this.resizeObserver.disconnect();this.canvas.removeEventListener('pointerdown',this._down);this.canvas.removeEventListener('pointerup',this._up);this.canvas.removeEventListener('pointermove',this._move);this.canvas.removeEventListener('pointerleave',this._leave);this.canvas.removeEventListener('pointercancel',this._cancel);this.canvas.removeEventListener('lostpointercapture',this._cancel);this.canvas.removeEventListener('dblclick',this._double);this.controls.dispose();this.viewMemory.clear();this.cameraTransition=null;if(this.reticle)disposeTree(this.reticle);disposeTree(this.group);disposeTree(this.bg);this.renderer.dispose();this.renderer.forceContextLoss();this.labelsRoot.replaceChildren();this.labelNodes.clear();}
 }
