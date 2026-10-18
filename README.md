@@ -2,8 +2,8 @@
 
 **The Map of the All** is a standalone Three.js, 4X-inspired, source-aware, editable survey of the Starsilk universe.
 
-- **GitHub target (not published yet):** https://github.com/westkitty/Starsilk_Map_of_the_All
-- **Expected Pages URL (not yet live):** https://westkitty.github.io/Starsilk_Map_of_the_All/
+- **Standalone repository:** https://github.com/westkitty/Starsilk_Map_of_the_All
+- **Published Atlas:** https://westkitty.github.io/Starsilk_Map_of_the_All/
 - **Orbital laboratory:** https://westkitty.github.io/Star_System_Planner/
 - **Lore authority (read-only):** https://github.com/westkitty/Starsilk_Character_Dossier
 
@@ -47,6 +47,7 @@ Historical phase notes below still describe some work performed when the Atlas w
 - Three temporal lenses: Blood Eclipse War, Siege Wall locking, post-Siege. **Visual filters only**, not computed historical census or epoch-specific correct positions.
 - Inspect and edit provisional object names, descriptive annotations, X/Y/Z *display* coordinates, colors, size, label colors, typeface and font size.
 - Create galaxies, systems, planets, and annotations. Select CONNECT ROUTE then select another object on the same tier to make a corridor; change corridor type between provisional Hookshot and azure via `H`/`S` and remove with `×` in the route list.
+- **Safe draft deletion:** use the inspector DELETE SELECTED DRAFT control for one node, or Strategic Studio GROUP then Shift-click/marquee/ALL VISIBLE and DELETE SELECTED DRAFTS for a group. Preview the dependents before confirming; one Undo restores all removed nodes, connected corridors and dependent regions. Delete/Backspace guards text inputs and dialogs. Canonical source records cannot be deleted. Provisional sectors and routes have their own delete controls.
 - Auto-save to browser-local `localStorage`; JSON export/import, bounded schema validation, 30-step Undo (`Ctrl/Cmd+Z`). Import demotes incoming canon claims, rather than granting source authority.
 - Tablet-aware layout, optional cinematic quality, reduced-motion respect, capped DPR, bounded star particle counts, one render loop, DOM label reuse and GPU resource disposal during view changes.
 

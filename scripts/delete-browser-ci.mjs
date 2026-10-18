@@ -83,8 +83,89 @@ async function main(){
   await mobile.close();
   console.log('DELETE_BROWSER_STAGE mobile-inspector-touch');
 
+  const groupContext=await browser.newContext({viewport:{width:1536,height:864},reducedMotion:'reduce'});
+  const groupPage=await groupContext.newPage();groupPage.on('pageerror',e=>errors.push('group: '+e.message));
+  await groupPage.goto(ROOT,{waitUntil:'domcontentloaded'});
+  await groupPage.locator('.world-label').first().waitFor({timeout:30000});
+  await groupPage.locator('[data-drawer="regions"]').click();
+  assert.equal(await groupPage.locator('#strategyDeleteGroup').isDisabled(),true);
+  await groupPage.locator('.world-label[data-atlas-id="perseus-confluence"]').click();
+  await groupPage.locator('.world-label[data-atlas-id="centauri-marches"]').click({modifiers:['Shift']});
+  assert.equal(await groupPage.locator('#strategyCount').textContent(),'2');
+  assert.equal(await groupPage.locator('#strategyDeleteGroup').isEnabled(),true);
+  let prohibitedDialogCount=0;
+  const prohibitedDelete=async dialog=>{prohibitedDialogCount++;await dialog.dismiss();};
+  groupPage.on('dialog',prohibitedDelete);
+  await groupPage.evaluate(()=>document.querySelector('#helpDialog').showModal());
+  await groupPage.keyboard.press('Delete');
+  assert.equal(prohibitedDialogCount,0,'delete shortcut must not open confirmation behind a dialog');
+  assert.equal(await groupPage.locator('#strategyCount').textContent(),'2','modal keyboard must not delete a group');
+  await groupPage.evaluate(()=>document.querySelector('#helpDialog').close());
+  await groupPage.locator('#strategyGroupSnap').focus();
+  await groupPage.keyboard.press('Backspace');
+  assert.equal(prohibitedDialogCount,0,'text/select focus must not open confirmation');
+  assert.equal(await groupPage.locator('#strategyCount').textContent(),'2','select input must not trigger group deletion');
+  groupPage.off('dialog',prohibitedDelete);
+  groupPage.once('dialog',async dialog=>{
+    assert.match(dialog.message(),/DELETE 2 SELECTED DRAFT OBJECT/);
+    assert.match(dialog.message(),/Total nodes including descendants: 42/);
+    await dialog.dismiss();
+  });
+  await groupPage.locator('#strategyDeleteGroup').click();
+  assert.equal(await groupPage.locator('#strategyCount').textContent(),'2','cancel keeps selected group');
+  groupPage.once('dialog',async dialog=>{
+    assert.match(dialog.message(),/Undo restores the entire selection/);
+    await dialog.accept();
+  });
+  await groupPage.keyboard.press('Delete');
+  await groupPage.waitForFunction(key=>{
+    const raw=localStorage.getItem(key);if(!raw)return false;
+    const s=JSON.parse(raw);
+    return !s.nodes.some(n=>n.id==='perseus-confluence'||n.id==='centauri-marches');
+  },KEY);
+  assert.equal(await groupPage.locator('#strategyCount').textContent(),'0','selection clears when nodes are removed');
+  const grouped=await groupPage.evaluate(key=>JSON.parse(localStorage.getItem(key)),KEY);
+  assert.equal(grouped.nodes.length,seedAtlas().nodes.length-42);
+  assert.ok(grouped.nodes.some(n=>n.id==='worldsvault'),'canonical source survives group deletion');
+  assert.ok(grouped.timeline.snapshots.war.nodes.some(n=>n.id==='perseus-confluence'),'other eras remain independent');
+  assert.ok(!grouped.routes.some(r=>['perseus-confluence','centauri-marches'].includes(r.from)||['perseus-confluence','centauri-marches'].includes(r.to)),'dependent draft routes removed');
+  await groupPage.keyboard.press('Control+z');
+  await groupPage.waitForFunction(key=>{
+    const s=JSON.parse(localStorage.getItem(key));
+    return s?.nodes.some(n=>n.id==='perseus-confluence')&&s.nodes.some(n=>n.id==='centauri-marches');
+  },KEY);
+  await groupPage.keyboard.press('Control+y');
+  await groupPage.waitForFunction(key=>{
+    const s=JSON.parse(localStorage.getItem(key));
+    return s&&!s.nodes.some(n=>n.id==='perseus-confluence'||n.id==='centauri-marches');
+  },KEY);
+  await groupPage.reload({waitUntil:'domcontentloaded'});
+  await groupPage.waitForFunction(key=>{
+    const s=JSON.parse(localStorage.getItem(key));
+    return s&&!s.nodes.some(n=>n.id==='perseus-confluence'||n.id==='centauri-marches');
+  },KEY);
+  console.log('DELETE_BROWSER_STAGE atomic-group-cancel-undo-redo-reload-era');
+  await groupContext.close();
+
+  const groupMobile=await browser.newContext({viewport:{width:412,height:915},isMobile:true,hasTouch:true,reducedMotion:'reduce'});
+  const groupPhone=await groupMobile.newPage();groupPhone.on('pageerror',e=>errors.push('group-mobile: '+e.message));
+  await groupPhone.goto(ROOT,{waitUntil:'domcontentloaded'});
+  await groupPhone.locator('[data-drawer="regions"]').click();
+  await groupPhone.locator('#strategySelectAll').click();
+  assert.equal(await groupPhone.locator('#strategyCount').textContent(),'7');
+  assert.ok((await groupPhone.locator('#strategyDeleteGroup').boundingBox()).height>=42);
+  groupPhone.once('dialog',async dialog=>{assert.match(dialog.message(),/DELETE 7 SELECTED/);await dialog.accept();});
+  await groupPhone.locator('#strategyDeleteGroup').click();
+  await groupPhone.waitForFunction(key=>{
+    const raw=localStorage.getItem(key);return raw&&JSON.parse(raw).nodes.every(n=>n.status==='reference');
+  },KEY);
+  assert.ok(await groupPhone.locator('#strategyDeleteGroup').isDisabled());
+  assert.equal(await groupPhone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await groupMobile.close();
+  console.log('DELETE_BROWSER_STAGE mobile-select-all-delete-canonical-survival');
+
   assert.deepEqual(errors,[]);
-  console.log('DELETE_BROWSER_PASS cancel=true cascade=true undo=true redo=true reload=true canon=true keyboard=true mobile=true errors=0');
+  console.log('DELETE_BROWSER_PASS cancel=true cascade=true undo=true redo=true reload=true canon=true keyboard=true mobile=true batch=true mixed-domain=true errors=0');
 }
 try{await main();}catch(e){console.error('DELETE_BROWSER_FAIL',e.stack||e);process.exitCode=1;}
 finally{await browser?.close();server.kill('SIGTERM');clearTimeout(timer);}
