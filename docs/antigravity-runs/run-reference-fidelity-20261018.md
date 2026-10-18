@@ -41,7 +41,7 @@
 | **Phase 10** | Loops 46–50 | Network Readability & De-cluttering | VERIFIED | `6e71b48` |
 | **Phase 11** | Loops 51–55 | Real Delete Engine — Core Architecture | VERIFIED | c869b483 |
 | **Phase 12** | Loops 56–60 | Dependency Cascade, Multi-Delete & Undo/Redo | VERIFIED | 885d38c |
-| **Phase 13** | Loops 61–65 | True Delete Persistence & Reload Verification | Planned | — |
+| **Phase 13** | Loops 61–65 | True Delete Persistence & Reload Verification | VERIFIED | d09befc |
 | **Phase 14** | Loops 66–70 | Visual Subtraction & Procedural Suppression | Planned | — |
 | **Phase 15** | Loops 71–75 | 4X Strategic Sector Overlays (Reference 04 Match) | Planned | — |
 | **Phase 16** | Loops 76–80 | Chromatic Territory Regions (Reference 05 Match) | Planned | — |
@@ -89,3 +89,21 @@
 - Physical Galaxy Tab S9 Ultra / S Pen still untested.
 
 **Next:** Phase 13 (Loops 61–65) — deletion persistence and recovery under reload, import/export, storage failures, era switching and interruption; avoid duplicating already proven cases. Phase 14 procedural element suppression still pending.
+
+## Phase 13 — Durable Deletion Recovery (Loops 61–65), 2026-10-18
+
+- **61 — Provenance-aware draft startup:** Added readStoredDraft() arbitration between valid local and temporary session copies, preferring the freshest timestamped state or explicitly marked session fallback without silently destroying old bytes. Supports undated legacy JSON v1 saves, corrupted candidates and original-byte recovery.
+- **62 — Immediate destructive transactions:** Deletions (single nodes, draft routes, sectors and multi-object groups) and era switches now require immediate persistence. If both browser stores reject a change, the destructive state edit is rejected and the previous in-memory state restored.
+- **63 — Durable Undo/Redo and confirmed import:** Undo and Redo synchronously save their target state before committing history changes. Confirmed import also saves before replacing the live map and stays retryable if storage is denied. Replacing unreadable original data requires a successful local write; session-only fallback never silently replaces corrupt original bytes.
+- **64 — Session and raw-file recovery UX:** A newer session draft survives reload even when a stale local draft remains, with an explicit SAVE RECOVERED DRAFT LOCALLY action and EXPORT RECOVERED JSON backup. Existing raw-recovery download filename/bytes remain compatible with the fullscreen suite; original invalid JSON remains available until an authorized local replacement.
+- **65 — Deterministic and browser failure-injection QA:** Ten additional Node tests cover storage candidates, date ties/legacy timestamps, source/era isolation, JSON v1 export/import and rejected bytes. Added a seventh Chromium suite testing stale local writes, session promotion, simultaneous store denial, guarded import retry and exact-byte recovery. Registered in npm test:browser and GitHub Actions.
+
+**Observed validation:**
+- npm run check: 243/243 Node tests PASS; Vite production build and budget gate PASS.
+- npm run test:browser: 7/7 Chromium suites PASS, including the new targeted storage failure suite; actual command exit code 0.
+- Bundle: 224,003 bytes gzip / 225,000-byte maximum (997-byte headroom); no asserted FPS or battery improvement.
+- Diff check and explicit staging PASS. Implementation SHA d09befcd5eb4ac67a55fcd7d2436c847068ba22f pushed to origin/feature/omni-uplift-100 with matching remote SHA.
+- Existing storage key starsilk.map-of-the-all.draft.v1 and JSON schema v1 preserved. Read-only canonical source identities and three independent historical eras protected. No Dossier writes or modifications to independent Planner.
+- Caveats: sessionStorage is not permanent across tab/browser closure; export JSON backup remains essential. Physical Galaxy Tab S9 Ultra/S Pen tests and production deployment for this phase remain unverified.
+
+**Next:** Phase 14 — persistent non-canonical procedural suppression and subtractive visual controls against the five fixed Drive references. Before adding renderer code, reclaim gzip headroom to avoid breaching the 225,000-byte budget.

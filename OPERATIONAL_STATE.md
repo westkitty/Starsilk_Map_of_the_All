@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 16
+revision: 17
 
 ## Current baseline
 
@@ -335,3 +335,13 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - Production bundle 223,024 bytes gzip under 225,000-byte cap; headroom 1,976 bytes. Future uplift should reduce bundle costs before significant additions.
 - No stored-draft v1 format changes, canon writes, Parent Planner edits, main merge, or new GitHub Pages deployment. Physical Galaxy Tab S9 Ultra/S Pen behavior remains unverified.
 - Phase 13 NEXT: strengthen delete recovery through interruption, storage failure, export/import and complex era transitions. Phase 14 procedural suppression is pending.
+
+## Campaign Three — Phase 13 Verified Checkpoint (2026-10-18)
+
+- Feature branch feature/omni-uplift-100 at implementation commit d09befcd5eb4ac67a55fcd7d2436c847068ba22f (verified push and matching remote head).
+- Root-cause repair: stale localStorage could previously resurrect draft nodes deleted while local writes failed and newer state resided in sessionStorage. readStoredDraft now selects a validated latest snapshot without discarding rejected original bytes. Legacy missing timestamps and equal-time fallback markers have explicit tests.
+- Immediate fail-closed persistence for deletion, Undo/Redo, confirmed import and era switching: an edit requiring a durable write will not be accepted when both browser stores reject it. Import/replace of an unreadable original requires an actual successful local write. One transaction remains one Undo step.
+- Recovery presentation: session-restored drafts offer explicit SAVE RECOVERED DRAFT LOCALLY and EXPORT RECOVERED JSON controls; corrupted original file bytes can be downloaded exactly with the backward-compatible filename.
+- Validation: 243/243 Node tests; 7/7 Chromium acceptance suites PASS, including injected quota/storage failures, stale-local recovery, retryable import, and raw-file preservation. Browser process exit 0. Final production bundle: 224,003 / 225,000 bytes gzip.
+- Preserved: starsilk.map-of-the-all.draft.v1 JSON schema, three era snapshots, source vs user-draft boundaries, Atlas/Planner separation and read-only Character Dossier. No production merge, new Pages deployment, or physical Galaxy Tab S9 Ultra/S Pen performance proof.
+- Next: Phase 14 (Loops 66–70) — explicit non-canonical procedural element suppression, hide/reset vs delete differentiation, and reference-guided visual subtraction. Only 997 bytes of gzip headroom remain, so prioritize render-graph reductions before increasing bundle size.
