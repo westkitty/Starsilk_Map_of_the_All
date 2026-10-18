@@ -7,7 +7,7 @@ const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 
 /** Store only editable cartography. Do not snapshot UI focus, camera, or global quality settings. */
 export function captureEra(state) {
-  return copy({nodes: state.nodes, routes: state.routes, regions: state.regions ?? [], layers: state.layers});
+  return copy({nodes: state.nodes, routes: state.routes, regions: state.regions ?? [], layers: state.layers, ...(state.suppressedVisuals!==undefined?{suppressedVisuals:state.suppressedVisuals}:{})});
 }
 export function applyEra(state, snapshot) {
   const data = copy(snapshot);
@@ -15,6 +15,7 @@ export function applyEra(state, snapshot) {
   state.routes = data.routes;
   state.regions = data.regions;
   state.layers = data.layers;
+  state.suppressedVisuals = data.suppressedVisuals ?? [];
   state.selected = null;
   return state;
 }

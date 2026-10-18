@@ -34,6 +34,15 @@
     <div id="searchResults" class="search-results" hidden role="listbox" aria-label="Search results"></div>
     <div class="panel-heading inline"><span>VISIBLE STRUCTURES</span><button id="allLayersBtn" class="text-btn">ALL / NONE</button></div>
     <div id="layerControls" class="layer-controls"></div>
+    <div class="panel-heading inline"><span>PROCEDURAL CLEANUP</span><small>PROVISIONAL ONLY</small></div>
+    <div class="visual-cleanup">
+      <label for="visualTarget">Select a generated detail</label>
+      <select id="visualTarget" aria-label="Generated map detail"></select>
+      <button id="visualSuppressBtn" type="button" class="button-outline">SUPPRESS THIS DETAIL</button>
+      <button id="visualResetBtn" type="button" class="button-outline faint">RESTORE ALL DETAILS</button>
+      <p id="visualStatus" role="status" aria-live="polite"></p>
+      <small>HIDE toggles layers. SUPPRESS removes generated effects from this era across reloads. DELETE removes user drafts in the inspector. Canon stays intact.</small>
+    </div>
     <div class="panel-heading inline"><span>CARTOGRAPHIC LEGEND</span><small>SEMANTICS</small></div>
     <div class="carto-legend" id="cartoLegend">
       <div class="legend-item"><span class="legend-glyph glyph-ref">◆</span><span class="legend-label">SOURCE TOPOLOGY</span><span class="legend-desc">Canon Dossier entity; unauthored coordinate</span></div>

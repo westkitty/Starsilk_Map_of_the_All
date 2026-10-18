@@ -50,6 +50,7 @@ export function setupFullscreenAtlas() {
 
   function reflect(){
     atlas.dataset.activeDrawer=active||'none';
+    nav.classList.toggle('expanded',active==='nav');
     for(const [key,b] of buttons){const expanded=key===active;b.setAttribute('aria-expanded',String(expanded));b.classList.toggle('active',expanded);}
   }
   function closeFeature(key){

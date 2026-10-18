@@ -1,5 +1,6 @@
 import {validateRegions} from './strategic-model.js';
 import {deleteObject} from './deletion-engine.js';
+import {validateSuppressed} from './visual-suppression.js';
 import {validateTimeline, sanitizeTimeline} from './temporal-model.js';
 export const VERSION = 1;
 export const STORAGE_KEY = 'starsilk.map-of-the-all.draft.v1';
@@ -82,7 +83,7 @@ export function seedAtlas() {
   ];
   const routes=connections.map(([from,to],i)=>({id:`lane-${i+1}`,from,to,kind:i%3===0?'starsilk':'hookshot',status:'draft'}));
   return { version:VERSION, title:'THE MAP OF THE ALL', epoch:'post', layers:{...DEFAULT_LAYERS},
-    nodes,routes, regions:[], selected:null, quality:'balanced', motion:true, typographyScale:1, updatedAt:new Date().toISOString() };
+    nodes,routes, regions:[], suppressedVisuals:[], selected:null, quality:'balanced', motion:true, typographyScale:1, updatedAt:new Date().toISOString() };
 }
 export const childNodes = (state,parentId,kind=null)=>state.nodes.filter(n=>n.parentId===parentId&&(!kind||n.kind===kind));
 export const nodeById = (state,id)=>state.nodes.find(n=>n.id===id)||null;
@@ -122,6 +123,7 @@ export function validateAtlas(value) {
   for(const r of value.routes){if(!r||!ids.has(r.from)||!ids.has(r.to)||r.from===r.to||!['hookshot','starsilk'].includes(r.kind)||!/^[-a-zA-Z0-9_]{1,90}$/.test(r.id)) errors.push('Invalid route');}
   if(!EPOCHS.some(e=>e.id===value.epoch))errors.push('Invalid epoch');
   if(!value.layers||LAYERS.some(([key])=>typeof value.layers[key]!=='boolean'))errors.push('Invalid layers');
+  errors.push(...validateSuppressed(value.suppressedVisuals));
   if(!['balanced','cinematic','battery'].includes(value.quality))errors.push('Invalid quality tier');
   if(typeof value.motion!=='boolean'||!Number.isFinite(value.typographyScale)||value.typographyScale<.6||value.typographyScale>2)errors.push('Invalid preferences');
   errors.push(...validateRegions(value));
@@ -133,6 +135,8 @@ export function normalizeDraft(raw) {
   const data=JSON.parse(JSON.stringify(raw));
   if(data.version!==VERSION)return {valid:false,errors:['Unsupported atlas schema version']};
   if(!Array.isArray(data.regions))data.regions=[];
+  if(data.suppressedVisuals===undefined)data.suppressedVisuals=[];
+  for(const snap of Object.values(data.timeline?.snapshots||{}))if(snap&&typeof snap==='object'&&snap.suppressedVisuals===undefined)snap.suppressedVisuals=[];
   if(!data.layers||typeof data.layers!=='object')data.layers={...DEFAULT_LAYERS};
   else{for(const [key] of LAYERS)if(typeof data.layers[key]!=='boolean')data.layers[key]=key!=='grid';}
   if(!data.quality||!['balanced','cinematic','battery'].includes(data.quality))data.quality='balanced';

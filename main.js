@@ -11,6 +11,7 @@ import { initSourceGraph } from './source-graph-ui.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename, getHandoffSystemMetadata } from './planner-handoff.js';
 import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, normalizeDraft, addNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
 import {planDeletion, deleteObject} from './deletion-engine.js';
+import {isSuppressed,listVisualTargets,setSuppressed} from './visual-suppression.js';
 import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations, WORLDSVAULT_IDENTITIES, CANON_REVISION_METADATA } from './canon-registry.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -260,6 +261,16 @@ function updateLayers(){const frag=document.createDocumentFragment();
     row.append(input,el('span','',label),el('em','',state.layers[key]?'ON':'OFF'));frag.append(row);
   }
   gui.layers.replaceChildren(frag);
+}
+function updateVisualCleanup(){
+  const select=$('visualTarget'),targets=listVisualTargets(state),prior=select.value;
+  select.replaceChildren(...targets.map(([id,name])=>{const o=el('option','',name);o.value=id;return o;}));
+  select.value=targets.some(([id])=>id===prior)?prior:targets[0][0];
+  const hidden=isSuppressed(state,select.value),count=state.suppressedVisuals?.length||0;
+  $('visualSuppressBtn').textContent=hidden?'RESTORE THIS DETAIL':'SUPPRESS THIS DETAIL';
+  $('visualSuppressBtn').setAttribute('aria-pressed',hidden?'true':'false');
+  $('visualStatus').textContent=count+' hidden in '+state.epoch.toUpperCase()+' era.';
+  $('visualResetBtn').disabled=count===0;
 }
 function currentNodes(){
   if(view.kind==='all')return childNodes(state,null).filter(n=>n.kind==='galaxy'||n.kind==='landmark'||n.kind==='annotation');
@@ -551,7 +562,7 @@ function updateScaleGauge(){
   }
 }
 function updateUI(){
-  updateBreadcrumb();updateLayers();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
+  updateBreadcrumb();updateLayers();updateVisualCleanup();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
   $('quality').value=state.quality;
   $('motionBtn').textContent=state.motion?'MOTION ON':'MOTION OFF';
   $('motionBtn').setAttribute('aria-pressed',state.motion?'true':'false');
@@ -965,6 +976,16 @@ function redo(){if(!redoStack.length){message('No changes to redo.');return;}
 function resetCamera(){engine?.setView(view);}
 function toggleFocus(){gui.atlas.classList.toggle('focus-view');if(!gui.atlas.classList.contains('focus-view'))gui.right.classList.remove('mobile-open');}
 function bind(){
+  $('visualTarget').addEventListener('change',updateVisualCleanup);
+  $('visualSuppressBtn').addEventListener('click',()=>{
+    const id=$('visualTarget').value,hidden=isSuppressed(state,id);
+    if(change(()=>setSuppressed(state,id,!hidden),{immediate:true}))
+      message((hidden?'Restored':'Suppressed')+' editorial detail. Undo available.');
+  });
+  $('visualResetBtn').addEventListener('click',()=>{
+    if(change(()=>{state.suppressedVisuals=[];},{immediate:true}))
+      message('All procedural details restored for this era. Undo available.');
+  });
   $('temporalOpen').addEventListener('click',()=>{networkLab?.close();strategy?.close();studio?.setMode('orbit');temporal?.open();});
   $('strategyOpen').addEventListener('click',()=>{if(!strategy)return;temporal?.close();networkLab?.close();studio?.setMode('orbit');strategy.open();});
   $('networkOpen').addEventListener('click',()=>{if(!networkLab)return;temporal?.close();studio?.setMode('orbit');strategy?.close();networkLab.open();});
