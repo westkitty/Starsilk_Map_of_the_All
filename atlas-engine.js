@@ -19,14 +19,20 @@ function makeGlow(color='#49dfff'){
 }
 function lines(points,color,opacity=.6,dashed=false){
   const g=new THREE.BufferGeometry().setFromPoints(points);
+  g.computeBoundingSphere();
   const m=dashed?new THREE.LineDashedMaterial({color,transparent:true,opacity,dashSize:3,gapSize:2}):new THREE.LineBasicMaterial({color,transparent:true,opacity});
   const o=new THREE.Line(g,m);if(dashed)o.computeLineDistances();return o;
 }
 function disposeTree(root){
   root.traverse(obj=>{
-    if(obj.geometry?.dispose)obj.geometry.dispose();
+    if(obj.geometry?.dispose&&!obj.geometry.userData?.isShared)obj.geometry.dispose();
     const mats=obj.material?Array.isArray(obj.material)?obj.material:[obj.material]:[];
-    for(const mat of mats){for(const key of ['map','alphaMap','emissiveMap'])if(mat[key]?.dispose)mat[key].dispose();mat.dispose?.();}
+    for(const mat of mats){
+      if(!mat.userData?.isShared){
+        for(const key of ['map','alphaMap','emissiveMap'])if(mat[key]?.dispose)mat[key].dispose();
+        mat.dispose?.();
+      }
+    }
   });
   root.clear();
 }
@@ -107,8 +113,20 @@ export class AtlasEngine {
     canvas.addEventListener('dblclick',this._double=(ev)=>{this.pick(ev,true);});
     this.frame=0;this.last=performance.now();this.elapsed=0;this.paused=false;this.disposed=false;
     this.reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.frameStats={lastMs:16.6,avgMs:16.6,maxMs:16.6};
+    this._sharedPickMat=new THREE.MeshBasicMaterial({visible:false});
+    this._sharedPickMat.userData={isShared:true};
+    this._sharedPickGeom=new THREE.SphereGeometry(1,10,8);
+    this._sharedPickGeom.userData={isShared:true};
     this.initBackground();this.resize();
     this.renderer.setAnimationLoop(t=>this.tick(t));
+  }
+  createPickTarget(radius,n,group){
+    const mesh=new THREE.Mesh(this._sharedPickGeom,this._sharedPickMat);
+    mesh.scale.setScalar(radius);
+    if(group)group.add(mesh);
+    this.hitTarget(n,mesh);
+    return mesh;
   }
   setHovered(id){
     if(this.hoveredId===id)return;
@@ -163,6 +181,7 @@ export class AtlasEngine {
     g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
     g.setAttribute('aSize',new THREE.Float32BufferAttribute(sizes,1));
     g.setAttribute('aAlpha',new THREE.Float32BufferAttribute(alphas,1));
+    g.computeBoundingSphere();
     const m=new THREE.ShaderMaterial({
       uniforms:{pixelRatio:{value:this.dpr||1}},
       vertexShader: String.raw`
@@ -396,6 +415,7 @@ export class AtlasEngine {
     g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
     g.setAttribute('aSize',new THREE.Float32BufferAttribute(sizes,1));
     g.setAttribute('aLight',new THREE.Float32BufferAttribute(intensities,1));
+    g.computeBoundingSphere();
     const m=new THREE.ShaderMaterial({
       uniforms:{pixelRatio:{value:this.dpr||1}},
       vertexShader: String.raw`
@@ -458,7 +478,7 @@ export class AtlasEngine {
         this.addGlow(group,37*n.size,n.color,.44);
         this.addGlow(group,7.5*n.size,'#fff0c9',.7);
         this.addRing(group,12*n.size,n.color,.20,.24);
-        const pick=new THREE.Mesh(new THREE.SphereGeometry(13*n.size,12,10),new THREE.MeshBasicMaterial({visible:false}));group.add(pick);this.hitTarget(n,pick);
+        this.createPickTarget(13*n.size,n,group);
         if(morph){
           const targetItem=this.labelItems[this.labelItems.length-1];
           if(targetItem)targetItem.subtitle=morph.badge;
@@ -472,7 +492,7 @@ export class AtlasEngine {
         if(s.layers.grid)this.makeDropStem(this.group,n.position,-19,0x6bbfe8,n.size,true);
         const crystal=new THREE.Mesh(new THREE.IcosahedronGeometry(4*n.size,1),new THREE.MeshStandardMaterial({color:n.color,wireframe:true,transparent:true,opacity:.75,emissive:n.color,emissiveIntensity:1.25}));group.add(crystal);
         this.addGlow(group,13,n.color,.6);this.addRing(group,7,n.color,.55);
-        const pick=new THREE.Mesh(new THREE.SphereGeometry(7,10,8),new THREE.MeshBasicMaterial({visible:false}));group.add(pick);this.hitTarget(n,pick);
+        this.createPickTarget(7,n,group);
       }
     }
     if(s.layers.rings&&s.epoch!=='post')this.makeRemnantRings();
@@ -511,8 +531,10 @@ export class AtlasEngine {
       if(i%2===0)latticeNodes.push(x+(rnd()-.5)*4,(rnd()-.5)*8,z+(rnd()-.5)*4);
     }
     const p=new THREE.BufferGeometry();p.setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
+    p.computeBoundingSphere();
     this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0x526573,size:.55,transparent:true,opacity:.7})));
     const lp=new THREE.BufferGeometry();lp.setAttribute('position',new THREE.Float32BufferAttribute(latticeNodes,3));
+    lp.computeBoundingSphere();
     this.group.add(new THREE.Points(lp,new THREE.PointsMaterial({color:0x38bdf8,size:.65,transparent:true,opacity:.55})));
     const wallLabel={id:'wall-concept',name:'THE SIEGE WALL',status:'reference',label:{show:true,size:19,color:'#d1d6de',family:'display'}};
     const o=new THREE.Object3D();o.position.set(35,10,-103);this.group.add(o);this.labelItems.push({node:wallLabel,obj:o,subtitle:'BLACK-HOLE LATTICE / ABSENCE'});
@@ -577,7 +599,7 @@ export class AtlasEngine {
       if(s.layers.grid)this.makeDropStem(this.group,n.position,-19,0x3d7499,1.0,n.status==='reference');
       this.addGlow(pg,15,n.color,.8);
       const core=sphere(.9,0xffffff,0x4488ff);pg.add(core);
-      const target=new THREE.Mesh(new THREE.SphereGeometry(3.5,12,10),new THREE.MeshBasicMaterial({visible:false}));pg.add(target);this.hitTarget(n,target);
+      this.createPickTarget(3.5,n,pg);
       if(s.layers.routes){this.addRing(pg,3.8,n.color,.42);}
     }
     if(s.layers.routes||s.layers.starsilk)this.makeRoutes(g.id);
@@ -594,8 +616,7 @@ export class AtlasEngine {
     this.addGlow(center,12,'#fff0cc',.9);
     this.addRing(center,4.4,starInfo.coronaColor,.38,0);
     this.addRing(center,5.4,starInfo.coronaColor,.22,Math.PI/6);
-    const sunTarget=new THREE.Mesh(new THREE.SphereGeometry(4.2,12,10),new THREE.MeshBasicMaterial({visible:false}));
-    center.add(sunTarget);this.hitTarget(sys,sunTarget);
+    this.createPickTarget(4.2,sys,center);
     if(this.labelItems.length)this.labelItems[this.labelItems.length-1].subtitle=starInfo.spectralType;
 
     if(s.layers.grid)this.makeGrid(120,8);
@@ -610,6 +631,7 @@ export class AtlasEngine {
       }
       const beltGeom=new THREE.BufferGeometry();
       beltGeom.setAttribute('position',new THREE.Float32BufferAttribute(beltPts,3));
+      beltGeom.computeBoundingSphere();
       const beltMesh=new THREE.Points(beltGeom,new THREE.PointsMaterial({color:0x8ca2b3,size:.45,transparent:true,opacity:.52,depthWrite:false}));
       this.group.add(beltMesh);
       this.motionObjects.push({obj:beltMesh,speed:.000015});
@@ -650,7 +672,7 @@ export class AtlasEngine {
         moonGroup.add(lines(moonOrbitPts,0x67899e,.18));
         this.motionObjects.push({obj:moonGroup,speed:.0009+idx*.0003});
       }
-      const target=new THREE.Mesh(new THREE.SphereGeometry(3,12,8),new THREE.MeshBasicMaterial({visible:false}));group.add(target);this.hitTarget(n,target);
+      this.createPickTarget(3,n,group);
       if(pInfo){
         const targetItem=this.labelItems[this.labelItems.length-1];
         if(targetItem)targetItem.subtitle=pInfo.badge;
@@ -725,23 +747,41 @@ export class AtlasEngine {
         btn.addEventListener('dblclick',()=>this.callbacks.onSelect?.(btn.dataset.atlasId,true));
         this.labelsRoot.append(btn);this.labelNodes.set(n.id,btn);
       }
-      btn.dataset.status=n.status||'draft';
-      btn.dataset.kind=n.kind||'';
+      const isSelected=state.selected===n.id;
+      if(btn._selected!==isSelected){btn._selected=isSelected;btn.classList.toggle('selected',isSelected);}
+      if(btn.dataset.status!==(n.status||'draft'))btn.dataset.status=n.status||'draft';
+      if(btn.dataset.kind!==(n.kind||''))btn.dataset.kind=n.kind||'';
       const isRef=n.status==='reference';
       const pipClass=isRef?'pip-canon':(n.kind==='galaxy'?'pip-draft':'pip-aux');
       const badgeText=isRef?(item.subtitle||'SOURCE TOPOLOGY'):(item.subtitle||'');
-      btn.innerHTML=`<span class="label-pip ${pipClass}" aria-hidden="true"></span><span class="label-name">${n.name}</span>${badgeText?`<span class="label-badge">${badgeText}</span>`:''}`;
-      btn.classList.toggle('selected',state.selected===n.id);
-      btn.style.left=x+'px';btn.style.top=y+'px';btn.style.fontSize=font+'px';
-      btn.style.color=n.label?.color||'#dff5ff';
-      btn.style.fontFamily=n.label?.family==='mono'?'var(--mono)':'var(--display)';
-      const alpha=state.selected===n.id?1.0:clamp(1.2-(d/700),0.42,1.0);
-      btn.style.opacity=alpha;
-      btn.title=item.subtitle?`${n.name} — ${item.subtitle}`:(isRef?`${n.name} — Canonical Source Topology (Immutable · Unauthored Coordinates)`:(n.kind==='galaxy'?`${n.name} — Draft Galaxy (Click to Inspect · Double-Click to Enter · Editable)`:n.name));
+      const contentKey=`${pipClass}|${n.name}|${badgeText}`;
+      if(btn._contentKey!==contentKey){
+        btn._contentKey=contentKey;
+        btn.innerHTML=`<span class="label-pip ${pipClass}" aria-hidden="true"></span><span class="label-name">${n.name}</span>${badgeText?`<span class="label-badge">${badgeText}</span>`:''}`;
+      }
+      if(btn._lastX===undefined||Math.abs(x-btn._lastX)>=0.25||Math.abs(y-btn._lastY)>=0.25){
+        btn._lastX=x;btn._lastY=y;
+        btn.style.left=x.toFixed(1)+'px';
+        btn.style.top=y.toFixed(1)+'px';
+      }
+      if(btn._lastFont!==font){btn._lastFont=font;btn.style.fontSize=font+'px';}
+      const fontColor=n.label?.color||'#dff5ff';
+      if(btn._lastColor!==fontColor){btn._lastColor=fontColor;btn.style.color=fontColor;}
+      const fontFamily=n.label?.family==='mono'?'var(--mono)':'var(--display)';
+      if(btn._lastFamily!==fontFamily){btn._lastFamily=fontFamily;btn.style.fontFamily=fontFamily;}
+      const alpha=isSelected?1.0:clamp(1.2-(d/700),0.42,1.0);
+      if(btn._lastAlpha===undefined||Math.abs(alpha-btn._lastAlpha)>=0.02){
+        btn._lastAlpha=alpha;
+        btn.style.opacity=alpha.toFixed(2);
+      }
+      const title=item.subtitle?`${n.name} — ${item.subtitle}`:(isRef?`${n.name} — Canonical Source Topology (Immutable · Unauthored Coordinates)`:(n.kind==='galaxy'?`${n.name} — Draft Galaxy (Click to Inspect · Double-Click to Enter · Editable)`:n.name));
+      if(btn._lastTitle!==title){btn._lastTitle=title;btn.title=title;}
     }
     for(const [id,element] of this.labelNodes){if(!live.has(id)){element.remove();this.labelNodes.delete(id);}}
   }
-  tick(now){if(this.disposed)return;const elapsed=frameDelta(now,this.last);if(Number.isFinite(now))this.last=now;
+  tick(now){if(this.disposed)return;
+    const tStart=performance.now();
+    const elapsed=frameDelta(now,this.last);if(Number.isFinite(now))this.last=now;
     this.elapsed+=elapsed;
     if(this.cameraTransition){
       const {startTime,duration,startCam,endCam,startTarget,endTarget,onComplete}=this.cameraTransition;
@@ -795,7 +835,47 @@ export class AtlasEngine {
     }
     this.controls.update();this.renderer.render(this.scene,this.camera);
     if(++this.frame%3===0)this.updateLabels();
+    const tDuration=performance.now()-tStart;
+    this.frameStats.lastMs=tDuration;
+    this.frameStats.avgMs=this.frameStats.avgMs*0.95+tDuration*0.05;
+    if(tDuration>this.frameStats.maxMs)this.frameStats.maxMs=tDuration;
+    else this.frameStats.maxMs=Math.max(tDuration,this.frameStats.maxMs*0.999);
   }
-  info(){return {drawCalls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,geometries:this.renderer.info.memory.geometries,textures:this.renderer.info.memory.textures};}
-  dispose(){this.disposed=true;this.renderer.setAnimationLoop(null);this.resizeObserver.disconnect();this.canvas.removeEventListener('pointerdown',this._down);this.canvas.removeEventListener('pointerup',this._up);this.canvas.removeEventListener('pointermove',this._move);this.canvas.removeEventListener('pointerleave',this._leave);this.canvas.removeEventListener('pointercancel',this._cancel);this.canvas.removeEventListener('lostpointercapture',this._cancel);this.canvas.removeEventListener('dblclick',this._double);this.controls.dispose();this.viewMemory.clear();this.cameraTransition=null;if(this.reticle)disposeTree(this.reticle);disposeTree(this.group);disposeTree(this.bg);this.renderer.dispose();this.renderer.forceContextLoss();this.labelsRoot.replaceChildren();this.labelNodes.clear();}
+  info(){
+    const fps=this.frameStats.avgMs>0?Math.round(1000/Math.max(1,this.frameStats.avgMs)):60;
+    return {
+      drawCalls:this.renderer.info.render.calls,
+      triangles:this.renderer.info.render.triangles,
+      geometries:this.renderer.info.memory.geometries,
+      textures:this.renderer.info.memory.textures,
+      fps,
+      lastFrameMs:Number(this.frameStats.lastMs.toFixed(2)),
+      avgFrameMs:Number(this.frameStats.avgMs.toFixed(2)),
+      maxFrameMs:Number(this.frameStats.maxMs.toFixed(2))
+    };
+  }
+  dispose(){
+    this.disposed=true;
+    this.renderer.setAnimationLoop(null);
+    this.resizeObserver.disconnect();
+    this.canvas.removeEventListener('pointerdown',this._down);
+    this.canvas.removeEventListener('pointerup',this._up);
+    this.canvas.removeEventListener('pointermove',this._move);
+    this.canvas.removeEventListener('pointerleave',this._leave);
+    this.canvas.removeEventListener('pointercancel',this._cancel);
+    this.canvas.removeEventListener('lostpointercapture',this._cancel);
+    this.canvas.removeEventListener('dblclick',this._double);
+    this.controls.dispose();
+    this.viewMemory.clear();
+    this.cameraTransition=null;
+    if(this._sharedPickGeom)this._sharedPickGeom.dispose();
+    if(this._sharedPickMat)this._sharedPickMat.dispose();
+    if(this.reticle)disposeTree(this.reticle);
+    disposeTree(this.group);
+    disposeTree(this.bg);
+    this.renderer.dispose();
+    this.renderer.forceContextLoss();
+    this.labelsRoot.replaceChildren();
+    this.labelNodes.clear();
+  }
 }
