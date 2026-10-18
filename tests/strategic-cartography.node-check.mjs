@@ -54,7 +54,7 @@ test('strategicPosture categorizes topological connectivity without sovereign as
 
 test('regionReport identifies canonical reference landmarks and reports topological posture', () => {
   const state = seedAtlas();
-  
+
   // Construct a wide survey sector around the All-scale overview covering the WorldsVault landmark
   const vaultNode = state.nodes.find(n => n.id === 'worldsvault');
   assert.ok(vaultNode, 'WorldsVault landmark exists in seed');

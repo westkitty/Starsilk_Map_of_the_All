@@ -107,4 +107,3 @@ export function getHandoffSystemMetadata(atlas, systemId){
     ])
   });
 }
-

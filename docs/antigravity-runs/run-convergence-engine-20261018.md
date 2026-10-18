@@ -125,8 +125,8 @@
 - [x] **Loop 160** (VERIFIED): Adversarial verification and test suite: created `tests/planner-refinement.node-check.mjs` verifying schema 1.1.0 compatibility, Keplerian circular speeds, body collections, and DOM attributes; 169/169 tests pass; bundle 213.8 kB gzip (<225 kB budget); Playwright browser CI passes (`PHASE5_BROWSER_PASS`); remote SHA equality verified.
 
 ### PHASE 33 — Visual Design-System Cohesion (Loops 161–165)
-- [ ] **Loop 161**: Refine obsidian, azure, neutral, and restrained accent hierarchy.
-- [ ] **Loop 162**: Refine typography, labels, numeric readability, and information density.
+- [x] **Loop 161** (VERIFIED): Semantic obsidian/azure/neutral/accent tokens in atlas.css, confirmed by visual-design-system tests and OPERATIONAL_STATE.md.
+- [x] **Loop 162** (VERIFIED): Tabular numeric typography, world-label dark text halos and readable telemetry in atlas.css, confirmed by visual-design-system tests and OPERATIONAL_STATE.md.
 - [x] **Loop 163**: Component consistency, iconography, panel styling, and control states.
 - [x] **Loop 164**: Selection highlights, contextual HUDs, and readable overlay composition.
 - [x] **Loop 165**: Restrained motion and transition craftsmanship, measuring performance and reduced-motion behavior.
@@ -190,4 +190,3 @@
 - **Production Bundle**: 218.2 kB gzip (Strict budget < 225.0 kB gzip; 6.7 kB headroom).
 - **Working Tree**: Clean, all commits pushed to remote branch `feature/omni-uplift-100`.
 - **Remote SHA Equality**: Confirmed.
-

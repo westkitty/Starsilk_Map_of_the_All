@@ -23,4 +23,3 @@ test('cubic easing clamps safely within 0 to 1 and evaluates endpoints exactly',
   assert.ok(easeInOutCubic(0.25)<0.25,'ease-in decelerates start');
   assert.ok(easeInOutCubic(0.75)>0.75,'ease-out decelerates end');
 });
-

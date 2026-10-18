@@ -163,5 +163,3 @@ export function articulationPointImpact(graph, nodeId) {
     componentSizes: components.map(c => c.length).sort((a, b) => b - a)
   };
 }
-
-

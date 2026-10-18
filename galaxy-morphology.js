@@ -27,7 +27,7 @@ export function getGalaxyMorphology(node) {
   const size = Number.isFinite(node.size) ? node.size : 1.0;
   const estStarsBln = (Math.round((0.8 + (h % 35) * 0.1) * size * 10) / 10).toFixed(1);
   const haloRadius = Math.round(size * 22);
-  
+
   return Object.freeze({
     id: node.id,
     morphologyId: morphClass.id,

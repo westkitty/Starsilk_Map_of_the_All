@@ -315,7 +315,3 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Total Browser CI Suites**: 5 / 5 suites pass across Desktop, Tablet (1280x800), and Mobile (412x915).
 - **Production Bundle**: 218.2 kB gzip (Strict budget: < 225.0 kB gzip; 6.7 kB headroom preserved).
 - **Invariant Integrity**: 100% verified across 170-year War, black-hole Siege Wall, WorldsVault topology, Drakken non-approval, and independent System Planner orbital simulation.
-
-
-
-

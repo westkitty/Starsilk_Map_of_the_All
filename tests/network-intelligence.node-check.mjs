@@ -133,4 +133,3 @@ test('network intelligence: DOM and CSS integration for provenance, bottleneck c
   assert.ok(js.includes('networkCutBridges'), 'network-lab.js wires networkCutBridges listener');
   assert.ok(js.includes('articulationPointImpact'), 'network-lab.js calculates articulation point severance impact');
 });
-

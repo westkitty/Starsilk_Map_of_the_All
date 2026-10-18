@@ -188,4 +188,3 @@ export function strategicAnalysis(state, region) {
     enclosedCorridorRatio
   };
 }
-
