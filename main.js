@@ -20,9 +20,9 @@ const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className
 const gui={
   canvas:$('spaceCanvas'), labels:$('labels'),atlas:$('atlas'), left:$('leftPanel'), right:$('rightPanel'),
   source:$('sourceLinks'), layers:$('layerControls'), nodes:$('nodeList'), breadcrumb:$('breadcrumb'),
-  form:$('objectForm'), search:$('search'), results:$('searchResults')
+  form:$('objectForm'), search:$('search'), results:$('searchResults'), filterBar:$('searchFilterBar')
 };
-let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let rejectedDraftRaw=null;let sourceGraphInstance=null;
+let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let rejectedDraftRaw=null;let sourceGraphInstance=null;let drawerController=null;let searchFilter='all';let searchSelectedIdx=-1;
 function message(text,error=false){const toast=el('div','toast'+(error?' error':''),text);$('notifications').append(toast);setTimeout(()=>toast.remove(),3500);}
 function bootstrapState(){
   let raw;
@@ -424,8 +424,17 @@ function inspectCanonEntity(c){
   $('inspectorDescription').textContent='Canonical figure/record from '+c.sourcePath+'. As an authoritative identity, it possesses no authored map coordinates in Starsilk canon.';
   $('inspectorStatus').textContent='CANONICAL IDENTITY / UNPLACED RECORD';
   $('objectSigil').style.borderColor='#8beaff';
+  $('objectSigil').innerHTML=getNodeSigilSvg({id:c.id,kind:c.group==='drakken'?'drakken':'reference',color:'#52deff'});
   gui.form.hidden=true;
   const frag=document.createDocumentFragment();
+
+  const unplacedCard=el('div','unplaced-warning-card');
+  unplacedCard.append(
+    el('div','unplaced-warning-header','🔒 UNPLACED CANONICAL RECORD'),
+    el('div','unplaced-warning-body','Authoritative identity from Starsilk Dossier (127 Stable IDs). Coordinates remain strictly unauthored in canon; no fictional spatial coordinates or star-chart positions are inferred or invented.')
+  );
+  frag.append(unplacedCard);
+
   const mainLink=el('a','source-item');mainLink.href=c.humanUrl;mainLink.target='_blank';mainLink.rel='noopener noreferrer';
   mainLink.append(el('strong','',c.name+' ↗'),el('span','','Open authoritative Dossier record ('+c.sourcePath+')'));
   frag.append(mainLink);
@@ -452,6 +461,18 @@ function inspectCanonEntity(c){
         else $('sourceGraphOpen')?.click();
       });
       relSec.append(chip);
+      const placedTarget=state.nodes.find(n=>n.id===r.targetId||n.name.toLowerCase()===r.targetName.toLowerCase());
+      if(placedTarget){
+        const jumpBtn=el('button','source-jump-btn',`⛶ JUMP TO MAP LANDMARK (${placedTarget.name.toUpperCase()})`);
+        jumpBtn.type='button';
+        jumpBtn.title=`Focus 3D camera on ${placedTarget.name}`;
+        jumpBtn.addEventListener('click',()=>{
+          select(placedTarget.id);
+          focusSelected();
+          drawerController?.open('inspect');
+        });
+        relSec.append(jumpBtn);
+      }
     }
     frag.append(relSec);
   }
@@ -466,34 +487,180 @@ function inspectCanonEntity(c){
   frag.append(rev);
   gui.source.replaceChildren(frag);
   if(innerWidth<=850)gui.right.classList.add('mobile-open');
-  const pullTab=document.querySelector('[data-drawer="inspect"]');
-  if(pullTab&&pullTab.getAttribute('aria-expanded')==='false')pullTab.click();
+  drawerController?.open('inspect');
   message('Inspecting canonical record: '+c.name+' (unplaced).');
 }
-function showSearch(){const q=gui.search.value.toLowerCase().trim();const frag=document.createDocumentFragment();if(q){
-  const hits=state.nodes.filter(n=>n.name.toLowerCase().includes(q)||n.description.toLowerCase().includes(q)).slice(0,12);
-  const canonHits=searchCanonEntities(q).slice(0,10);
-  if(hits.length){
-    frag.append(el('div','search-category-header','MAP OBJECTS (VIEWPORT)'));
-    for(const n of hits){const b=button(n.name,'search-result',()=>{gui.search.value='';gui.results.hidden=true;select(n.id);});
-      b.append(el('small','',n.kind+' / '+(n.parentId||'THE ALL')));frag.append(b);}
-  }
-  if(canonHits.length){
-    frag.append(el('div','search-category-header','CANON DOSSIER (127 STABLE IDS)'));
-    for(const c of canonHits){
-      const b=button(c.name,'search-result canon-result',()=>{
-        gui.search.value='';gui.results.hidden=true;
+
+function setSearchFilter(filter){
+  searchFilter=filter;
+  const chips=document.querySelectorAll('.search-filter-chip');
+  chips.forEach(c=>{c.classList.toggle('active',c.dataset.filter===filter);});
+  showSearch();
+}
+
+function showSearch(){
+  const q=gui.search.value.toLowerCase().trim();
+  const frag=document.createDocumentFragment();
+  searchSelectedIdx=-1;
+
+  if(q){
+    const mapNodes=(searchFilter==='all'||searchFilter==='map')
+      ? state.nodes.filter(n=>n.name.toLowerCase().includes(q)||n.description.toLowerCase().includes(q)||n.id.toLowerCase().includes(q)||n.kind.toLowerCase().includes(q)).slice(0,15)
+      : [];
+
+    const regions=(searchFilter==='all'||searchFilter==='regions')
+      ? (state.regions||[]).filter(r=>r.name.toLowerCase().includes(q)||r.id.toLowerCase().includes(q)||(r.notes&&r.notes.toLowerCase().includes(q))).slice(0,8)
+      : [];
+
+    const routes=(searchFilter==='all'||searchFilter==='routes')
+      ? (state.routes||[]).filter(rt=>{
+          if(rt.id.toLowerCase().includes(q)||(rt.kind&&rt.kind.toLowerCase().includes(q)))return true;
+          const fromN=nodeById(state,rt.from);const toN=nodeById(state,rt.to);
+          return (fromN&&fromN.name.toLowerCase().includes(q))||(toN&&toN.name.toLowerCase().includes(q));
+        }).slice(0,8)
+      : [];
+
+    const canonHits=(searchFilter==='all'||searchFilter==='canon')
+      ? searchCanonEntities(q).slice(0,15)
+      : [];
+
+    const totalCount=mapNodes.length+regions.length+routes.length+canonHits.length;
+
+    if(mapNodes.length){
+      frag.append(el('div','search-category-header',`MAP OBJECTS (${mapNodes.length})`));
+      for(const n of mapNodes){
+        const b=el('button','search-result','');
+        b.type='button';b.setAttribute('role','option');
+        const badgeCls=n.status==='reference'?'badge-ref':(n.kind==='galaxy'?'badge-galaxy':(n.kind==='system'?'badge-system':'badge-draft'));
+        const badgeText=n.status==='reference'?'◆ TOPOLOGY':(n.kind==='galaxy'?'● GALAXY':(n.kind==='system'?'● SYSTEM':'● '+n.kind.toUpperCase()));
+        const topRow=el('div','search-result-header');
+        topRow.append(el('span','search-result-name',n.name),el('span',`search-badge ${badgeCls}`,badgeText));
+        const sub=el('small','',`${n.kind.toUpperCase()} · Tier: ${n.parentId||'THE ALL'} · ${n.status==='reference'?'Authoritative Landmark':'Provisional Draft'}`);
+        b.append(topRow,sub);
+        b.addEventListener('click',()=>{
+          gui.search.value='';gui.results.hidden=true;
+          select(n.id);focusSelected();drawerController?.open('inspect');
+        });
+        frag.append(b);
+      }
+    }
+
+    if(regions.length){
+      frag.append(el('div','search-category-header',`STRATEGIC REGIONS (${regions.length})`));
+      for(const r of regions){
+        const b=el('button','search-result','');
+        b.type='button';b.setAttribute('role','option');
+        const topRow=el('div','search-result-header');
+        topRow.append(el('span','search-result-name',r.name),el('span','search-badge badge-region','✥ REGION'));
+        const sub=el('small','',`4X Draft Sector · ${r.vertices?.length||0} vertices · Parent: ${r.parent||'THE ALL'}`);
+        b.append(topRow,sub);
+        b.addEventListener('click',()=>{
+          gui.search.value='';gui.results.hidden=true;
+          drawerController?.open('regions');
+          if(strategy){strategy.open();strategy.setMode('region');strategy.selectRegion(r.id);}
+          message(`Selected draft region: ${r.name}. Edit vertices in Strategy Lab.`);
+        });
+        frag.append(b);
+      }
+    }
+
+    if(routes.length){
+      frag.append(el('div','search-category-header',`DRAFT CORRIDORS (${routes.length})`));
+      for(const rt of routes){
+        const fromN=nodeById(state,rt.from);const toN=nodeById(state,rt.to);
+        const fromName=fromN?fromN.name:rt.from;const toName=toN?toN.name:rt.to;
+        const b=el('button','search-result','');
+        b.type='button';b.setAttribute('role','option');
+        const topRow=el('div','search-result-header');
+        topRow.append(el('span','search-result-name',`${fromName} ↔ ${toName}`),el('span','search-badge badge-route',`— ${rt.kind.toUpperCase()}`));
+        const sub=el('small','',`Draft Corridor · ID: ${rt.id} · Kind: ${rt.kind}`);
+        b.append(topRow,sub);
+        b.addEventListener('click',()=>{
+          gui.search.value='';gui.results.hidden=true;
+          drawerController?.open('routes');
+          if(networkLab){networkLab.open();networkLab.focusRoute(rt.id);}
+          message(`Focused draft corridor: ${fromName} ↔ ${toName} in Network Lab.`);
+        });
+        frag.append(b);
+      }
+    }
+
+    if(canonHits.length){
+      frag.append(el('div','search-category-header',`CANON DOSSIER (${canonHits.length})`));
+      for(const c of canonHits){
+        const b=el('button','search-result canon-result','');
+        b.type='button';b.setAttribute('role','option');
         const mapMatch=state.nodes.find(n=>n.id===c.id||n.name.toLowerCase()===c.name.toLowerCase());
-        if(mapMatch)select(mapMatch.id);
-        else inspectCanonEntity(c);
-      });
-      b.append(el('small','',c.group.toUpperCase()+' / CANONICAL IDENTITY (UNPLACED)'));
-      frag.append(b);
+        const isPlaced=!!mapMatch;
+        const topRow=el('div','search-result-header');
+        topRow.append(
+          el('span','search-result-name',c.name),
+          el('span',`search-badge badge-canon`,isPlaced?'◆ PLACED CANON':'◆ UNPLACED CANON')
+        );
+        let drakkenSnippet='';
+        if(c.drakkenMetadata){
+          drakkenSnippet=` · ${c.drakkenMetadata.candidateId} (${c.drakkenMetadata.threatTier}) · ${c.drakkenMetadata.affinity}`;
+        }
+        const sub=el('small','',`${c.group.toUpperCase()}${drakkenSnippet} · ${isPlaced?'Placed Landmark':'Unauthored Coordinates (No 3D Placement)'}`);
+        b.append(topRow,sub);
+        b.addEventListener('click',()=>{
+          gui.search.value='';gui.results.hidden=true;
+          if(mapMatch){select(mapMatch.id);focusSelected();drawerController?.open('inspect');}
+          else{inspectCanonEntity(c);drawerController?.open('inspect');}
+        });
+        frag.append(b);
+      }
+    }
+
+    if(totalCount===0){
+      const emptyBox=el('div','search-empty-box');
+      emptyBox.append(el('div','',`No objects or canon records match "${q}" in ${searchFilter.toUpperCase()}.`));
+      const suggestions=el('div','search-suggestions');
+      const sampleQueries=['WorldsVault','Mother','Omega','Spiral','Corridor'];
+      for(const sq of sampleQueries){
+        const chip=el('button','search-suggest-chip',`Try: ${sq}`);
+        chip.type='button';
+        chip.addEventListener('click',()=>{
+          gui.search.value=sq;setSearchFilter('all');showSearch();gui.search.focus();
+        });
+        suggestions.append(chip);
+      }
+      emptyBox.append(suggestions);
+      frag.append(emptyBox);
     }
   }
-  if(!hits.length&&!canonHits.length)frag.append(el('div','search-result','No objects found'));
+
+  gui.results.replaceChildren(frag);
+  gui.results.hidden=!q;
 }
-  gui.results.replaceChildren(frag);gui.results.hidden=!q;
+
+function handleSearchKeydown(e){
+  if(gui.results.hidden)return;
+  const items=Array.from(gui.results.querySelectorAll('.search-result'));
+  if(!items.length){
+    if(e.key==='Escape'){gui.search.value='';gui.results.hidden=true;gui.search.blur();}
+    return;
+  }
+  if(e.key==='ArrowDown'){
+    e.preventDefault();searchSelectedIdx=(searchSelectedIdx+1)%items.length;updateSearchSelection(items);
+  }else if(e.key==='ArrowUp'){
+    e.preventDefault();searchSelectedIdx=(searchSelectedIdx-1+items.length)%items.length;updateSearchSelection(items);
+  }else if(e.key==='Enter'){
+    if(searchSelectedIdx>=0&&items[searchSelectedIdx]){e.preventDefault();items[searchSelectedIdx].click();}
+  }else if(e.key==='Escape'){
+    e.preventDefault();gui.search.value='';gui.results.hidden=true;gui.search.blur();
+  }
+}
+
+function updateSearchSelection(items){
+  items.forEach((item,idx)=>{
+    const isSelected=idx===searchSelectedIdx;
+    item.classList.toggle('search-selected',isSelected);
+    if(isSelected){
+      item.scrollIntoView({block:'nearest'});
+      gui.search.setAttribute('aria-activedescendant',item.id||`search-result-${idx}`);
+    }
+  });
 }
 function addCurrentNode(kind){const parentId=kind==='galaxy'?null:view.id;
   let id;const ok=change(()=>{const n=addNode(state,kind,parentId);id=n.id;});
@@ -573,7 +740,18 @@ function bind(){
   $('handoffExportBtn').addEventListener('click',exportPlannerHandoff);
   $('exportBtn').addEventListener('click',exportAtlas);$('importBtn').addEventListener('click',()=>$('fileInput').click());
   $('fileInput').addEventListener('change',ev=>{importAtlas(ev.target.files?.[0]);ev.target.value='';});
-  gui.search.addEventListener('input',showSearch);gui.search.addEventListener('focus',()=>{if(innerWidth<=620)gui.left.classList.add('expanded');});
+  gui.search.addEventListener('input',showSearch);
+  gui.search.addEventListener('keydown',handleSearchKeydown);
+  gui.search.addEventListener('focus',()=>{if(innerWidth<=620)gui.left.classList.add('expanded');});
+  $('searchFilterBar')?.addEventListener('click',ev=>{
+    const chip=ev.target.closest('.search-filter-chip');
+    if(chip&&chip.dataset.filter){setSearchFilter(chip.dataset.filter);}
+  });
+  document.addEventListener('pointerdown',ev=>{
+    if(!ev.target.closest('.search-box')&&!ev.target.closest('.search-filter-bar')&&!ev.target.closest('.search-results')){
+      gui.results.hidden=true;
+    }
+  });
   document.addEventListener('keydown',ev=>{
     if(ev.target?.closest?.('input,textarea,select,[contenteditable]')||$('helpDialog').open||$('sourceGraphDialog').open)return;
     if((ev.ctrlKey||ev.metaKey)&&!ev.altKey&&!ev.shiftKey&&ev.key.toLowerCase()==='z'){ev.preventDefault();undo();return;}
@@ -634,5 +812,5 @@ function init(){updateUI();bind();
     console.error('Atlas startup:',e);}
 }
 init();
-setupFullscreenAtlas();
+drawerController=setupFullscreenAtlas();
 setupRecoveryUI();

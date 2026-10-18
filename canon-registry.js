@@ -178,7 +178,16 @@ export function searchCanonEntities(query, groupFilter = null) {
   return CANON_IDENTITIES.filter(item => {
     if (groupFilter && groupFilter !== 'all' && item.group !== groupFilter) return false;
     if (!q) return true;
-    return item.id.toLowerCase().includes(q) || item.name.toLowerCase().includes(q);
+    if (item.id.toLowerCase().includes(q) || item.name.toLowerCase().includes(q)) return true;
+    if (item.sourcePath && item.sourcePath.toLowerCase().includes(q)) return true;
+    if (item.drakkenMetadata) {
+      const d = item.drakkenMetadata;
+      if (d.candidateId && d.candidateId.toLowerCase().includes(q)) return true;
+      if (d.affinity && d.affinity.toLowerCase().includes(q)) return true;
+      if (d.threatTier && d.threatTier.toLowerCase().includes(q)) return true;
+      if (d.sourceAnchor && d.sourceAnchor.toLowerCase().includes(q)) return true;
+    }
+    return false;
   });
 }
 

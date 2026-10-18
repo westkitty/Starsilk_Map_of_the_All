@@ -23,8 +23,15 @@
     <button id="closeNavPanel" class="mobile-close drawer-close" type="button" aria-label="Close Explore drawer">× CLOSE NAVIGATOR</button>
     <div class="panel-heading"><span>ATLAS NAVIGATOR</span><small>01 / 04</small></div>
     <div class="breadcrumb" id="breadcrumb" aria-label="Navigation path"></div>
-    <div class="search-box"><span aria-hidden="true">&#9906;</span><input id="search" type="search" aria-label="Find a galaxy, system, planet or annotation" placeholder="Find an object...  /" autocomplete="off"/></div>
-    <div id="searchResults" class="search-results" hidden></div>
+    <div class="search-box"><span aria-hidden="true">&#9906;</span><input id="search" type="search" aria-label="Find a galaxy, system, planet, region, corridor or canon figure" placeholder="Find an object...  /" autocomplete="off" aria-autocomplete="list" aria-controls="searchResults"/></div>
+    <div id="searchFilterBar" class="search-filter-bar" role="tablist" aria-label="Search classification filters">
+      <button type="button" class="search-filter-chip active" data-filter="all">ALL</button>
+      <button type="button" class="search-filter-chip" data-filter="canon">CANON (127)</button>
+      <button type="button" class="search-filter-chip" data-filter="map">MAP</button>
+      <button type="button" class="search-filter-chip" data-filter="regions">REGIONS</button>
+      <button type="button" class="search-filter-chip" data-filter="routes">CORRIDORS</button>
+    </div>
+    <div id="searchResults" class="search-results" hidden role="listbox" aria-label="Search results"></div>
     <div class="panel-heading inline"><span>VISIBLE STRUCTURES</span><button id="allLayersBtn" class="text-btn">ALL / NONE</button></div>
     <div id="layerControls" class="layer-controls"></div>
     <div class="panel-heading inline"><span>CARTOGRAPHIC LEGEND</span><small>SEMANTICS</small></div>

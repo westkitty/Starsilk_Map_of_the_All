@@ -111,11 +111,11 @@
 - [x] **Loop 150** (VERIFIED): Adversarial verification and test suite: created unit tests in `tests/network-intelligence.node-check.mjs` verifying `articulationPointImpact`, bridge simulation, and DOM/CSS integration; 158/158 pure Node tests pass; production bundle 210.8 kB gzip (<225 kB budget); Playwright browser CI passes (`PHASE5_BROWSER_PASS`); remote SHA equality verified.
 
 ### PHASE 31 — Discovery and Exploration (Loops 151–155)
-- [ ] **Loop 151**: Search coverage for Atlas objects and accessible indexed source identities.
-- [ ] **Loop 152**: Filters, classification visibility, and result readability.
-- [ ] **Loop 153**: Handling of unplaced canonical entities so they remain discoverable without fictional coordinates.
-- [ ] **Loop 154**: Transitions from search results to source inspection, appropriate map focus, and related-record exploration.
-- [ ] **Loop 155**: Repair dead-end navigation, misleading search results, focus loss, or empty/offline state problems.
+- [x] **Loop 151** (VERIFIED): Multi-collection search coverage: upgraded `searchCanonEntities` indexing across IDs, names, source paths, and Drakken metadata; implemented unified search in `main.js` across celestial nodes, 4X regions, draft routes, and 127 canonical entities.
+- [x] **Loop 152** (VERIFIED): Classification filters & keyboard navigation: added `#searchFilterBar` with interactive chips (`ALL`, `CANON (127)`, `MAP`, `REGIONS`, `CORRIDORS`); added distinct visual badges; wired keyboard navigation (ArrowDown, ArrowUp, Enter, Escape) with `aria-activedescendant`.
+- [x] **Loop 153** (VERIFIED): Unplaced canonical identity cards: enforced strict unauthored coordinates invariant; enriched `inspectCanonEntity(c)` with procedural vector sigils via `getNodeSigilSvg`, structured `.unplaced-warning-card`, Drakken Bio-Weapon Taxonomy card, direct Dossier deep-links, and direct jump buttons (`.source-jump-btn`) to placed landmarks.
+- [x] **Loop 154** (VERIFIED): Fluid search-to-map transitions: implemented smart transition routing focusing camera on map nodes, opening Strategy Lab for regions, opening Network Lab for corridors, and displaying detailed source records for canonical personae.
+- [x] **Loop 155** (VERIFIED): Dead-end repair & adversarial verification: added interactive search empty state with quick suggestion chips; added outside-click dismissal; created `tests/discovery-exploration.node-check.mjs`; 164/164 tests pass; production bundle 212.8 kB gzip (<225 kB budget); Playwright browser CI passes (`PHASE5_BROWSER_PASS`); remote SHA equality verified.
 
 ### PHASE 32 — Planner Integration Refinement (Loops 156–160)
 - [ ] **Loop 156**: Atlas-to-Planner system handoff discoverability and presentation.
