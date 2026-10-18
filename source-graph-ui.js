@@ -59,7 +59,7 @@ export function initSourceGraph(options={}){
       makeSourceLink(n.graphUrl,'OPEN PUBLISHED GRAPH RECORD ↗'),
       makeSourceLink(n.sourceUrl,'OPEN AUTHORED EVIDENCE ↗')
     );
-    if(onInspect3D && (id==='worldsvault'||id==='mother')){
+    if(onInspect3D){
       const inspectBtn=el('button','source-handoff-btn','INSPECT IN 3D ATLAS ⛶');
       inspectBtn.type='button';
       inspectBtn.title=`Focus 3D camera on ${n.label} landmark`;

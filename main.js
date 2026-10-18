@@ -129,6 +129,16 @@ function up(){
     message('Active drafting mode in progress. Finish or cancel (Escape) before ascending.',true);
     return;
   }
+  if(view.kind==='system'&&state.selected){
+    const sel=nodeById(state,state.selected);
+    if(sel&&sel.kind==='planet'&&sel.parentId===view.id){
+      state.selected=null;
+      if(engine)engine.trackingNodeId=null;
+      updateUI();
+      message('Ascended to '+nodeById(state,view.id)?.name+' system overview.');
+      return;
+    }
+  }
   if(view.kind==='system'){
     const sysId=view.id;
     const node=nodeById(state,view.id);
@@ -174,6 +184,14 @@ function updateBreadcrumb(){
     for(const n of ancestry(state,view.id)){
       if(n.kind==='galaxy')frag.append(button(n.name,view.id===n.id&&view.kind==='galaxy'?'breadcrumb-active':'',()=>enter('galaxy',n.id)));
       else if(n.kind==='system')frag.append(button(n.name,view.id===n.id&&view.kind==='system'?'breadcrumb-active':'',()=>enter('system',n.id)));
+    }
+  }
+  if(view.kind==='system'&&state.selected){
+    const sel=nodeById(state,state.selected);
+    if(sel&&sel.kind==='planet'&&sel.parentId===view.id){
+      const planetBtn=button(sel.name,'breadcrumb-active',()=>focusSelected());
+      planetBtn.title='Inspect selected planet ('+sel.name+')';
+      frag.append(planetBtn);
     }
   }
   const resetBtn=button('⟲ RESET CAM','breadcrumb-reset',()=>{
@@ -950,6 +968,8 @@ function init(){updateUI();bind();
             engine.focusOn(targetNode);
             message('Focused 3D camera on '+targetNode.name+'.');
           }
+        }else{
+          message('Selected '+id+' in source topology. Node has unauthored spatial coordinates.');
         }
       }
     });

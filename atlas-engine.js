@@ -147,7 +147,8 @@ export class AtlasEngine {
   }
   createSelectionReticle(){
     const group=new THREE.Group();group.name='selection-reticle';group.visible=false;
-    const ring=new THREE.Mesh(new THREE.RingGeometry(1,1.09,36),new THREE.MeshBasicMaterial({color:0x52deff,side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}));
+    const ringMat=new THREE.MeshBasicMaterial({color:0x52deff,side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false});
+    const ring=new THREE.Mesh(new THREE.RingGeometry(1,1.09,36),ringMat);
     ring.rotation.x=-Math.PI/2;group.add(ring);
     const tickGeom=new THREE.ConeGeometry(.14,.35,4);
     const tickMat=new THREE.MeshBasicMaterial({color:0x9ef0ff,side:THREE.DoubleSide,transparent:true,opacity:.9,depthWrite:false});
@@ -158,6 +159,7 @@ export class AtlasEngine {
       tick.rotation.y=-angle-Math.PI/2;
       group.add(tick);
     }
+    group.userData={ringMat,tickMat};
     return group;
   }
   initBackground(){
@@ -814,7 +816,7 @@ export class AtlasEngine {
       if(trackItem?.obj){
         const wp=this._scratchWorldPos||(this._scratchWorldPos=new THREE.Vector3());
         trackItem.obj.getWorldPosition(wp);
-        const delta=wp.clone().sub(this.controls.target);
+        const delta=(this._scratchDelta||(this._scratchDelta=new THREE.Vector3())).copy(wp).sub(this.controls.target);
         this.camera.position.add(delta);
         this.controls.target.copy(wp);
       }else{this.trackingNodeId=null;}
@@ -832,6 +834,11 @@ export class AtlasEngine {
         const pulse=1+Math.sin(this.elapsed*0.003)*0.06;
         this.reticle.scale.set(scale*pulse,scale*pulse,scale*pulse);
         this.reticle.rotation.y+=elapsed*0.0006;
+        if(this.reticle.userData?.ringMat){
+          const alpha=0.72+Math.sin(this.elapsed*0.004)*0.18;
+          this.reticle.userData.ringMat.opacity=alpha;
+          if(this.reticle.userData.tickMat)this.reticle.userData.tickMat.opacity=Math.min(1,alpha+0.1);
+        }
       }else{this.reticle.visible=false;}
     }else{this.reticle.visible=false;}
     const motion=this.state?.motion&&!this.reducedMotion&&!this.paused;
