@@ -420,9 +420,21 @@ export class AtlasEngine {
       const y=(rnd()-.5)*rad*flatten*(1-r/rad*.75);
       p.push(x,y,z);
       const temperature=rnd();
-      const warm=r/rad<.23||temperature>.90;
-      const violet=!warm&&temperature<.09;
-      const color=new THREE.Color(warm?'#ffd9a8':violet?'#c9b8ff':'#63cbfa');
+      let color;
+      if(String(seed).includes('perseus')){
+        const isCore = r/rad < 0.35;
+        color = new THREE.Color(isCore ? '#fff3d6' : temperature > 0.4 ? '#fde047' : '#93c5fd');
+      } else if(String(seed).includes('centauri')){
+        color = new THREE.Color(temperature > 0.5 ? '#c084fc' : temperature > 0.2 ? '#fde047' : '#93c5fd');
+      } else if(String(seed).includes('ember')){
+        color = new THREE.Color(temperature > 0.35 ? '#fb923c' : temperature > 0.1 ? '#f59e0b' : '#fed7aa');
+      } else if(String(seed).includes('halcyon')){
+        color = new THREE.Color(temperature > 0.25 ? '#38bdf8' : '#e0f2fe');
+      } else {
+        const warm=r/rad<.23||temperature>.90;
+        const violet=!warm&&temperature<.09;
+        color=new THREE.Color(warm?'#ffd9a8':violet?'#c9b8ff':'#63cbfa');
+      }
       color.multiplyScalar(.75+rnd()*.5);
       col.push(color.r,color.g,color.b);
       sizes.push(.75+Math.pow(rnd(),4)*1.85);
@@ -496,6 +508,14 @@ export class AtlasEngine {
 
         this.addGlow(group,37*n.size,n.color,.44);
         this.addGlow(group,7.5*n.size,'#fff0c9',.7);
+        if(n.id==='perseus-confluence'){
+          this.addGlow(group,52*n.size,'#ffd5a2',.48);
+          this.addGlow(group,15*n.size,'#ffffff',.82);
+        } else if(n.id==='centauri-marches'){
+          this.addGlow(group,40*n.size,'#c084fc',.35);
+        } else if(n.id==='ember-span'){
+          this.addGlow(group,42*n.size,'#fb923c',.38);
+        }
         this.addRing(group,12*n.size,n.color,.20,.24);
         this.createPickTarget(13*n.size,n,group);
         if(morph){
