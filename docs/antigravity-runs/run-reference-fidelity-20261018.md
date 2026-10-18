@@ -42,7 +42,7 @@
 | **Phase 11** | Loops 51–55 | Real Delete Engine — Core Architecture | VERIFIED | c869b483 |
 | **Phase 12** | Loops 56–60 | Dependency Cascade, Multi-Delete & Undo/Redo | VERIFIED | 885d38c |
 | **Phase 13** | Loops 61–65 | True Delete Persistence & Reload Verification | VERIFIED | d09befc |
-| **Phase 14** | Loops 66–70 | Visual Subtraction & Procedural Suppression | Planned | — |
+| **Phase 14** | Loops 66–70 | Visual Subtraction & Procedural Suppression | VERIFIED | 6731409 |
 | **Phase 15** | Loops 71–75 | 4X Strategic Sector Overlays (Reference 04 Match) | Planned | — |
 | **Phase 16** | Loops 76–80 | Chromatic Territory Regions (Reference 05 Match) | Planned | — |
 | **Phase 17** | Loops 81–85 | Reference Cartography & Typography | Planned | — |
@@ -107,3 +107,21 @@
 - Caveats: sessionStorage is not permanent across tab/browser closure; export JSON backup remains essential. Physical Galaxy Tab S9 Ultra/S Pen tests and production deployment for this phase remain unverified.
 
 **Next:** Phase 14 — persistent non-canonical procedural suppression and subtractive visual controls against the five fixed Drive references. Before adding renderer code, reclaim gzip headroom to avoid breaching the 225,000-byte budget.
+
+## Phase 14 — Reference-Safe Procedural Subtraction (Loops 66–70), 2026-10-18
+
+- **66 — Source-safe exclusion manifest:** Introduced visual-suppression.js with fixed category and per-element IDs for generated secondary network links, intergalactic bridge ornaments, galaxy embellishments, Flow junctions/pulses, Wall edge particles, route glow tubes and optional orbital debris. Unknown or malformed IDs are rejected; suppression never deletes user draft objects or published Dossier references.
+- **67 — Renderer-level subtraction:** atlas-engine.js now omits the selected procedural meshes, sprites, lines and effect geometries during real Three.js scene construction rather than merely hiding already constructed objects. Maintained the actual cosmic map, Wall absence, galaxy/system zoom, navigation and separate editable draft data.
+- **68 — Genuine subtractive visual polish:** Reduced redundant wall plumes, 700 stray far-field sparkles, extra guide-bead halos and Flow-junction overglow, and consolidated flow strand geometry/shader definitions plus repeated fog setup. Reduced disposable per-particle THREE.Color allocations and kept shared glow textures out of per-rebuild disposal.
+- **69 — Editable Explore UX, eras and JSON v1:** Added Procedural Cleanup selector, SUPPRESS/RESTORE THIS DETAIL, RESTORE ALL, status and explicit HIDE vs SUPPRESS vs DELETE explanation. These controls use existing atomic Undo/Redo and immediate saved draft transactions; each era maintains its own exclusions with backward-compatible optional suppressedVisuals arrays. Mobile Explore expands when opened.
+- **70 — Full runtime and regression verification:** Added 10 focused visual suppression model tests (including bad IDs, old JSON v1, import/export, source integrity, era isolation and deletion boundaries) and a real Chromium acceptance suite proving observable WebGL draw-call reductions, Undo/Redo, reload, independent eras, reset, source protection and mobile touch. Registered eighth browser suite in npm and GitHub Actions.
+
+**Observed release gates:**
+- npm run check: 253/253 Node tests PASS, Vite build PASS and bundled JS/CSS 224,979 bytes gzip versus unchanged 225,000-byte cap (21 bytes spare).
+- npm run test:browser: 8/8 real Chromium suites PASS; process exit code 0, including fullscreen, spatial, strategic, network, temporal, deletion, storage recovery and procedural suppression.
+- Focused measured default balanced All-view: 368 draw calls; after suppressing secondary guide network: 221; Undo: 368; Redo: 221. Independent Flow-pulse removal: 368 to 340, then one Flow node removal: 340 to 337. These are measured draw calls, not an FPS benchmark or tablet thermals.
+- Explicit staged diff and git diff --check PASS. Commit 673140965e4b0baedbed8320d4f48f98ce3c1320 pushed and remote feature SHA confirmed.
+- Preserves storage key starsilk.map-of-the-all.draft.v1, JSON v1, three eras, read-only Dossier and existing parent Planner. No new official coordinates/routes/borders/characters.
+- NOT VERIFIED: Physical Galaxy Tab S9 Ultra / S Pen, independent device frame time, production main merge or published Phase 14 deployment.
+
+**Next:** Phase 15 loops 71–75 — reference-locked 4X strategic sector overlays, while protecting user-authored region geometry and preserving all subtractive editing. Phase 15 must first reclaim meaningful bundle headroom: only 21 bytes remain under the existing gzip budget; never silently raise it.

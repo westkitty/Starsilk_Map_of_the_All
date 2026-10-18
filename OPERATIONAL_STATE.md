@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 17
+revision: 18
 
 ## Current baseline
 
@@ -345,3 +345,14 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - Validation: 243/243 Node tests; 7/7 Chromium acceptance suites PASS, including injected quota/storage failures, stale-local recovery, retryable import, and raw-file preservation. Browser process exit 0. Final production bundle: 224,003 / 225,000 bytes gzip.
 - Preserved: starsilk.map-of-the-all.draft.v1 JSON schema, three era snapshots, source vs user-draft boundaries, Atlas/Planner separation and read-only Character Dossier. No production merge, new Pages deployment, or physical Galaxy Tab S9 Ultra/S Pen performance proof.
 - Next: Phase 14 (Loops 66–70) — explicit non-canonical procedural element suppression, hide/reset vs delete differentiation, and reference-guided visual subtraction. Only 997 bytes of gzip headroom remain, so prioritize render-graph reductions before increasing bundle size.
+
+## Campaign Three — Phase 14 Verified Checkpoint (2026-10-18)
+
+- Feature branch feature/omni-uplift-100, implementation SHA 673140965e4b0baedbed8320d4f48f98ce3c1320 pushed and remote SHA verified. Completion through loops 66–70 (70/100 loops).
+- Added deliberate HIDE (whole existing layer), SUPPRESS (a named generated procedural detail, per era), RESTORE (reversible procedural appearance) and DELETE DRAFT (actual editable user-owned map data). Procedural targets are enumerated and validated in visual-suppression.js; no source registry or physical-canon geometry mutation.
+- Renderer does NOT construct suppressed secondary network mesh groups, selected individual link ornaments, Flow effects, nebula dust, Wall edge particle groups and optional system orbital decoration. Desktop Chromium measured 368 baseline WebGL draws versus 221 after suppressing secondary network, restored to 368 with Undo; Flow pulses separately measured 368 to 340 and one Flow junction 340 to 337. FPS improvements and device thermals are not claimed.
+- Continued actual UI authoring: Explore sidebar has procedural cleanup selection, category and element toggles, Restore All, persistent optional JSON v1 suppressedVisuals with independent war/locking/post snapshots, ordinary atomic Undo/Redo, localStorage persistence, keyboard protections and mobile Explore expansion.
+- Removed some redundant editorial noise and expensive non-essential glow sprites without flattening the actual Three.js scene; refactored shared glow texture lifecycle, strand geometry declarations, fog synchronization and particle color allocations.
+- npm run check PASS: 253/253 Node tests, build and strict bundle gate. Full npm run test:browser PASS: 8/8 Chromium suites, including desktop/phone visual suppression and preserved deletion/storage recovery paths. Compressed bundle 224,979 / 225,000 bytes.
+- Canon safety preserved: Dossier read-only, unplaced source topology distinct from procedural visuals, Siege Wall absence and 170-year Blood Eclipse War unchanged. Parent Planner remains separate. No production merge, Pages deployment or physical S Pen device validation claimed.
+- Next Phase 15: reference-fidelity strategic-sector visual overlays; MUST recover gzip headroom before adding substantial new renderer code. Current margin only 21 bytes.
