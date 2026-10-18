@@ -17,7 +17,7 @@
     <div class="brandmark" aria-hidden="true"><span class="brandmark-a">S</span><span class="brandmark-line"></span></div>
     <div class="branding"><div class="eyebrow">STARSILK <span class="brand-sep">/</span> CARTOGRAPHIC DIRECTORATE</div><h1>THE MAP OF THE ALL</h1><div class="minor">DRAFT ATLAS <span class="dot-amber"></span> UNAUTHORED COORDINATES <span class="separator">/</span> SURVEY 001</div></div>
     <button id="canonHeaderPill" class="header-canon-pill" type="button" title="127 Stable Dossier Records Ingested · Invariants Locked 🔒 (Click to explore canonical entities)" aria-label="127 Canonical Records Ingested. Click to explore source topology."><span class="canon-pill-glyph" aria-hidden="true">◆</span><span class="canon-pill-text">127 CANON IDS</span><span class="canon-pill-lock" aria-hidden="true">🔒</span></button>
-    <div class="header-actions"><div class="status-label" id="savedStatus" role="status">LOCAL DRAFT</div><button id="temporalOpen" class="quiet-btn temporal-header-entry" type="button" aria-expanded="false" aria-controls="temporalPanel">ERA STUDIO ✧</button><button id="networkOpen" class="quiet-btn" title="Open draft corridor network analysis">NETWORK LAB</button><button id="strategyOpen" class="quiet-btn strategic-entry" title="Open group transforms and draft territory authoring">STRATEGY LAB ✥</button><button id="sourceGraphOpen" class="quiet-btn" title="Read-only WorldsVault relationship graph">SOURCE GRAPH · 11 / 6</button><button id="presentBtn" class="quiet-btn" title="Hide the interface (H)">FOCUS VIEW <span aria-hidden="true">&#8599;</span></button><button id="helpBtn" class="quiet-btn" aria-label="Open controls help">?</button></div>
+    <div class="header-actions"><div class="status-label" id="savedStatus" role="status">LOCAL DRAFT</div><button id="undoBtn" class="quiet-btn" type="button" title="Undo change (Ctrl+Z / Cmd+Z)" disabled>UNDO ↶</button><button id="redoBtn" class="quiet-btn" type="button" title="Redo change (Ctrl+Shift+Z / Cmd+Shift+Z / Ctrl+Y)" disabled>REDO ↷</button><button id="temporalOpen" class="quiet-btn temporal-header-entry" type="button" aria-expanded="false" aria-controls="temporalPanel">ERA STUDIO ✧</button><button id="networkOpen" class="quiet-btn" title="Open draft corridor network analysis">NETWORK LAB</button><button id="strategyOpen" class="quiet-btn strategic-entry" title="Open group transforms and draft territory authoring">STRATEGY LAB ✥</button><button id="sourceGraphOpen" class="quiet-btn" title="Read-only WorldsVault relationship graph">SOURCE GRAPH · 11 / 6</button><button id="presentBtn" class="quiet-btn" title="Hide the interface (H)">FOCUS VIEW <span aria-hidden="true">&#8599;</span></button><button id="helpBtn" class="quiet-btn" aria-label="Open controls help">?</button></div>
   </header>
   <aside class="left-panel" id="leftPanel">
     <button id="closeNavPanel" class="mobile-close drawer-close" type="button" aria-label="Close Explore drawer">× CLOSE NAVIGATOR</button>
@@ -256,6 +256,31 @@
     <div class="help-actions">
       <a class="primary-button" href="https://westkitty.github.io/Star_System_Planner/" target="_blank" rel="noopener noreferrer">OPEN PLANNER IN NEW TAB ↗</a>
       <button type="button" id="closeHandoffInstructions" class="button-outline">CLOSE GUIDE</button>
+    </div>
+  </dialog>
+  <dialog id="importConfirmDialog" class="import-dialog" aria-labelledby="importDialogTitle">
+    <div class="import-dialog-card">
+      <div class="panel-heading"><span id="importDialogTitle">GUARDED DRAFT IMPORT</span><small id="importVersionBadge">VERSION 1.0.0</small></div>
+      <div class="import-summary-grid" id="importSummaryGrid">
+        <div><strong id="importSummaryFile">draft.json</strong><small>FILE NAME</small></div>
+        <div><strong id="importSummarySize">0 KB</strong><small>FILE SIZE</small></div>
+        <div><strong id="importSummaryNodes">0</strong><small>NODES</small></div>
+        <div><strong id="importSummaryRoutes">0</strong><small>CORRIDORS</small></div>
+        <div><strong id="importSummaryRegions">0</strong><small>REGIONS</small></div>
+        <div><strong id="importSummaryEras">3</strong><small>ERAS</small></div>
+      </div>
+      <div class="import-warning-notice">
+        <span class="import-warn-icon" aria-hidden="true">⚠️</span>
+        <div class="import-warn-body">
+          <strong>GUARDED IMPORT PROTOCOL:</strong>
+          <p>Importing will replace your active map draft. All imported entities will be marked as provisional draft content with canon pointers safely demoted. Your current state has been preserved in Undo history.</p>
+        </div>
+      </div>
+      <div class="import-actions">
+        <button type="button" id="importBackupBtn" class="button-outline">DOWNLOAD BACKUP FIRST 💾</button>
+        <button type="button" id="importConfirmBtn" class="primary-button">PROCEED WITH IMPORT ↗</button>
+        <button type="button" id="importCancelBtn" class="button-outline faint">CANCEL</button>
+      </div>
     </div>
   </dialog>
   <div class="notifications" id="notifications" aria-live="polite"></div>

@@ -127,9 +127,39 @@ export function validateAtlas(value) {
   if (!errors.length) errors.push(...validateTimeline(value, validateAtlas));
   return [...new Set(errors)];
 }
+export function normalizeDraft(raw) {
+  if(!raw||typeof raw!=='object')return {valid:false,errors:['Invalid or non-object draft JSON']};
+  const data=JSON.parse(JSON.stringify(raw));
+  if(data.version!==VERSION)return {valid:false,errors:['Unsupported atlas schema version']};
+  if(!Array.isArray(data.regions))data.regions=[];
+  if(!data.layers||typeof data.layers!=='object')data.layers={...DEFAULT_LAYERS};
+  else{for(const [key] of LAYERS)if(typeof data.layers[key]!=='boolean')data.layers[key]=key!=='grid';}
+  if(!data.quality||!['balanced','cinematic','battery'].includes(data.quality))data.quality='balanced';
+  if(typeof data.motion!=='boolean')data.motion=true;
+  if(!Number.isFinite(data.typographyScale)||data.typographyScale<.6||data.typographyScale>2)data.typographyScale=1;
+  if(!EPOCHS.some(e=>e.id===data.epoch))data.epoch='post';
+  if(Array.isArray(data.nodes)){
+    for(const n of data.nodes){
+      if(n&&typeof n==='object'){
+        if(!n.label||typeof n.label!=='object'){
+          n.label={show:true,size:12,color:'#e5f5ff',family:'display'};
+        }else{
+          if(typeof n.label.show!=='boolean')n.label.show=true;
+          if(!isHex(n.label.color))n.label.color='#e5f5ff';
+          if(!Number.isFinite(n.label.size)||n.label.size<9||n.label.size>36)n.label.size=12;
+          if(!['display','mono'].includes(n.label.family))n.label.family='display';
+        }
+      }
+    }
+  }
+  const errors=validateAtlas(data);
+  if(errors.length)return {valid:false,errors,data};
+  return {valid:true,errors:[],data};
+}
 export function sanitizeAtlas(value) {
-  const errors=validateAtlas(value);if(errors.length)throw new Error(errors.join('; '));
-  const data=JSON.parse(JSON.stringify(value));
+  const norm=normalizeDraft(value);
+  if(!norm.valid)throw new Error(norm.errors.join('; '));
+  const data=JSON.parse(JSON.stringify(norm.data));
   // Imported source pointers do not grant canon authority. Keep the official read-only evidence separate.
   for(const n of data.nodes){n.status='draft';n.sourceUrl=null;}
   sanitizeTimeline(data);

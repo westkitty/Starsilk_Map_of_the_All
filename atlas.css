@@ -103,4 +103,14 @@
   .studio-handle{width:54px;height:54px}
   .atlas-pull-tab:active,button:active,.node-btn:active,.search-result:active,.source-relation:active{transform:scale(.98);filter:brightness(1.15)}
 }
+.import-dialog{border:1px solid var(--rule-strong);background:var(--panel-solid);color:var(--txt);border-radius:8px;max-width:540px;width:92vw;padding:0;box-shadow:0 16px 48px rgba(0,0,0,.85)}
+.import-dialog::backdrop{background:rgba(1,4,8,.78);backdrop-filter:blur(4px)}
+.import-dialog-card{padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.import-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:rgba(3,12,22,.65);border:1px solid var(--rule);border-radius:4px;padding:10px 14px}
+.import-summary-grid div{display:flex;flex-direction:column}
+.import-summary-grid strong{font-family:var(--mono);font-size:13px;color:var(--azure-bright)}
+.import-summary-grid small{font-size:9px;letter-spacing:.08em;color:var(--txt-muted)}
+.import-warning-notice{display:flex;gap:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.28);border-radius:4px;padding:10px 12px;font-size:11px;line-height:1.4;color:#fca5a5}
+.import-warn-icon{font-size:16px;flex-shrink:0}
+.import-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 

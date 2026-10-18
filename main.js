@@ -9,7 +9,7 @@ import { SpatialStudio } from './spatial-studio.js';
 import { validateCorridor } from './studio-math.js';
 import { initSourceGraph } from './source-graph-ui.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename, getHandoffSystemMetadata } from './planner-handoff.js';
-import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
+import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, normalizeDraft, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
 import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations } from './canon-registry.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -22,12 +22,22 @@ const gui={
   source:$('sourceLinks'), layers:$('layerControls'), nodes:$('nodeList'), breadcrumb:$('breadcrumb'),
   form:$('objectForm'), search:$('search'), results:$('searchResults'), filterBar:$('searchFilterBar')
 };
-let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let rejectedDraftRaw=null;let sourceGraphInstance=null;let drawerController=null;let searchFilter='all';let searchSelectedIdx=-1;
+let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let redoStack=[];let pendingImportData=null;let rejectedDraftRaw=null;let sourceGraphInstance=null;let drawerController=null;let searchFilter='all';let searchSelectedIdx=-1;
 function message(text,error=false){const toast=el('div','toast'+(error?' error':''),text);$('notifications').append(toast);setTimeout(()=>toast.remove(),3500);}
+function updateUndoRedoButtons(){
+  const u=$('undoBtn'),r=$('redoBtn');
+  if(u)u.disabled=history.length===0;
+  if(r)r.disabled=redoStack.length===0;
+}
 function bootstrapState(){
-  let raw;
+  let raw=null;
   try{raw=localStorage.getItem(STORAGE_KEY);}
-  catch(e){message('Local storage unavailable; export your work as JSON.',true);return seedAtlas();}
+  catch(e){console.warn('LocalStorage inaccessible:',e);}
+  if(!raw){
+    try{raw=sessionStorage.getItem(STORAGE_KEY);}
+    catch(e){console.warn('SessionStorage inaccessible:',e);}
+  }
+  if(!raw) return seedAtlas();
   const result=readDraft(raw);
   if(result.rejectedRaw!==null){
     rejectedDraftRaw=result.rejectedRaw;
@@ -40,8 +50,22 @@ state=bootstrapState();
 ensureTimeline(state);
 function writeDraftNow(){
   if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
-  try{state.updatedAt=new Date().toISOString();localStorage.setItem(STORAGE_KEY,JSON.stringify(state));$('savedStatus').textContent='DRAFT SAVED';return true;}
-  catch(e){$('savedStatus').textContent='EXPORT REQUIRED';message('Storage blocked. Export your draft.',true);return false;}
+  try{
+    state.updatedAt=new Date().toISOString();
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    $('savedStatus').textContent='DRAFT SAVED';
+    return true;
+  }catch(e){
+    try{
+      sessionStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+      $('savedStatus').textContent='SESSION SAVED (EXPORT)';
+      message('Local storage quota reached; draft preserved in session. Export your JSON.',true);
+    }catch(se){
+      $('savedStatus').textContent='EXPORT REQUIRED';
+      message('Storage full or blocked. Export your draft.',true);
+    }
+    return false;
+  }
 }
 function flushPendingSave(){
   if(saveTimer===null)return;
@@ -76,7 +100,10 @@ function change(mutator,{geometry=true}={}){
   const prior=JSON.stringify(state);
   try{mutator();syncEra(state);const errors=validateAtlas(state);if(errors.length)throw new Error(errors[0]);}
   catch(e){state=JSON.parse(prior);message('Change rejected: '+e.message,true);return false;}
-  history.push(prior);if(history.length>30)history.shift();revision++;
+  history.push(prior);if(history.length>30)history.shift();
+  redoStack=[];
+  revision++;
+  updateUndoRedoButtons();
   if(geometry)engine?.setState(state,view);else engine?.updateLabels();
   updateUI();persist();return true;
 }
@@ -721,15 +748,71 @@ function exportAtlas(){syncEra(state);const data={...state,selected:null,updated
   const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='starsilk-map-of-the-all-draft-v'+VERSION+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);message('JSON atlas exported. No canon has been changed.');
 }
 async function importAtlas(file){if(!file)return;if(file.size>1200000){message('JSON exceeds 1.2 MB import limit.',true);return;}
-  try{const contents=await file.text();const parsed=sanitizeAtlas(JSON.parse(contents));const previous=JSON.stringify(state);
-    if(rejectedDraftRaw!==null&&!confirm('Importing this valid draft will replace the unreadable saved draft. Download the original JSON from EXPLORE if you need it. Continue?'))return;
-    strategy?.cancelGesture();strategy?.cancelDrawing();
-    studio?.cancel();studio?.routeStop();state=parsed;ensureTimeline(state);history.push(previous);view={kind:'all',id:null};pendingRoute=null;engine?.setState(state,view);engine?.setView(view);updateUI();
-    rejectedDraftRaw=null;$('atlasRecoveryTools')?.remove();persist();message('Imported as draft: source status intentionally demoted.');
+  try{
+    const contents=await file.text();
+    const raw=JSON.parse(contents);
+    const normalized=normalizeDraft(raw);
+    if(!normalized.valid)throw new Error(normalized.errors[0]||'Invalid draft schema');
+    const parsed=sanitizeAtlas(normalized.data);
+    pendingImportData={
+      parsed,
+      filename:file.name,
+      filesize:(file.size/1024).toFixed(1)+' KB',
+      nodeCount:parsed.nodes?.length||0,
+      routeCount:parsed.routes?.length||0,
+      regionCount:parsed.regions?.length||0,
+      eraCount:parsed.timeline?Object.keys(parsed.timeline.snapshots).length:1
+    };
+    if($('importConfirmDialog')){
+      $('importSummaryFile').textContent=pendingImportData.filename;
+      $('importSummarySize').textContent=pendingImportData.filesize;
+      $('importSummaryNodes').textContent=pendingImportData.nodeCount;
+      $('importSummaryRoutes').textContent=pendingImportData.routeCount;
+      $('importSummaryRegions').textContent=pendingImportData.regionCount;
+      $('importSummaryEras').textContent=pendingImportData.eraCount;
+      $('importConfirmDialog').showModal();
+    }else{
+      executeImport();
+    }
   }catch(e){message('Import refused: '+e.message,true);}
 }
-function undo(){if(!history.length){message('No changes to undo.');return;}strategy?.cancelGesture();strategy?.cancelDrawing();studio?.cancel();studio?.routeStop();pendingRoute=null;state=JSON.parse(history.pop());
-  if(view.id&&!nodeById(state,view.id))view={kind:'all',id:null};engine?.setState(state,view);updateUI();persist();message('Reverted last edit.');
+function executeImport(){
+  if(!pendingImportData)return;
+  const previous=JSON.stringify(state);
+  strategy?.cancelGesture();strategy?.cancelDrawing();
+  studio?.cancel();studio?.routeStop();
+  state=pendingImportData.parsed;
+  ensureTimeline(state);
+  history.push(previous);
+  redoStack=[];
+  view={kind:'all',id:null};
+  pendingRoute=null;
+  engine?.setState(state,view);
+  engine?.setView(view);
+  updateUI();
+  updateUndoRedoButtons();
+  rejectedDraftRaw=null;
+  $('atlasRecoveryTools')?.remove();
+  persist();
+  $('importConfirmDialog')?.close();
+  message(`Imported ${pendingImportData.filename}: source status intentionally demoted to draft.`);
+  pendingImportData=null;
+}
+function undo(){if(!history.length){message('No changes to undo.');return;}
+  strategy?.cancelGesture();strategy?.cancelDrawing();studio?.cancel();studio?.routeStop();pendingRoute=null;
+  const current=JSON.stringify(state);
+  redoStack.push(current);if(redoStack.length>30)redoStack.shift();
+  state=JSON.parse(history.pop());
+  if(view.id&&!nodeById(state,view.id))view={kind:'all',id:null};
+  engine?.setState(state,view);updateUI();persist();updateUndoRedoButtons();message('Reverted last edit.');
+}
+function redo(){if(!redoStack.length){message('No changes to redo.');return;}
+  strategy?.cancelGesture();strategy?.cancelDrawing();studio?.cancel();studio?.routeStop();pendingRoute=null;
+  const current=JSON.stringify(state);
+  history.push(current);if(history.length>30)history.shift();
+  state=JSON.parse(redoStack.pop());
+  if(view.id&&!nodeById(state,view.id))view={kind:'all',id:null};
+  engine?.setState(state,view);updateUI();persist();updateUndoRedoButtons();message('Redone edit.');
 }
 function resetCamera(){engine?.setView(view);}
 function toggleFocus(){gui.atlas.classList.toggle('focus-view');if(!gui.atlas.classList.contains('focus-view'))gui.right.classList.remove('mobile-open');}
@@ -753,6 +836,14 @@ function bind(){
   $('motionBtn').addEventListener('click',()=>change(()=>{state.motion=!state.motion;},{geometry:false}));
   $('presentBtn').addEventListener('click',toggleFocus);
   $('helpBtn').addEventListener('click',()=>$('helpDialog').showModal());$('closeHelp').addEventListener('click',()=>$('helpDialog').close());
+  $('undoBtn')?.addEventListener('click',undo);
+  $('redoBtn')?.addEventListener('click',redo);
+  $('importConfirmBtn')?.addEventListener('click',executeImport);
+  $('importCancelBtn')?.addEventListener('click',()=>{
+    $('importConfirmDialog')?.close();
+    pendingImportData=null;
+  });
+  $('importBackupBtn')?.addEventListener('click',()=>{exportAtlas();});
   $('handoffExportBtn').addEventListener('click',exportPlannerHandoff);
   $('handoffHelpBtn')?.addEventListener('click',()=>$('handoffInstructionsDialog')?.showModal());
   $('closeHandoffInstructions')?.addEventListener('click',()=>$('handoffInstructionsDialog')?.close());
@@ -771,8 +862,12 @@ function bind(){
     }
   });
   document.addEventListener('keydown',ev=>{
-    if(ev.target?.closest?.('input,textarea,select,[contenteditable]')||$('helpDialog').open||$('sourceGraphDialog').open)return;
-    if((ev.ctrlKey||ev.metaKey)&&!ev.altKey&&!ev.shiftKey&&ev.key.toLowerCase()==='z'){ev.preventDefault();undo();return;}
+    if(ev.target?.closest?.('input,textarea,select,[contenteditable]')||$('helpDialog').open||$('sourceGraphDialog').open||$('importConfirmDialog')?.open)return;
+    if((ev.ctrlKey||ev.metaKey)&&!ev.altKey){
+      const k=ev.key.toLowerCase();
+      if(!ev.shiftKey&&k==='z'){ev.preventDefault();undo();return;}
+      if((ev.shiftKey&&k==='z')||k==='y'){ev.preventDefault();redo();return;}
+    }
     if(ev.ctrlKey||ev.metaKey||ev.altKey)return; // Preserve browser, OS and assistive-tech shortcuts.
     if(ev.key==='/'){ev.preventDefault();focusSearch();}
     else if(ev.key.toLowerCase()==='h'){toggleFocus();}
