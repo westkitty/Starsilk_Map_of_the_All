@@ -18,11 +18,13 @@ export function setupFullscreenAtlas() {
   const rail=document.createElement('nav');
   rail.id='atlasPullTabs';rail.className='atlas-pull-tabs';rail.setAttribute('aria-label','Open Atlas controls');
   const buttons=new Map();let active=null;
-  for(const [key,label,panel] of DRAWERS){
+  for(let idx=0;idx<DRAWERS.length;idx++){
+    const [key,label,panel]=DRAWERS[idx];
     const b=document.createElement('button');b.type='button';b.className='atlas-pull-tab';
     b.dataset.drawer=key;b.setAttribute('aria-controls',panel);b.setAttribute('aria-expanded','false');
-    b.setAttribute('aria-label','Toggle '+label.toLowerCase()+' tools');
-    b.innerHTML=`<span>${label}</span><span class="atlas-tab-chevron" aria-hidden="true">\u2304</span>`;
+    b.setAttribute('aria-label','Toggle '+label.toLowerCase()+' tools (key '+(idx+1)+')');
+    b.title=label+' [Key: '+(idx+1)+']';
+    b.innerHTML=`<span class="tab-key" aria-hidden="true">${idx+1}</span><span>${label}</span><span class="atlas-tab-chevron" aria-hidden="true">\u2304</span>`;
     b.addEventListener('click',()=>activate(active===key?null:key));rail.append(b);buttons.set(key,b);
   }
   head.append(rail);
@@ -65,16 +67,37 @@ export function setupFullscreenAtlas() {
     if(active==='eras'&&byId('temporalPanel')?.hidden)byId('temporalOpen')?.click();
     reflect();
   }
-  for(const [close,key] of [['strategyClose','regions'],['networkClose','routes'],['temporalClose','eras']]){
+  for(const [close,key] of [['closeNavPanel','nav'],['closeMobileInspector','inspect'],['strategyClose','regions'],['networkClose','routes'],['temporalClose','eras']]){
     byId(close)?.addEventListener('click',()=>{if(active===key){active=null;reflect();}});
   }
+  byId('canonHeaderPill')?.addEventListener('click',()=>{
+    activate('nav');
+    const search=byId('search');
+    if(search){
+      search.focus();
+      search.value='SOURCE';
+      search.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  });
+  const hud=byId('firstActionHud');
+  byId('dismissHudBtn')?.addEventListener('click',()=>{
+    hud?.classList.add('dismissed');
+  });
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'&&active&&!e.target.closest('dialog')){
       e.preventDefault();e.stopImmediatePropagation();activate(null);
+      return;
+    }
+    if(e.target?.closest?.('input,textarea,select,[contenteditable]')||document.querySelector('dialog[open]'))return;
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
+    if(e.key>='1'&&e.key<='6'){
+      const idx=Number(e.key)-1;
+      if(DRAWERS[idx]){e.preventDefault();activate(active===DRAWERS[idx][0]?null:DRAWERS[idx][0]);}
     }
   },true);
   byId('spaceCanvas')?.addEventListener('pointerdown',()=>{
     if(['nav','inspect','eras'].includes(active))activate(null);
+    hud?.classList.add('dimmed');
   },{passive:true});
   // Historic phone inspector auto-opening is deliberately not authoritative.
   // Inspector is shown only when the reader pulls down INSPECT.

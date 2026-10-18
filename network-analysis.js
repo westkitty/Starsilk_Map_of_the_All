@@ -95,15 +95,49 @@ export function networkBridges(graph) {
   return bridges.sort();
 }
 
+/** Chokepoint Hubs (Cut Vertices): nodes whose severance increases disconnected components. */
+export function networkArticulationPoints(graph) {
+  const adj=adjacency(graph),tin=new Map(),low=new Map(),points=new Set(),timer={value:0};
+  const visit=(id,parentNode=null)=>{
+    tin.set(id,timer.value);low.set(id,timer.value++);
+    let children=0;
+    for(const link of adj.get(id)){
+      if(link.node===parentNode)continue;
+      if(tin.has(link.node)){
+        low.set(id,Math.min(low.get(id),tin.get(link.node)));
+      }else{
+        visit(link.node,id);
+        low.set(id,Math.min(low.get(id),low.get(link.node)));
+        if(low.get(link.node)>=tin.get(id)&&parentNode!==null){
+          points.add(id);
+        }
+        children++;
+      }
+    }
+    if(parentNode===null&&children>1)points.add(id);
+  };
+  for(const id of [...adj.keys()].sort())if(!tin.has(id))visit(id);
+  return [...points].sort();
+}
+
+/** Finds a secondary alternative route between from and to without using excluded routes. */
+export function alternativePath(graph,from,to,excludeRoutes=[]) {
+  if(!graph||!Array.isArray(graph.edges))return null;
+  const blocked=new Set(excludeRoutes);
+  const subGraph={...graph,edges:graph.edges.filter(e=>!blocked.has(e.id))};
+  return minimumHopPath(subGraph,from,to);
+}
+
 /** Statistical topology only: no claims about travel speed or access rights. */
 export function networkReport(graph) {
-  const components=networkComponents(graph),bridges=networkBridges(graph),degree=new Map(graph.nodes.map(n=>[n.id,0]));
+  const components=networkComponents(graph),bridges=networkBridges(graph),articulationPoints=networkArticulationPoints(graph),degree=new Map(graph.nodes.map(n=>[n.id,0]));
   for(const edge of graph.edges){degree.set(edge.from,degree.get(edge.from)+1);degree.set(edge.to,degree.get(edge.to)+1);}
   const isolated=[...degree].filter(([,count])=>count===0).map(([id])=>id).sort();
   return {
     nodeCount:graph.nodes.length, corridorCount:graph.edges.length,
     componentCount:components.length, components, isolated,
     bridgeIds:bridges, bridgeCount:bridges.length,
+    articulationPoints, articulationCount:articulationPoints.length,
     mostConnected:[...degree].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))
       .slice(0,5).map(([id,count])=>({id,corridors:count})),
   };
@@ -115,4 +149,17 @@ export function closureImpact(state,view,kind='all',closed=[]) {
   const after=networkReport(draftNetwork(state,view,{kind,closed}));
   return {before,after,addedComponents:after.componentCount-before.componentCount,
     newlyIsolated:after.isolated.filter(id=>!before.isolated.includes(id))};
+}
+
+/** Assesses component fragmentation resulting from severing a specific chokepoint hub. */
+export function articulationPointImpact(graph, nodeId) {
+  const remainingNodes = graph.nodes.filter(n => n.id !== nodeId);
+  const remainingEdges = graph.edges.filter(e => e.from !== nodeId && e.to !== nodeId);
+  const subGraph = { ...graph, nodes: remainingNodes, edges: remainingEdges };
+  const components = networkComponents(subGraph);
+  return {
+    nodeId,
+    resultingComponents: components.length,
+    componentSizes: components.map(c => c.length).sort((a, b) => b - a)
+  };
 }

@@ -1,12 +1,13 @@
-/** Documented relationship explorer. Topology is not metric cartography. */
 import { TOPOLOGY, conceptualLayout, linksForNode, validateSourceTopology } from './source-topology.js';
+import { searchCanonEntities } from './canon-registry.js';
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
 const SVG_NS='http://www.w3.org/2000/svg';
 const svg=(tag,attrs)=>{const node=document.createElementNS(SVG_NS,tag);for(const [k,v] of Object.entries(attrs))node.setAttribute(k,String(v));return node;};
 const makeSourceLink=(url,label)=>{const a=el('a','source-citation',label);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;};
 
-export function initSourceGraph(){
+export function initSourceGraph(options={}){
+  const {onInspect3D}=options;
   const failures=validateSourceTopology();
   if(failures.length)throw new Error('WorldsVault snapshot rejected: '+failures.join('; '));
   const dialog=$('sourceGraphDialog');if(!dialog)throw new Error('Source graph dialog missing');
@@ -58,6 +59,16 @@ export function initSourceGraph(){
       makeSourceLink(n.graphUrl,'OPEN PUBLISHED GRAPH RECORD ↗'),
       makeSourceLink(n.sourceUrl,'OPEN AUTHORED EVIDENCE ↗')
     );
+    if(onInspect3D){
+      const inspectBtn=el('button','source-handoff-btn','INSPECT IN 3D ATLAS ⛶');
+      inspectBtn.type='button';
+      inspectBtn.title=`Focus 3D camera on ${n.label} landmark`;
+      inspectBtn.addEventListener('click',()=>{
+        dialog.close();
+        onInspect3D(id);
+      });
+      details.append(inspectBtn);
+    }
     const matches=linksForNode(id);
     if(!matches.length)details.append(el('p','source-caveat','No published relationship edge is listed for this node. Nothing further should be inferred.'));
     for(const edge of matches){
@@ -70,10 +81,42 @@ export function initSourceGraph(){
     for(const line of lineLayer.querySelectorAll('.source-edge'))line.classList.toggle('active',line.getAttribute('data-from')===id||line.getAttribute('data-to')===id);
     for(const b of relationships.children)b.classList.toggle('active',b.dataset.linked?.split(' ').includes(id));
   }
-  function filter(){const q=search.value.trim().toLowerCase();for(const [id,b] of btns){const n=TOPOLOGY.nodes.find(x=>x.id===id);b.classList.toggle('dimmed',!!q&&!([n.label,n.kind,n.id].some(v=>v.toLowerCase().includes(q))));}}
+  function filter(){
+    const q=search.value.trim().toLowerCase();
+    let directMatches=0;
+    for(const [id,b] of btns){
+      const n=TOPOLOGY.nodes.find(x=>x.id===id);
+      const match=!q||[n.label,n.kind,n.id].some(v=>v.toLowerCase().includes(q));
+      b.classList.toggle('dimmed',!match);
+      if(match&&q)directMatches++;
+    }
+    if(q&&directMatches===0){
+      const canonHits=searchCanonEntities(q).slice(0,6);
+      if(canonHits.length){
+        details.replaceChildren(
+          el('div','source-eyebrow','CANON DOSSIER 127 REGISTRY / MATCHES'),
+          el('h3','','CANONICAL EVIDENCE FOUND'),
+          el('p','source-warning','The query matches authoritative character/strain records from the Dossier. These entities are canonical identities with unauthored spatial coordinates.')
+        );
+        for(const c of canonHits){
+          const row=el('div','source-linked-edge');
+          row.append(el('span','source-evidence-chip',c.group.toUpperCase()),el('span','',c.name),makeSourceLink(c.humanUrl,'DOSSIER ↗'));
+          details.append(row);
+        }
+      }
+    }else if(!q){
+      select(selected);
+    }
+  }
   search.addEventListener('input',filter);
   $('sourceGraphOpen').addEventListener('click',()=>{dialog.showModal();select(selected);});
   $('sourceGraphClose').addEventListener('click',()=>dialog.close());
   select(selected);
-  return {sourceSha:TOPOLOGY.sourceSha,open:()=>dialog.showModal()};
+  return {
+    sourceSha:TOPOLOGY.sourceSha,
+    open:(id)=>{
+      dialog.showModal();
+      if(id&&TOPOLOGY.nodes.some(x=>x.id===id))select(id);
+    }
+  };
 }

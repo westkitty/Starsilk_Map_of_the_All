@@ -12,3 +12,17 @@ export function wrapCurvePhase(value) {
   if (!Number.isFinite(value)) return 0;
   return ((value%1)+1)%1;
 }
+
+/** Cubic ease-out for responsive camera decelerations. */
+export function easeOutCubic(t) {
+  if (!Number.isFinite(t)) return 0;
+  const clamped = Math.max(0, Math.min(1, t));
+  return 1 - Math.pow(1 - clamped, 3);
+}
+
+/** Cubic ease-in-out for smooth cinematic camera journeys between scales. */
+export function easeInOutCubic(t) {
+  if (!Number.isFinite(t)) return 0;
+  const clamped = Math.max(0, Math.min(1, t));
+  return clamped < 0.5 ? 4 * clamped * clamped * clamped : 1 - Math.pow(-2 * clamped + 2, 3) / 2;
+}

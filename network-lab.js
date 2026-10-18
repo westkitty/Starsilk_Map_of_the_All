@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {draftNetwork,minimumHopPath,networkReport,closureImpact,NETWORK_KINDS} from './network-analysis.js';
+import {draftNetwork,minimumHopPath,networkReport,closureImpact,networkArticulationPoints,articulationPointImpact,alternativePath,NETWORK_KINDS} from './network-analysis.js';
 import {validateCorridor} from './studio-math.js';
 
 const svgNS='http://www.w3.org/2000/svg';
@@ -27,6 +27,14 @@ export class NetworkLab {
     this.$('networkTo').addEventListener('change',e=>{this.to=e.target.value;this.refresh();},{signal});
     this.$('networkTrace').addEventListener('click',()=>this.refresh(true),{signal});
     this.$('networkReset').addEventListener('click',()=>{this.closed.clear();this.sync();this.message('Temporary route closures cleared.');},{signal});
+    this.$('networkCutBridges')?.addEventListener('click',()=>{
+      const graph=draftNetwork(this.getState(),this.getView(),{kind:this.kind});
+      const report=networkReport(graph);
+      if(!report.bridgeIds.length){this.message('No bridge corridors found to simulate cutting.');return;}
+      for(const id of report.bridgeIds)this.closed.add(id);
+      this.sync();
+      this.message(`Simulating ${report.bridgeIds.length} bridge corridor(s) severed. Temporary analysis only.`);
+    },{signal});
     this.$('networkCommit').addEventListener('click',()=>this.commitLink(),{signal});
     this.$('networkNewKind').addEventListener('change',()=>this.refresh(),{signal});
     this._resize=()=>this.projectOverlay();window.addEventListener('resize',this._resize,{signal});
@@ -74,11 +82,40 @@ export class NetworkLab {
         this.refresh();
       },{signal:this.listeners.signal});
       const caption=make('span','',`${names.get(edge.from)} / ${names.get(edge.to)}`);
-      const type=make('small','',edge.kind==='starsilk'?'AZURE':'HOOKSHOT');
+      const isStarsilk=edge.kind==='starsilk';
+      const type=make('span','topology-badge '+(isStarsilk?'badge-draft-starsilk':'badge-draft-hookshot'),isStarsilk?'AZURE':'HOOKSHOT');
       row.append(checkbox,caption,type);frag.append(row);
     }
     if(!graph.edges.length)frag.append(make('p','network-empty','No drafted corridors at this scale for the chosen filter.'));
     this.$('networkRouteList').replaceChildren(frag);
+  }
+  focusNode(nodeId){
+    if(!this.engine)return;
+    const item=this.engine.labelItems.find(x=>x.node.id===nodeId);
+    if(!item)return;
+    const targetPos=new THREE.Vector3();item.obj.getWorldPosition(targetPos);
+    const dir=this.engine.camera.position.clone().sub(this.engine.controls.target).normalize();
+    const distance=Math.max(35,this.engine.controls.minDistance+20);
+    const camPos=targetPos.clone().add(dir.multiplyScalar(distance));
+    this.engine.transitionCamera(camPos,targetPos,650);
+    this.message(`Focused on draft node: ${item.node.name}`);
+  }
+  focusRoute(routeId){
+    if(!this.engine)return;
+    const r=this.getState().routes.find(x=>x.id===routeId);
+    if(!r)return;
+    const itemA=this.engine.labelItems.find(x=>x.node.id===r.from);
+    const itemB=this.engine.labelItems.find(x=>x.node.id===r.to);
+    if(!itemA||!itemB)return;
+    const posA=new THREE.Vector3(),posB=new THREE.Vector3();
+    itemA.obj.getWorldPosition(posA);itemB.obj.getWorldPosition(posB);
+    const mid=posA.clone().add(posB).multiplyScalar(0.5);
+    const dist=posA.distanceTo(posB);
+    const camDist=Math.max(dist*1.4,45);
+    const dir=this.engine.camera.position.clone().sub(this.engine.controls.target).normalize();
+    const camPos=mid.clone().add(dir.multiplyScalar(camDist));
+    this.engine.transitionCamera(camPos,mid,650);
+    this.message(`Focused on corridor: ${itemA.node.name} to ${itemB.node.name}`);
   }
   refresh(announce=false){
     if(!this.engine)return;
@@ -94,17 +131,81 @@ export class NetworkLab {
       : 'All saved draft corridors active. Outage switches are temporary.';
     const bridges=new Map(draftNetwork(state,view,{kind:this.kind}).edges.map(e=>[e.id,e]));
     const frag=document.createDocumentFragment();for(const id of report.bridgeIds.slice(0,24)){
-      const edge=bridges.get(id);if(edge)frag.append(make('li','',`${names.get(edge.from)} / ${names.get(edge.to)}`));
+      const edge=bridges.get(id);if(!edge)continue;
+      const btn=make('button','network-bottleneck-chip');btn.type='button';
+      const label=make('span','',`${names.get(edge.from)} ↔ ${names.get(edge.to)}`);
+      const tag=make('span','bottleneck-count-tag','CUT EDGE');
+      btn.append(label,tag);
+      btn.title=`Cut Edge (Bridge): Severing this corridor partitions the cluster. Click to focus in 3D.`;
+      btn.addEventListener('click',()=>this.focusRoute(id));
+      frag.append(btn);
     }
     if(!report.bridgeIds.length)frag.append(make('li','','No single-corridor cut edges in the active graph.'));
     this.$('networkBridgeList').replaceChildren(frag);
+    const artFrag=document.createDocumentFragment();
+    for(const id of (report.articulationPoints||[]).slice(0,24)){
+      const nodeName=names.get(id)||id;
+      const impact=articulationPointImpact(graph,id);
+      const btn=make('button','network-bottleneck-chip');btn.type='button';
+      const label=make('span','',nodeName);
+      const tag=make('span','bottleneck-count-tag',`SEVERS INTO ${impact.resultingComponents} CLUSTERS`);
+      btn.append(label,tag);
+      btn.title=`Chokepoint Hub: Severing ${nodeName} splits the network into ${impact.resultingComponents} disconnected components. Click to focus in 3D.`;
+      btn.addEventListener('click',()=>this.focusNode(id));
+      artFrag.append(btn);
+    }
+    if(!report.articulationPoints?.length)artFrag.append(make('li','','No chokepoint hubs in the active graph.'));
+    this.$('networkArticulationList')?.replaceChildren(artFrag);
     this.currentPath=minimumHopPath(graph,this.from,this.to);
     const pathEl=this.$('networkPath');
-    if(!this.from||!this.to){pathEl.textContent='No two draft objects are available at this tier.';}
-    else if(!this.currentPath){pathEl.textContent='NO CONNECTED DRAFT CORRIDOR / Hypothetical network only.';}
+    const stepsList=this.$('networkStepsList');
+    if(!this.from||!this.to){
+      pathEl.textContent='No two draft objects are available at this tier.';
+      if(stepsList)stepsList.replaceChildren(make('span','network-empty','No endpoints selected.'));
+    }
+    else if(!this.currentPath){
+      pathEl.textContent='NO CONNECTED DRAFT CORRIDOR / Hypothetical network only.';
+      if(stepsList)stepsList.replaceChildren(make('span','network-empty','No continuous corridor available.'));
+    }
     else {
       const steps=this.currentPath.nodes.map(id=>names.get(id)||id);
       pathEl.textContent=`${this.currentPath.hops} HOPS / ${steps.join(' > ')}`;
+      if(stepsList){
+        stepsList.replaceChildren();
+        for(const [idx,nodeId] of this.currentPath.nodes.entries()){
+          const btn=make('button','network-step-chip');btn.type='button';
+          const numSpan=make('span','network-step-num',`[${idx+1}]`);
+          const nameSpan=make('span','',names.get(nodeId)||nodeId);
+          btn.append(numSpan,nameSpan);
+          if(idx<this.currentPath.nodes.length-1){
+            const nextId=this.currentPath.nodes[idx+1];
+            const nodeA=state.nodes.find(n=>n.id===nodeId);
+            const nodeB=state.nodes.find(n=>n.id===nextId);
+            if(nodeA&&nodeB){
+              const dist=Math.hypot(nodeB.position[0]-nodeA.position[0],nodeB.position[1]-nodeA.position[1],nodeB.position[2]-nodeA.position[2]);
+              const distSpan=make('span','network-step-dist',`~${dist.toFixed(1)} DU`);
+              btn.append(distSpan);
+            }
+          }
+          btn.title=`Click to focus on ${names.get(nodeId)||nodeId} in 3D`;
+          btn.addEventListener('click',()=>this.focusNode(nodeId));
+          stepsList.append(btn);
+        }
+      }
+    }
+    const bypassEl=this.$('networkBypass');
+    if(bypassEl){
+      if(this.currentPath&&this.currentPath.hops>0){
+        const alt=alternativePath(graph,this.from,this.to,this.currentPath.routes);
+        if(alt){
+          bypassEl.hidden=false;bypassEl.className='network-bypass-box available';
+          const altNames=alt.nodes.map(id=>names.get(id)||id);
+          bypassEl.textContent=`BYPASS AVAILABLE (${alt.hops} HOPS): Detour via ${altNames.slice(1,-1).join(' > ')||'parallel route'}. Transit survives primary corridor severance.`;
+        }else{
+          bypassEl.hidden=false;bypassEl.className='network-bypass-box critical';
+          bypassEl.textContent=`CRITICAL BOTTLENECK: No alternative path exists. Entire route depends on a single-corridor bridge.`;
+        }
+      }else{bypassEl.hidden=true;}
     }
     this.$('networkCommit').disabled=!!validateCorridor(state,this.from,this.to)||!this.from||!this.to;
     this.projectOverlay();
@@ -133,10 +234,19 @@ export class NetworkLab {
     const rect=this.canvas.getBoundingClientRect();if(rect.width<10||rect.height<10)return;
     this.overlay.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
     const path=this.currentPath.nodes.map(id=>this.screenOf(id));if(path.some(p=>!p))return;
+    const state=this.getState();
     for(let i=1;i<path.length;i++){
       const a=path[i-1],b=path[i],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2-22;
-      const line=svg('path','network-highlight-line');line.setAttribute('d',`M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`);
+      const u=this.currentPath.nodes[i-1],v=this.currentPath.nodes[i];
+      const edge=state.routes.find(r=>r.status==='draft'&&((r.from===u&&r.to===v)||(r.to===u&&r.from===v)));
+      const line=svg('path','network-highlight-line '+(edge?.kind==='starsilk'?'starsilk':'hookshot'));
+      line.setAttribute('d',`M ${a.x} ${a.y} Q ${cx} ${cy} ${b.x} ${b.y}`);
       this.overlay.append(line);
+      const badgeCircle=svg('circle','network-path-badge-circle');
+      badgeCircle.setAttribute('cx',String(cx));badgeCircle.setAttribute('cy',String(cy));badgeCircle.setAttribute('r','8');
+      const badgeText=svg('text','network-path-badge-text');
+      badgeText.setAttribute('x',String(cx));badgeText.setAttribute('y',String(cy));badgeText.textContent=String(i);
+      this.overlay.append(badgeCircle,badgeText);
     }
     for(const [i,p] of path.entries()){
       const circle=svg('circle','network-highlight-node');circle.setAttribute('cx',String(p.x));circle.setAttribute('cy',String(p.y));

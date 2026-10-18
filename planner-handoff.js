@@ -83,3 +83,27 @@ export function validateHandoff(project){
   if(bodies.some(b=>b.type==='planet'&&!ids.has(b.primaryId)))errors.push('Unresolved stellar parent');
   return [...new Set(errors)];
 }
+
+export function getHandoffSystemMetadata(atlas, systemId){
+  const system = nodeById(atlas, systemId);
+  if (!system || system.kind !== 'system' || system.status !== 'draft') return null;
+  const planets = childNodes(atlas, systemId, 'planet');
+  const minAu = 0.50;
+  const maxAu = planets.length > 0 ? (0.50 + (planets.length - 1) * 0.62) : 0.50;
+  return Object.freeze({
+    systemId: system.id,
+    systemName: system.name,
+    planetCount: planets.length,
+    primaryMassSolar: '1.00 M☉ (SOLAR ANALOG)',
+    primaryRadiusKm: 695700,
+    orbitalSpanAu: `${minAu.toFixed(2)} – ${maxAu.toFixed(2)} AU`,
+    schemaVersion: '1.1.0',
+    disclaimer: 'NON-CANON SANDBOX: All orbital periods, radii, and physical masses are synthesized defaults. Display coordinates do not represent physical distances.',
+    steps: Object.freeze([
+      '1. Export: Click "EXPORT SYSTEM .SSP" to download hypothetical Keplerian initial conditions.',
+      '2. Open Planner: Navigate to the standalone Star System Planner simulator.',
+      '3. Import: In the Planner, click IMPORT in the header and select the downloaded .ssp.json file.',
+      '4. Simulate: Run 60 FPS gravitational n-body physics without altering your Map of the All draft.'
+    ])
+  });
+}

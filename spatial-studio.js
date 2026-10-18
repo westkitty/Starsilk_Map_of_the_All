@@ -22,6 +22,16 @@ export class SpatialStudio {
     this.routeSvg.classList.add('studio-route-preview');this.routeSvg.setAttribute('aria-hidden','true');
     this.routePath=document.createElementNS('http://www.w3.org/2000/svg','path');this.routeSvg.append(this.routePath);
     this.canvas.parentElement.append(this.routeSvg);
+    this.guideSvg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    this.guideSvg.classList.add('studio-guide-preview');this.guideSvg.setAttribute('aria-hidden','true');this.guideSvg.hidden=true;
+    this.guideLine=document.createElementNS('http://www.w3.org/2000/svg','line');
+    this.guideTick=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    this.guideTick.setAttribute('r','4.5');
+    this.guideTick.setAttribute('fill','#38bdf8');
+    this.guideTick.setAttribute('stroke','#ffffff');
+    this.guideTick.setAttribute('stroke-width','1.5');
+    this.guideSvg.append(this.guideLine,this.guideTick);
+    this.canvas.parentElement.append(this.guideSvg);
     this.modeButtons=[...panel.querySelectorAll('[data-studio-mode]')];
     for(const btn of this.modeButtons)btn.addEventListener('click',()=>this.setMode(btn.dataset.studioMode));
     panel.querySelector('#studioAxis').addEventListener('change',e=>{this.axis=e.target.value;this.cancel();});
@@ -42,9 +52,20 @@ export class SpatialStudio {
     this.labelsRoot.addEventListener('dblclick',e=>{if(this.mode==='label'){e.stopImmediatePropagation();e.preventDefault();}},true);
     this.canvas.addEventListener('pointermove',e=>{if(this.mode==='route')this.updateRoute(e);});
     this.resizeHandler=()=>{this.updateHandle();this.updateRoute();};window.addEventListener('resize',this.resizeHandler);
-    this.escapeHandler=e=>{if(e.key==='Escape'&&(this.drag||this.labelDrag||this.routeFrom)){
-      e.preventDefault();e.stopImmediatePropagation();this.cancel();this.routeFrom=null;this.onRouteCancel();this.updateRoute();
-    }};document.addEventListener('keydown',this.escapeHandler,true);
+    this.keyHandler=e=>{
+      if(e.target.closest?.('input,textarea,select')||e.ctrlKey||e.metaKey)return;
+      if(e.key==='Escape'&&(this.drag||this.labelDrag||this.routeFrom)){
+        e.preventDefault();e.stopImmediatePropagation();this.cancel();this.routeFrom=null;this.onRouteCancel();this.updateRoute();return;
+      }
+      if(!this.drag&&!this.labelDrag&&!this.routeFrom){
+        const k=e.key.toLowerCase();
+        if(k==='o')this.setMode('orbit');
+        else if(k==='m')this.setMode('move');
+        else if(k==='r')this.setMode('route');
+        else if(k==='t')this.setMode('label');
+      }
+    };
+    document.addEventListener('keydown',this.keyHandler,true);
     this.prefsKey='starsilk.map-of-the-all.visual-lens.v1';
     let lens='survey';try{lens=localStorage.getItem(this.prefsKey)||lens;}catch{}
     this.setLens(DISPLAY_LENSES.includes(lens)?lens:'survey');
@@ -119,39 +140,72 @@ export class SpatialStudio {
     if(!validMoveTarget(n,this.getView()))return;
     const hit=this.rayPoint(e,n.position[1]);if(!hit){this.message('Tilt the map for horizontal movement, or choose Y axis.',true);return;}
     e.preventDefault();e.stopPropagation();
-    this.drag={pointer:e.pointerId,id:n.id,origin:[...n.position],start:hit,client:[e.clientX,e.clientY],candidate:[...n.position],moved:false,controlsEnabled:this.engine.controls.enabled};
+    const startScreen=this.screenOf(n.id);
+    this.drag={pointer:e.pointerId,pointerType:e.pointerType||'mouse',id:n.id,origin:[...n.position],start:hit,startScreen,client:[e.clientX,e.clientY],candidate:[...n.position],moved:false,controlsEnabled:this.engine.controls.enabled};
     this.engine.controls.enabled=false;
     this.handle.setPointerCapture(e.pointerId);this.handle.classList.add('dragging');this.ghost.hidden=false;
     this.updateMoveReadout(this.drag.candidate);
   }
-  updateMoveReadout(coords){this.ghost.textContent=`DRAFT X ${coords[0].toFixed(2)} / Y ${coords[1].toFixed(2)} / Z ${coords[2].toFixed(2)}`;}
+  updateMoveReadout(coords){
+    const d=this.drag;
+    const dx=d?coords[0]-d.origin[0]:0,dy=d?coords[1]-d.origin[1]:0,dz=d?coords[2]-d.origin[2]:0;
+    const deltaStr=this.axis==='y'?`ΔY ${dy>=0?'+':''}${dy.toFixed(1)}`:`Δ[${dx>=0?'+':''}${dx.toFixed(1)}, ${dz>=0?'+':''}${dz.toFixed(1)}]`;
+    const snapStr=this.snap?` · SNAP ${this.snap}`:'';
+    this.ghost.textContent=`DRAFT [${coords[0].toFixed(1)}, ${coords[1].toFixed(1)}, ${coords[2].toFixed(1)}] (${deltaStr}${snapStr})`;
+  }
   onHandleMove(e){const d=this.drag;if(!d||d.pointer!==e.pointerId)return;e.preventDefault();
-    const moved=Math.hypot(e.clientX-d.client[0],e.clientY-d.client[1]);if(moved>3)d.moved=true;
+    const events=(typeof e.getCoalescedEvents==='function')?e.getCoalescedEvents():[e];
+    const ev=events.length?events[events.length-1]:e;
+    const moved=Math.hypot(ev.clientX-d.client[0],ev.clientY-d.client[1]);if(moved>3)d.moved=true;
     if(!d.moved)return;
     let delta;
     if(this.axis==='y'){
       const distance=this.engine.camera.position.distanceTo(this.engine.controls.target);
-      delta=[0,(d.client[1]-e.clientY)*Math.max(.04,distance/460),0];
+      delta=[0,(d.client[1]-ev.clientY)*Math.max(.04,distance/460),0];
     }else{
-      const next=this.rayPoint(e,d.origin[1]);if(!next)return;
+      const next=this.rayPoint(ev,d.origin[1]);if(!next)return;
       delta=[next.x-d.start.x,0,next.z-d.start.z];
     }
     d.candidate=draftPosition(d.origin,delta,this.axis,this.snap);
-    const rect=this.canvas.getBoundingClientRect();this.handle.style.left=Math.max(0,Math.min(rect.width,e.clientX-rect.left))+'px';
-    this.handle.style.top=Math.max(0,Math.min(rect.height,e.clientY-rect.top))+'px';
+    const rect=this.canvas.getBoundingClientRect();
+    const curX=Math.max(0,Math.min(rect.width,ev.clientX-rect.left));
+    const curY=Math.max(0,Math.min(rect.height,ev.clientY-rect.top));
+    this.handle.style.left=curX+'px';
+    this.handle.style.top=curY+'px';
     this.ghost.style.left=this.handle.style.left;this.ghost.style.top=this.handle.style.top;
+    if(d.startScreen){
+      this.guideSvg.hidden=false;
+      this.guideLine.setAttribute('x1',String(d.startScreen.x));
+      this.guideLine.setAttribute('y1',String(d.startScreen.y));
+      this.guideLine.setAttribute('x2',String(curX));
+      this.guideLine.setAttribute('y2',String(curY));
+      this.guideTick.setAttribute('cx',String(curX));
+      this.guideTick.setAttribute('cy',String(curY));
+    }
     this.updateMoveReadout(d.candidate);
   }
   onHandleEnd(e){if(!this.drag||e.pointerId!==this.drag.pointer)return;
     const d=this.drag;this.cancel();
-    if(d.moved&&d.candidate.some((v,i)=>Math.abs(v-d.origin[i])>1e-7))this.onMove(d.id,d.candidate);
+    if(d.moved&&d.candidate.some((v,i)=>Math.abs(v-d.origin[i])>1e-7)){
+      this.onMove(d.id,d.candidate);
+      const n=this.getState().nodes.find(x=>x.id===d.id);
+      if(n)this.message(`Moved ${n.name} to [${d.candidate[0].toFixed(1)}, ${d.candidate[1].toFixed(1)}, ${d.candidate[2].toFixed(1)}]. Undo available.`);
+    }
   }
-  onLabelDown(e){if(this.mode!=='label'||!e.isPrimary||e.button!==0)return;
+  onLabelDown(e){if(this.mode!=='label'||!e.isPrimary)return;
     const button=e.target.closest?.('.world-label');if(!button)return;
     const id=button.dataset.atlasId,n=this.getState().nodes.find(x=>x.id===id);
     if(!validMoveTarget(n,this.getView()))return;
+    if(e.button===2||e.buttons===2){
+      e.stopPropagation();e.preventDefault();
+      this.onLabelMoveCommit(id,[0,0]);
+      button.style.removeProperty('transform');
+      this.message(`Reset label offset for ${n.name}. Undo available.`);
+      return;
+    }
+    if(e.button!==0)return;
     e.stopPropagation();e.preventDefault();button.setPointerCapture(e.pointerId);
-    this.labelDrag={pointer:e.pointerId,id,button,start:[e.clientX,e.clientY],offset:[...(n.label.offset||[0,0])],candidate:[...(n.label.offset||[0,0])],moved:false};
+    this.labelDrag={pointer:e.pointerId,pointerType:e.pointerType||'mouse',id,button,start:[e.clientX,e.clientY],offset:[...(n.label.offset||[0,0])],candidate:[...(n.label.offset||[0,0])],moved:false};
     button.classList.add('studio-label-dragging');
   }
   onLabelPointerMove(e){const d=this.labelDrag;if(!d||d.pointer!==e.pointerId)return;
@@ -189,10 +243,10 @@ export class SpatialStudio {
   cancel(){
     if(this.drag){this.engine.controls.enabled=this.drag.controlsEnabled;try{this.handle.releasePointerCapture(this.drag.pointer);}catch{}this.drag=null;}
     if(this.labelDrag){const d=this.labelDrag;d.button.style.removeProperty('transform');d.button.classList.remove('studio-label-dragging');try{d.button.releasePointerCapture(d.pointer);}catch{}this.labelDrag=null;}
-    this.handle.classList.remove('dragging');this.ghost.hidden=true;this.updateHandle();
+    this.handle.classList.remove('dragging');this.ghost.hidden=true;this.guideSvg.hidden=true;this.updateHandle();
   }
   dispose(){this.cancel();if(this.engine)this.engine.controls.removeEventListener('change',this.engineChange);
-    window.removeEventListener('resize',this.resizeHandler);document.removeEventListener('keydown',this.escapeHandler,true);
-    this.handle.remove();this.ghost.remove();this.routeSvg.remove();this.labelStyles.remove();
+    window.removeEventListener('resize',this.resizeHandler);document.removeEventListener('keydown',this.keyHandler,true);
+    this.handle.remove();this.ghost.remove();this.routeSvg.remove();this.guideSvg.remove();this.labelStyles.remove();
   }
 }

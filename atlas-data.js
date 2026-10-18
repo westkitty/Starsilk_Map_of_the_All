@@ -4,9 +4,30 @@ export const VERSION = 1;
 export const STORAGE_KEY = 'starsilk.map-of-the-all.draft.v1';
 export const CANON_BASE = 'https://westkitty.github.io/Starsilk_Character_Dossier';
 export const EPOCHS = [
-  { id: 'war', title: 'Blood Eclipse War', note: 'Blood Rings documented by Year 3; exact locations here are not authored.' },
-  { id: 'locking', title: 'The Siege Wall is locked', note: 'Heliocide containment, black-hole lattice, and costly survival.' },
-  { id: 'post', title: 'Post-Siege survey', note: 'Interpretive visualization only. No canonical epoch number is asserted.' },
+  {
+    id: 'war',
+    title: 'Blood Eclipse War',
+    duration: '170 YEARS (YEARS 0–170)',
+    note: 'Blood Rings documented by Year 3; Year 121 Ruby Eclipse in Pharos. Invariant: strictly 170-year duration (not 17 years).',
+    visualTheme: 'crimson-remnant',
+    canonLocks: ['170-year war duration strictly locked', 'Blood Rings are vitrified remnants of destroyed worlds']
+  },
+  {
+    id: 'locking',
+    title: 'The Siege Wall is locked',
+    duration: 'YEAR 170 (WAR END / PERMANENT CONTAINMENT)',
+    note: 'Tiger heliocide aftermath. Invariant: Siege Wall is a starless black-hole containment lattice and cosmic absence, never a glowing magical barrier.',
+    visualTheme: 'black-hole-lattice',
+    canonLocks: ['Siege Wall is a black-hole containment lattice and cosmic absence', 'Heliocide triggered by Aureal Starsilk strike']
+  },
+  {
+    id: 'post',
+    title: 'Post-Siege survey',
+    duration: 'CONTEMPORARY SURVEY',
+    note: 'Interpretive visualization and Hookshot recovery. Invariant: Illustrative coordinates; no official galactic positions or faction borders authored.',
+    visualTheme: 'archival-survey',
+    canonLocks: ['No authored galaxy coordinates', 'Hookshot corridors are provisional drafts']
+  },
 ];
 export const LAYERS = [
   ['galaxies','Galactic structures'], ['stars','Stellar detail'],
@@ -106,9 +127,39 @@ export function validateAtlas(value) {
   if (!errors.length) errors.push(...validateTimeline(value, validateAtlas));
   return [...new Set(errors)];
 }
+export function normalizeDraft(raw) {
+  if(!raw||typeof raw!=='object')return {valid:false,errors:['Invalid or non-object draft JSON']};
+  const data=JSON.parse(JSON.stringify(raw));
+  if(data.version!==VERSION)return {valid:false,errors:['Unsupported atlas schema version']};
+  if(!Array.isArray(data.regions))data.regions=[];
+  if(!data.layers||typeof data.layers!=='object')data.layers={...DEFAULT_LAYERS};
+  else{for(const [key] of LAYERS)if(typeof data.layers[key]!=='boolean')data.layers[key]=key!=='grid';}
+  if(!data.quality||!['balanced','cinematic','battery'].includes(data.quality))data.quality='balanced';
+  if(typeof data.motion!=='boolean')data.motion=true;
+  if(!Number.isFinite(data.typographyScale)||data.typographyScale<.6||data.typographyScale>2)data.typographyScale=1;
+  if(!EPOCHS.some(e=>e.id===data.epoch))data.epoch='post';
+  if(Array.isArray(data.nodes)){
+    for(const n of data.nodes){
+      if(n&&typeof n==='object'){
+        if(!n.label||typeof n.label!=='object'){
+          n.label={show:true,size:12,color:'#e5f5ff',family:'display'};
+        }else{
+          if(typeof n.label.show!=='boolean')n.label.show=true;
+          if(!isHex(n.label.color))n.label.color='#e5f5ff';
+          if(!Number.isFinite(n.label.size)||n.label.size<9||n.label.size>36)n.label.size=12;
+          if(!['display','mono'].includes(n.label.family))n.label.family='display';
+        }
+      }
+    }
+  }
+  const errors=validateAtlas(data);
+  if(errors.length)return {valid:false,errors,data};
+  return {valid:true,errors:[],data};
+}
 export function sanitizeAtlas(value) {
-  const errors=validateAtlas(value);if(errors.length)throw new Error(errors.join('; '));
-  const data=JSON.parse(JSON.stringify(value));
+  const norm=normalizeDraft(value);
+  if(!norm.valid)throw new Error(norm.errors.join('; '));
+  const data=JSON.parse(JSON.stringify(norm.data));
   // Imported source pointers do not grant canon authority. Keep the official read-only evidence separate.
   for(const n of data.nodes){n.status='draft';n.sourceUrl=null;}
   sanitizeTimeline(data);

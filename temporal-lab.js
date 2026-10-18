@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {ERA_IDS, compareEras, eraSummary} from './temporal-model.js';
 import {EPOCHS} from './atlas-data.js';
+import {CANON_CHRONOLOGY_MILESTONES} from './canon-registry.js';
 
 const $ = id => document.getElementById(id);
 const elem = (tag, cls='', value='') => {
@@ -12,7 +13,7 @@ const labelFor=id=>EPOCHS.find(e=>e.id===id)?.title||id;
 export class TemporalLab {
   constructor({canvas,atlas,panel,getState,getView,message,onSwitch,onCopy,onNote}) {
     Object.assign(this,{canvas,atlas,panel,getState,getView,message,onSwitch,onCopy,onNote});
-    this.opened=false;this.engine=null;this.baseline='war';this.showGhosts=true;
+    this.opened=false;this.engine=null;this.baseline='war';this.showGhosts=true;this.milestoneFilter='all';
     this.svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
     this.svg.classList.add('temporal-overlay');this.svg.setAttribute('aria-hidden','true');
     this.svg.hidden=true;canvas.parentElement.append(this.svg);
@@ -50,23 +51,102 @@ export class TemporalLab {
     $('temporalCloneBtn').disabled=this.baseline===state.epoch;
     $('temporalJump').disabled=this.baseline===state.epoch;
     $('temporalNote').value=t.notes[state.epoch];
+
+    const activeEpochObj = EPOCHS.find(e => e.id === state.epoch);
+    const eraInfoRoot = $('temporalEraInfo');
+    if (eraInfoRoot && activeEpochObj) {
+      eraInfoRoot.replaceChildren();
+      const meta = elem('div', 'temporal-era-meta');
+      meta.append(
+        elem('span', 'temporal-era-duration', activeEpochObj.duration || ''),
+        elem('span', `temporal-era-badge theme-${activeEpochObj.visualTheme === 'crimson-remnant' ? 'crimson' : activeEpochObj.visualTheme === 'black-hole-lattice' ? 'blackhole' : 'archival'}`, (activeEpochObj.visualTheme || '').toUpperCase())
+      );
+      eraInfoRoot.append(meta);
+      if (activeEpochObj.canonLocks && activeEpochObj.canonLocks.length) {
+        const locksRow = elem('div', 'temporal-era-locks');
+        for (const lock of activeEpochObj.canonLocks) {
+          locksRow.append(elem('span', 'temporal-lock-tag', '🔒 ' + lock));
+        }
+        eraInfoRoot.append(locksRow);
+      }
+    }
+
     const diff=compareEras(t.snapshots[this.baseline],t.snapshots[state.epoch]);
     $('temporalStatus').textContent=diff.total?`${diff.total} DIFFERENCES / ${labelFor(this.baseline).toUpperCase()} → CURRENT`:'NO DRAFT DIFFERENCES';
     const metrics=document.createDocumentFragment();for(const [name,count] of eraSummary(diff)){
       const cell=elem('div','temporal-metric');cell.append(elem('strong','',String(count)),elem('span','',name));metrics.append(cell);
     }$('temporalMetrics').replaceChildren(metrics);
-    const list=document.createDocumentFragment();const add=(kind,item,detail)=>{
-      const div=elem('div','temporal-entry');div.append(elem('b','',kind),elem('span','',`${item.name||item.id||item.after?.name||'Unnamed'} · ${detail}`));list.append(div);
+    const list=document.createDocumentFragment();
+    const add=(kind,item,detail,statusClass='diff-edit')=>{
+      const div=elem('div','temporal-entry');
+      div.append(elem('b',`diff-badge ${statusClass}`,kind),elem('span','',`${item.name||item.id||item.after?.name||'Unnamed'} · ${detail}`));
+      const targetId = item.id || item.after?.id || item.before?.id;
+      if (targetId) {
+        div.title = `Click to focus on ${item.name || item.after?.name || targetId} in 3D`;
+        div.addEventListener('click', () => {
+          const n = this.getState().nodes.find(x => x.id === targetId);
+          if (n && this.engine) {
+            this.engine.focusOn(n);
+            this.message(`Focused on ${n.name} in active era.`);
+          }
+        });
+      }
+      list.append(div);
     };
-    for(const n of diff.nodes.added.slice(0,12))add('NEW',n,'object in active draft');
-    for(const n of diff.nodes.removed.slice(0,12))add('ABSENT',n,'present in baseline');
-    for(const item of diff.nodes.modified.slice(0,20))add('EDIT',item.after,'attributes or position');
-    for(const r of diff.routes.added.slice(0,6))add('LINK',r,'new draft corridor');
-    for(const r of diff.routes.removed.slice(0,6))add('MISSING LINK',r,'baseline corridor absent');
-    for(const reg of diff.regions.modified.slice(0,6))add('REGION',reg.after,'draft boundary changed');
-    for(const k of diff.layers)add('LAYER',{name:k},'display toggle differs');
+    for(const n of diff.nodes.added.slice(0,12))add('NEW',n,'object in active draft','diff-new');
+    for(const n of diff.nodes.removed.slice(0,12))add('ABSENT',n,'present in baseline','diff-absent');
+    for(const item of diff.nodes.modified.slice(0,20))add('EDIT',item.after,'attributes or position','diff-edit');
+    for(const r of diff.routes.added.slice(0,6))add('LINK',r,'new draft corridor','diff-link');
+    for(const r of diff.routes.removed.slice(0,6))add('MISSING LINK',r,'baseline corridor absent','diff-missing');
+    for(const reg of diff.regions.modified.slice(0,6))add('REGION',reg.after,'draft boundary changed','diff-region');
+    for(const k of diff.layers)add('LAYER',{name:k},'display toggle differs','diff-layer');
     if(!list.childNodes.length)list.append(elem('p','temporal-empty','These two independently editable eras currently share the same draft layout.'));
     $('temporalDiffList').replaceChildren(list);
+
+    const milestonesRoot = $('temporalMilestonesList');
+    if (milestonesRoot) {
+      const frag = document.createDocumentFragment();
+      const filterBar = elem('div', 'milestone-filter-bar');
+      const filters = [
+        ['all', 'ALL (5)'],
+        ['war', 'WAR (3)'],
+        ['locking', 'LOCKING (1)'],
+        ['post', 'POST (1)']
+      ];
+      for (const [fId, fLabel] of filters) {
+        const btn = elem('button', 'milestone-filter-btn' + (this.milestoneFilter === fId ? ' active' : ''), fLabel);
+        btn.type = 'button';
+        btn.addEventListener('click', () => {
+          this.milestoneFilter = fId;
+          this.sync();
+        });
+        filterBar.append(btn);
+      }
+      frag.append(filterBar);
+
+      const filtered = CANON_CHRONOLOGY_MILESTONES.filter(m => this.milestoneFilter === 'all' || m.eraId === this.milestoneFilter);
+      for (const m of filtered) {
+        const globalIdx = CANON_CHRONOLOGY_MILESTONES.indexOf(m);
+        const item = elem('div', 'temporal-milestone-item');
+        if (m.eraId === state.epoch) item.style.borderLeftColor = '#8be7ff';
+        const head = elem('div', 'temporal-milestone-head');
+        head.append(
+          elem('span', 'temporal-milestone-year', `STEP ${globalIdx + 1}/5 · ${m.timeframe}`),
+          elem('span', 'milestone-era-tag', m.eraId.toUpperCase())
+        );
+        const titleRow = elem('div', 'temporal-milestone-title-row');
+        titleRow.append(elem('strong', 'temporal-milestone-title', m.title));
+        const link = elem('a', 'temporal-milestone-link', 'DOSSIER ↗');
+        link.href = m.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        titleRow.append(link);
+        item.append(head, titleRow, elem('span', 'temporal-milestone-desc', m.detail));
+        frag.append(item);
+      }
+      milestonesRoot.replaceChildren(frag);
+    }
+
     this.updateOverlay(diff);
   }
   // Convert editable local scene coordinates into the current camera projection.
@@ -90,19 +170,36 @@ export class TemporalLab {
     const active=t.snapshots[state.epoch],baseline=t.snapshots[this.baseline],view=this.getView();
     const container=this.canvas.getBoundingClientRect();this.svg.setAttribute('viewBox',`0 0 ${container.width||1} ${container.height||1}`);
     const shapes=[];const NS='http://www.w3.org/2000/svg';
-    const shape=(tag,attrs,kind)=>{const el=document.createElementNS(NS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));el.setAttribute('class','temporal-'+kind);shapes.push(el);};
+    const shape=(tag,attrs,kind,targetNode=null)=>{
+      const el=document.createElementNS(NS,tag);
+      for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));
+      el.setAttribute('class','temporal-'+kind);
+      if(targetNode){
+        el.style.pointerEvents='auto';
+        el.style.cursor='pointer';
+        el.addEventListener('click',(ev)=>{
+          ev.stopPropagation();
+          const liveNode=state.nodes.find(n=>n.id===targetNode.id)||targetNode;
+          if(this.engine&&liveNode){
+            this.engine.focusOn(liveNode);
+            this.message(`Focused on ${liveNode.name}.`);
+          }
+        });
+      }
+      shapes.push(el);
+    };
     for(const item of diff.moved.slice(0,28)){
       const from=this.project(item.before,view),to=this.project(item.after,view);
       if(!from||!to)continue;
       shape('line',{x1:from.x,y1:from.y,x2:to.x,y2:to.y},'trail');
-      shape('circle',{cx:from.x,cy:from.y,r:8},'ghost');
-      shape('circle',{cx:to.x,cy:to.y,r:6},'current');
+      shape('circle',{cx:from.x,cy:from.y,r:8},'ghost',item.before);
+      shape('circle',{cx:to.x,cy:to.y,r:6},'current',item.after);
     }
     for(const n of diff.nodes.added.slice(0,20)){
-      const p=this.project(n,view);if(p)shape('circle',{cx:p.x,cy:p.y,r:9},'added');
+      const p=this.project(n,view);if(p)shape('circle',{cx:p.x,cy:p.y,r:9},'added',n);
     }
     for(const n of diff.nodes.removed.slice(0,20)){
-      const p=this.project(n,view);if(p)shape('circle',{cx:p.x,cy:p.y,r:9},'removed');
+      const p=this.project(n,view);if(p)shape('circle',{cx:p.x,cy:p.y,r:9},'removed',n);
     }
     this.svg.replaceChildren(...shapes);this.svg.hidden=!shapes.length;
   }
