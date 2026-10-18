@@ -167,16 +167,48 @@ export const CANON_CHRONOLOGY_MILESTONES = Object.freeze([
   }
 ]);
 
+export const WORLDSVAULT_IDENTITIES = Object.freeze(
+  TOPOLOGY.nodes.map(n => Object.freeze({
+    id: n.id,
+    group: 'worldsvault',
+    name: n.label.toUpperCase(),
+    humanUrl: n.sourceUrl,
+    sourcePath: `worldsvault.json#${n.id}`,
+    relationStatus: 'direct-authored topology node',
+    coordinateStatus: 'unauthored',
+    canonStatus: 'published-worldsvault-topology',
+    drakkenMetadata: null,
+  }))
+);
+
+export const CANON_REVISION_METADATA = Object.freeze({
+  dossierSha: '862bc476fb8165784704151eed35c915cbf31bf4',
+  dossierUrl: 'https://westkitty.github.io/Starsilk_Character_Dossier/',
+  stableIdentitiesCount: 127,
+  trackedRepairCount: 75,
+  publishedDrakkenCount: 60,
+  compendiumCrosswalkStrains: 58,
+  authoritativeChronology: '170-year Blood Eclipse War (Years 0–170)',
+  lastReconciliation: '2026-10-18',
+});
+
 export function findCanonEntity(query) {
   if (!query || typeof query !== 'string') return null;
   const q = query.trim().toLowerCase();
-  return CANON_IDENTITIES.find(item => item.id.toLowerCase() === q || item.name.toLowerCase() === q) || null;
+  return CANON_IDENTITIES.find(item => item.id.toLowerCase() === q || item.name.toLowerCase() === q)
+    || WORLDSVAULT_IDENTITIES.find(item => item.id.toLowerCase() === q || item.name.toLowerCase() === q)
+    || null;
 }
 
 export function searchCanonEntities(query, groupFilter = null) {
   const q = (query || '').trim().toLowerCase();
-  return CANON_IDENTITIES.filter(item => {
-    if (groupFilter && groupFilter !== 'all' && item.group !== groupFilter) return false;
+  const searchPool = groupFilter === 'worldsvault'
+    ? WORLDSVAULT_IDENTITIES
+    : (groupFilter && groupFilter !== 'all')
+      ? CANON_IDENTITIES.filter(item => item.group === groupFilter)
+      : (q ? [...CANON_IDENTITIES, ...WORLDSVAULT_IDENTITIES.filter(w => !CANON_IDENTITIES.some(c => c.id === w.id))] : CANON_IDENTITIES);
+
+  return searchPool.filter(item => {
     if (!q) return true;
     if (item.id.toLowerCase().includes(q) || item.name.toLowerCase().includes(q)) return true;
     if (item.sourcePath && item.sourcePath.toLowerCase().includes(q)) return true;
@@ -198,6 +230,7 @@ export function listCanonGroups() {
     { id: 'peripheral', name: 'PERIPHERAL PERSONAE', count: 41 },
     { id: 'drakken', name: 'DRAKKEN BIO-WEAPON STRAINS', count: 60 },
     { id: 'supporting', name: 'FOUNDATIONAL SECTIONS', count: 20 },
+    { id: 'worldsvault', name: 'WORLDSVAULT TOPOLOGY', count: WORLDSVAULT_IDENTITIES.length },
   ];
 }
 

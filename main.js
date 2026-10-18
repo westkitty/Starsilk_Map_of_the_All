@@ -10,7 +10,7 @@ import { validateCorridor } from './studio-math.js';
 import { initSourceGraph } from './source-graph-ui.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename, getHandoffSystemMetadata } from './planner-handoff.js';
 import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, normalizeDraft, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
-import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations } from './canon-registry.js';
+import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations, WORLDSVAULT_IDENTITIES, CANON_REVISION_METADATA } from './canon-registry.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
 import { getNodeSigilSvg, getAssetProvenance } from './source-assets.js';
@@ -380,8 +380,28 @@ function updateSources(){
       frag.append(card);
     }
   }
+  const isRef=n?.status==='reference'||!!canonMatch;
+  const integrityCard=el('div','source-integrity-card');
+  integrityCard.append(
+    el('div','source-integrity-title','SOURCE COMPLETENESS & CARTOGRAPHIC HONESTY'),
+    el('div','source-integrity-grid',
+      `COORDINATES: ${isRef?'UNAUTHORED (PROVISIONAL PIN)':'EDITORIAL DRAFT (USER-EDITABLE)'} · `+
+      `DISTANCES: UNKNOWN (NO ASTROMETRY CLAIMS) · `+
+      `BORDERS: UNCLAIMED (NO FACTION EMPIRES AUTHORED)`
+    ),
+    el('div','source-integrity-notice',
+      isRef
+        ? 'HONEST CARTOGRAPHY: Canonical entities possess published relationships in the Dossier, but zero canonical 3D coordinates. Display pins are illustrative.'
+        : 'HONEST CARTOGRAPHY: Draft objects are provisional sandboxes. They can be freely edited, repositioned, or exported without mutating canonical lore.'
+    )
+  );
+  frag.append(integrityCard);
   const rev=el('div','source-revision-footer');
-  rev.append(el('span','','DOSSIER REF: 862bc476 · 127 STABLE IDS'),el('span','','CANON: 170-YR BLOOD ECLIPSE WAR'));
+  rev.append(
+    el('span','',`DOSSIER REF: ${CANON_REVISION_METADATA.dossierSha.slice(0,8)} · 127 STABLE IDS`),
+    el('span','',`WAR: 170 YRS · S4 STRAINS: ${CANON_REVISION_METADATA.compendiumCrosswalkStrains} MAPPED`),
+    el('span','source-repair-badge',`INVARIANTS: ${CANON_REVISION_METADATA.trackedRepairCount} TRACKED`)
+  );
   frag.append(rev);
   gui.source.replaceChildren(frag);
 }

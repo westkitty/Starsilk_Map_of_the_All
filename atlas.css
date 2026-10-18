@@ -118,4 +118,8 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
   .world-label,button,.quiet-btn,.search-box,.drawer,.top-bar,.bottom-bar,.import-dialog{forced-color-adjust:none;border:2px solid ButtonText!important}
   .world-label.selected{outline:3px solid Highlight!important}
 }
-
+.source-integrity-card{margin:8px 0;padding:8px 10px;border:1px solid rgba(56,189,248,.25);background:rgba(2,16,28,.78);border-radius:4px}
+.source-integrity-title{font:600 9px/1 var(--mono);color:#38bdf8;letter-spacing:.08em;margin-bottom:5px}
+.source-integrity-grid{font:8.5px/1.4 var(--mono);color:#93c5fd;margin-bottom:4px}
+.source-integrity-notice{font:7.5px/1.2 var(--mono);color:#64748b;letter-spacing:.02em;line-height:1.35}
+.source-repair-badge{color:#f59e0b;font-weight:600}
