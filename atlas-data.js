@@ -38,13 +38,13 @@ export const LAYERS = [
 ];
 export const DEFAULT_LAYERS = Object.fromEntries(LAYERS.map(([key])=>[key,key!=='grid']));
 const galaxyDefs = [
-  ['north-reach','NORTH REACH',-102,26,-46,'#83bcff',1.0],
-  ['halcyon-arm','HALCYON ARM',-106,-5,18,'#85dcff',0.92],
-  ['perseus-confluence','PERSEUS CONFLUENCE',-28,2,7,'#ffe1ac',1.4],
-  ['triangulum','TRIANGULUM',-112,-17,57,'#8bbfff',0.68],
-  ['centauri-marches','CENTAURI MARCHES',38,1,30,'#bdaaff',0.90],
-  ['ember-span','EMBER SPAN',92,6,1,'#ffd5a2',0.93],
-  ['southern-territories','SOUTHERN TERRITORIES',130,-12,53,'#7aa9ff',0.83],
+  ['north-reach','NORTH REACH',-52,22,-58,'#83bcff',1.05],
+  ['halcyon-arm','HALCYON ARM',-108,6,-12,'#85dcff',0.95],
+  ['perseus-confluence','PERSEUS CONFLUENCE',-26,2,8,'#ffe1ac',1.45],
+  ['triangulum','TRIANGULUM',-96,-10,42,'#8bbfff',0.72],
+  ['centauri-marches','CENTAURI MARCHES',44,3,20,'#bdaaff',0.92],
+  ['ember-span','EMBER SPAN',102,7,-8,'#ffd5a2',0.95],
+  ['southern-territories','SOUTHERN TERRITORIES',128,-14,52,'#7aa9ff',0.85],
 ];
 export const RESEARCH_ANCHORS = [
   { name: 'WorldsVault', description: 'Published topology and its direct-authored relationships; layout is explicitly not canonical.', url: CANON_BASE + '/worldsvault/' },

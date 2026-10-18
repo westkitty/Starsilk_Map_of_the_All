@@ -48,8 +48,8 @@ export class AtlasEngine {
     this.canvas=canvas;this.labelsRoot=labelsRoot;this.callbacks=callbacks;
     this.scene=new THREE.Scene();this.scene.background=new THREE.Color(PALETTE.void);
     this.scene.fog=new THREE.FogExp2(0x02070d, 0.0012);
-    this.camera=new THREE.PerspectiveCamera(48,1,.1,5000);
-    this.camera.position.set(0,215,280);
+    this.camera=new THREE.PerspectiveCamera(44,1,.1,5000);
+    this.camera.position.set(0,195,260);
     try{
       this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
     }catch(err){
@@ -61,7 +61,7 @@ export class AtlasEngine {
     this.controls.enableDamping=true;this.controls.dampingFactor=.075;
     this.controls.minDistance=6;this.controls.maxDistance=950;this.controls.maxPolarAngle=Math.PI*.91;
     this.controls.screenSpacePanning=true;
-    this.controls.target.set(0,-4,-12);
+    this.controls.target.set(6,-2,-6);
     this.group=new THREE.Group();this.scene.add(this.group);
     this.bg=new THREE.Group();this.scene.add(this.bg);
     this.scene.add(new THREE.AmbientLight(0x8db9ec,1.2));
@@ -475,6 +475,7 @@ export class AtlasEngine {
     if(s.layers.grid)this.makeGrid(360,24);
     if(s.layers.wall&&s.epoch!=='war')this.makeWall();
     if(s.layers.galaxies){
+      this.makeContinentalNebula();
       for(const n of childNodes(s,null,'galaxy')){
         const group=new THREE.Group();group.position.copy(V(n.position));
         const tiltX=((hash(n.id)%19)-9)*.012,tiltZ=((hash(n.id+'z')%19)-9)*.012;
@@ -513,6 +514,77 @@ export class AtlasEngine {
     }
     if(s.layers.rings&&s.epoch!=='post')this.makeRemnantRings();
     if(s.layers.annotations)this.makeAnnotations(null);
+  }
+  makeContinentalNebula(){
+    const s=this.state;
+    const count=s.quality==='cinematic'?2200:s.quality==='battery'?550:1300;
+    const rnd=rng(909);
+    const p=[];const colors=[];const sizes=[];const alphas=[];
+    const spine=[
+      [-108,6,-12,'#0284c7',36],
+      [-96,-10,42,'#0ea5e9',32],
+      [-65,-2,14,'#38bdf8',34],
+      [-26,2,8,'#d97706',42],
+      [12,-4,12,'#38bdf8',36],
+      [44,3,20,'#8b5cf6',38],
+      [75,-2,14,'#0ea5e9',34],
+      [102,7,-8,'#f59e0b',36],
+      [128,-14,52,'#0284c7',34],
+    ];
+    for(let i=0;i<count;i++){
+      const hub=spine[Math.floor(rnd()*spine.length)];
+      const rad=hub[4]*(0.2+rnd()*0.9);
+      const angle=rnd()*Math.PI*2;
+      const x=hub[0]+Math.cos(angle)*rad+(rnd()-.5)*12;
+      const y=hub[1]+(rnd()-.5)*10*0.35;
+      const z=hub[2]+Math.sin(angle)*rad*0.75+(rnd()-.5)*12;
+      if(x>-15&&z<-70)continue;
+      p.push(x,y,z);
+      const baseCol=new THREE.Color(hub[3]);
+      if(rnd()>0.65)baseCol.lerp(new THREE.Color('#38bdf8'),0.5);
+      colors.push(baseCol.r,baseCol.g,baseCol.b);
+      sizes.push(4.5+rnd()*12.0);
+      alphas.push(0.035+rnd()*0.075);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
+    g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+    g.setAttribute('aSize',new THREE.Float32BufferAttribute(sizes,1));
+    g.setAttribute('aAlpha',new THREE.Float32BufferAttribute(alphas,1));
+    g.computeBoundingSphere();
+    const m=new THREE.ShaderMaterial({
+      uniforms:{pixelRatio:{value:this.dpr||1}},
+      vertexShader:String.raw`
+        attribute float aSize;
+        attribute float aAlpha;
+        attribute vec3 color;
+        uniform float pixelRatio;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main(){
+          vColor=color;vAlpha=aAlpha;
+          vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
+          gl_Position=projectionMatrix*mvPosition;
+          float distanceScale=320.0/max(40.0,-mvPosition.z);
+          gl_PointSize=clamp(aSize*distanceScale*pixelRatio,2.0,30.0*pixelRatio);
+        }`,
+      fragmentShader:String.raw`
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main(){
+          float r=length(gl_PointCoord-.5)*2.0;
+          if(r>1.0) discard;
+          float halo=pow(max(0.0,1.0-r),2.0);
+          gl_FragColor=vec4(vColor,halo*vAlpha);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+      transparent:true,blending:THREE.AdditiveBlending,
+      depthWrite:false
+    });
+    const dust=new THREE.Points(g,m);
+    dust.name='continental-nebula-bed';
+    this.group.add(dust);
   }
   makeGrid(size,step){for(let x=-size/2;x<=size/2;x+=step)this.group.add(lines([new THREE.Vector3(x,-19,-size/2),new THREE.Vector3(x,-19,size/2)],0x2d6581,.16));
     for(let z=-size/2;z<=size/2;z+=step)this.group.add(lines([new THREE.Vector3(-size/2,-19,z),new THREE.Vector3(size/2,-19,z)],0x2d6581,.16));}
@@ -713,8 +785,8 @@ export class AtlasEngine {
     this.transitionCamera(newCam,p,durationMs);
   }
   resetViewCamera(smooth=true){
-    const cam=this.view.kind==='all'?[0,215,280]:this.view.kind==='galaxy'?[0,55,110]:[0,38,82];
-    const tgt=this.view.kind==='all'?[0,-4,-12]:[0,0,0];
+    const cam=this.view.kind==='all'?[0,195,260]:this.view.kind==='galaxy'?[0,55,110]:[0,38,82];
+    const tgt=this.view.kind==='all'?[6,-2,-6]:[0,0,0];
     const targetCamera=new THREE.Vector3(...cam);
     const targetControls=new THREE.Vector3(...tgt);
     this.trackingNodeId=null;
