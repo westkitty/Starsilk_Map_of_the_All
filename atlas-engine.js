@@ -603,14 +603,29 @@ export class AtlasEngine {
     hits.sort((a,b)=>a.distance-b.distance);
     const id=hits[0].object.userData.atlasId;if(id)this.callbacks.onSelect?.(id,enter,ev);
   }
-  focusOn(node){const obj=this.labelItems.find(p=>p.node.id===node.id)?.obj;if(!obj)return;
+  focusOn(node,durationMs=600){const obj=this.labelItems.find(p=>p.node.id===node.id)?.obj;if(!obj)return;
     const p=new THREE.Vector3();obj.getWorldPosition(p);
-    const dist=node.kind==='galaxy'?68:node.kind==='system'?28:10;
+    const dist=node.kind==='galaxy'?(62*(node.size||1)):node.kind==='system'?26:10;
     const dir=this.camera.position.clone().sub(this.controls.target).normalize();
     if(dir.lengthSq()<0.001)dir.set(0,.6,.8).normalize();
     const newCam=p.clone().add(dir.multiplyScalar(dist));
     this.trackingNodeId=node.id;
-    this.transitionCamera(newCam,p,600);
+    this.transitionCamera(newCam,p,durationMs);
+  }
+  resetViewCamera(smooth=true){
+    const cam=this.view.kind==='all'?[0,215,280]:this.view.kind==='galaxy'?[0,55,110]:[0,38,82];
+    const tgt=this.view.kind==='all'?[0,-4,-12]:[0,0,0];
+    const targetCamera=new THREE.Vector3(...cam);
+    const targetControls=new THREE.Vector3(...tgt);
+    this.trackingNodeId=null;
+    if(smooth&&!this.reducedMotion){
+      this.transitionCamera(targetCamera,targetControls,600,()=>{
+        this.camera.updateMatrixWorld();this.updateLabels();
+      });
+    }else{
+      this.controls.target.copy(targetControls);this.camera.position.copy(targetCamera);
+      this.controls.update();this.camera.updateMatrixWorld();this.updateLabels();
+    }
   }
   updateLabels(){
     const state=this.state;

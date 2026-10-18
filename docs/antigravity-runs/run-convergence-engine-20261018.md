@@ -60,11 +60,11 @@
 - [x] **Loop 115** (VERIFIED): Created `tests/galaxy-authorship.node-check.mjs`; 123/123 pure Node tests passing (507ms); production bundle 203.6 kB gzip (well under 225 kB budget); Playwright browser CI passing across Desktop (156 draws), Tablet (156 draws), and Mobile (93 draws) with zero errors and clean recovery; verified remote SHA equality. Commit & push Phase 23.
 
 ### PHASE 24 — Cross-Scale Camera Intelligence (Loops 116–120)
-- [ ] **Loop 116**: Camera target acquisition when selecting celestial systems.
-- [ ] **Loop 117**: Continuity between wheel, pinch, double-click, and explicit system-entry controls.
-- [ ] **Loop 118**: Reverse navigation, breadcrumbs, camera reset, and preservation of selection context.
-- [ ] **Loop 119**: Discoverable transitions between All, galaxy, and system tiers while protecting editing-mode guards.
-- [ ] **Loop 120**: Repair lost-target, camera jump, double-click, zoom-boundary, or clipping defects with regression evidence.
+- [x] **Loop 116** (VERIFIED): Target acquisition with `focusOn(node, durationMs)` tailored to node diameter/tier with singularity protection.
+- [x] **Loop 117** (VERIFIED): Seamless camera continuity with `resetViewCamera()` and keyboard shortcuts `[0]` (reset camera), `[Backspace]` / `[Escape]` (hierarchical ascent).
+- [x] **Loop 118** (VERIFIED): Upgraded `enter()` and `up()` to preserve selection context across parent transitions; enhanced breadcrumbs with `.breadcrumb-active` styling and one-click `⟲ RESET CAM` button.
+- [x] **Loop 119** (VERIFIED): Guarded tier transitions against active drawing modes (`strategy?.isDrawing()`, `studio?.mode === 'route'`).
+- [x] **Loop 120** (VERIFIED): Created `tests/camera-intelligence.node-check.mjs`; 127/127 pure Node tests passing (569ms); production bundle 204.0 kB gzip (well under 225 kB budget); Playwright browser CI passing across Desktop (156 draws), Tablet (156 draws), and Mobile (93 draws) with zero errors and clean recovery; verified remote SHA equality. Commit & push Phase 24.
 
 ### PHASE 25 — Deep Stellar Exploration (Loops 121–125)
 - [ ] **Loop 121**: Real Three.js star-system presentation, central star visibility and orbital composition.

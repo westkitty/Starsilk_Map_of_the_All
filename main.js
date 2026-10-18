@@ -78,13 +78,13 @@ function change(mutator,{geometry=true}={}){
   if(geometry)engine?.setState(state,view);else engine?.updateLabels();
   updateUI();persist();return true;
 }
-function enter(viewKind,id){
+function enter(viewKind,id,preserveSelectedId=null){
   studio?.cancel();studio?.routeStop();strategy?.cancelGesture();strategy?.cancelDrawing();pendingRoute=null;
   const n=nodeById(state,id);
   if(viewKind==='galaxy'&&n?.kind!=='galaxy')return;
   if(viewKind==='system'&&n?.kind!=='system')return;
   view={kind:viewKind,id:viewKind==='all'?null:id};
-  state.selected=null;engine?.setView(view);updateUI();
+  state.selected=preserveSelectedId;engine?.setView(view);updateUI();
   const name=n?.name||'THE ALL';$('savedStatus').textContent='VIEW / '+name.slice(0,14);
   if(viewKind==='galaxy'&&n)message('Entered '+n.name+': '+childNodes(state,n.id,'system').length+' provisional stellar systems mapped.');
   else if(viewKind==='system'&&n)message('Entered '+n.name+': '+childNodes(state,n.id,'planet').length+' draft planetary bodies.');
@@ -95,9 +95,22 @@ function enterSelected(){const n=nodeById(state,state.selected);
   else if(n?.kind==='system')enter('system',n.id);
   else message('This object has no deeper cartographic tier.');
 }
-function up(){if(view.kind==='system'){
-  const node=nodeById(state,view.id);enter('galaxy',node?.parentId);
-}else if(view.kind==='galaxy')enter('all',null);else{state.selected=null;updateUI();}}
+function up(){
+  if(strategy?.isDrawing?.()||studio?.mode==='route'){
+    message('Active drafting mode in progress. Finish or cancel (Escape) before ascending.',true);
+    return;
+  }
+  if(view.kind==='system'){
+    const sysId=view.id;
+    const node=nodeById(state,view.id);
+    enter('galaxy',node?.parentId,sysId);
+  }else if(view.kind==='galaxy'){
+    const galId=view.id;
+    enter('all',null,galId);
+  }else{
+    state.selected=null;updateUI();
+  }
+}
 function select(id,autoEnter=false,ev=null){
   if(strategy?.consumeSelect(id,ev))return;
   const n=nodeById(state,id);if(!n){if(id==='wall-concept')message('The Siege Wall: containment by heliocide, not ordinary masonry.');return;}
@@ -125,11 +138,21 @@ function select(id,autoEnter=false,ev=null){
 }
 function focusSelected(){const n=nodeById(state,state.selected);if(n){engine?.focusOn(n);message('Camera focused on '+n.name+'. Orbit to inspect.');}}
 function button(text,cls,action){const b=el('button',cls,text);b.type='button';b.addEventListener('click',action);return b;}
-function updateBreadcrumb(){const frag=document.createDocumentFragment();frag.append(button('THE ALL','',()=>enter('all',null)));
-  if(view.kind!=='all')for(const n of ancestry(state,view.id)){
-    if(n.kind==='galaxy')frag.append(button(n.name,'',()=>enter('galaxy',n.id)));
-    else if(n.kind==='system')frag.append(button(n.name,'',()=>enter('system',n.id)));
+function updateBreadcrumb(){
+  const frag=document.createDocumentFragment();
+  frag.append(button('THE ALL',view.kind==='all'?'breadcrumb-active':'',()=>enter('all',null)));
+  if(view.kind!=='all'){
+    for(const n of ancestry(state,view.id)){
+      if(n.kind==='galaxy')frag.append(button(n.name,view.id===n.id&&view.kind==='galaxy'?'breadcrumb-active':'',()=>enter('galaxy',n.id)));
+      else if(n.kind==='system')frag.append(button(n.name,view.id===n.id&&view.kind==='system'?'breadcrumb-active':'',()=>enter('system',n.id)));
+    }
   }
+  const resetBtn=button('⟲ RESET CAM','breadcrumb-reset',()=>{
+    engine?.resetViewCamera(true);
+    message('Camera reset to default.');
+  });
+  resetBtn.title='Reset camera framing to tier default';
+  frag.append(resetBtn);
   gui.breadcrumb.replaceChildren(frag);
 }
 function updateLayers(){const frag=document.createDocumentFragment();
@@ -508,6 +531,8 @@ function bind(){
     else if(ev.key.toLowerCase()==='h'){toggleFocus();}
     else if(ev.key.toLowerCase()==='f'){focusSelected();}
     else if(ev.key==='Escape'){ev.preventDefault();up();gui.right.classList.remove('mobile-open');}
+    else if(ev.key==='Backspace'&&!ev.target?.closest?.('input,textarea,select')){ev.preventDefault();up();}
+    else if(ev.key==='0'){ev.preventDefault();engine?.resetViewCamera(true);message('Camera reset to default.');}
     else if(ev.key==='Home'){enter('all',null);}
   });
   const mobile=button('INSPECT OBJECT','mobile-inspect',()=>{gui.right.classList.toggle('mobile-open');gui.left.classList.remove('expanded');});
