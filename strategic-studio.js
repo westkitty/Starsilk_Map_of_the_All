@@ -87,7 +87,7 @@ export class StrategicStudio {
   }
   eligibleVisible(){const s=this.getState(),view=this.getView(),parent=view.kind==='all'?null:view.id;
     const type=view.kind==='all'?'galaxy':view.kind==='galaxy'?'system':'planet';
-    return s.nodes.filter(n=>n.status==='draft'&&n.kind===type&&n.parentId===parent);
+    return s.nodes.filter(n=>n.status==='draft'&&n.kind===type&&n.parentId===parent&&n.id!=='worldsvault'&&n.id!=='mother');
   }
   consumeSelect(id,ev){if(!this.opened)return false;
     if(this.mode==='region')return true;
@@ -141,7 +141,10 @@ export class StrategicStudio {
     if(!this.opened||!this.engine)return;
     if(this.mode==='group'){
       const centre=this.groupCentre(),p=centre&&this.project(centre);
-      if(p){this.selectHandle.hidden=false;this.selectHandle.style.left=p.x+'px';this.selectHandle.style.top=p.y+'px';}
+      if(p){
+        this.selectHandle.hidden=false;this.selectHandle.style.left=p.x+'px';this.selectHandle.style.top=p.y+'px';
+        this.selectHandle.textContent=this.groupIds.length>1?'✥ '+this.groupIds.length:'✥';
+      }
       if(this.groupIds.length>1){
         const valid=this.eligibleVisible(),chosen=this.groupIds.map(id=>valid.find(n=>n.id===id)).filter(Boolean);
         if(chosen.length>1){
@@ -185,11 +188,22 @@ export class StrategicStudio {
     if(!region||this.drawing)return;
     region.points.forEach((point,i)=>{
       const pos=this.project([point[0],this.planeY(),point[1]]);if(!pos)return;
-      const h=document.createElement('button');h.type='button';h.className='strategy-vertex';h.textContent=String(i+1);h.title='Drag region vertex '+(i+1);
+      const h=document.createElement('button');h.type='button';h.className='strategy-vertex';h.textContent=String(i+1);
+      h.title=`Vertex ${i+1}: [${point[0].toFixed(1)}, ${point[1].toFixed(1)}] · Drag to move · Right-click or Alt-click to remove`;
       h.style.left=pos.x+'px';h.style.top=pos.y+'px';h.dataset.vertexIndex=String(i);
-      h.setAttribute('aria-label','Drag vertex '+(i+1));
+      h.setAttribute('aria-label','Vertex '+(i+1));
       h.addEventListener('pointerdown',e=>this.vertexDown(e,i));h.addEventListener('pointermove',e=>this.vertexMove(e));
       h.addEventListener('pointerup',e=>this.vertexUp(e));h.addEventListener('pointercancel',()=>this.cancelGesture());
+      h.addEventListener('contextmenu',e=>{
+        e.preventDefault();e.stopPropagation();
+        const r=this.visibleRegions().find(x=>x.id===this.regionId);
+        if(r&&r.points.length<=3){
+          this.onMessage('A polygon region requires at least 3 vertices.',true);
+          return;
+        }
+        this.removeVertex(i);
+        this.onMessage(`Removed vertex ${i+1}. Undo available.`);
+      });
       this.vertexLayer.append(h);
     });
   }
@@ -371,10 +385,12 @@ export class StrategicStudio {
     this.engine.controls.enabled=false;this.selectHandle.setPointerCapture(e.pointerId);this.readout.hidden=false;
   }
   moveGroupDrag(e){const d=this.gesture;if(d?.type!=='group'||d.pointer!==e.pointerId)return;e.preventDefault();
-    if(Math.hypot(e.clientX-d.origin[0],e.clientY-d.origin[1])<4)return;
+    const events=(typeof e.getCoalescedEvents==='function')?e.getCoalescedEvents():[e];
+    const ev=events.length?events[events.length-1]:e;
+    if(Math.hypot(ev.clientX-d.origin[0],ev.clientY-d.origin[1])<4)return;
     d.moved=true;
-    if(this.groupAxis()==='y'){const distance=this.engine.camera.position.distanceTo(this.engine.controls.target);d.delta=[0,(d.origin[1]-e.clientY)*Math.max(.04,distance/460),0];}
-    else {const next=this.pickPlane(e,d.centre[1]);if(!next)return;d.delta=[next.x-d.start.x,0,next.z-d.start.z];}
+    if(this.groupAxis()==='y'){const distance=this.engine.camera.position.distanceTo(this.engine.controls.target);d.delta=[0,(d.origin[1]-ev.clientY)*Math.max(.04,distance/460),0];}
+    else {const next=this.pickPlane(ev,d.centre[1]);if(!next)return;d.delta=[next.x-d.start.x,0,next.z-d.start.z];}
     const steps=this.groupSnap(),updates=translatedGroup(this.getState(),this.groupIds,this.getView(),d.delta,steps);
     const next=updates.reduce((p,u)=>p.map((v,i)=>v+u.position[i]/updates.length),[0,0,0]);
     const projection=this.project(next);if(projection){this.selectHandle.style.left=projection.x+'px';this.selectHandle.style.top=projection.y+'px';}
@@ -385,11 +401,23 @@ export class StrategicStudio {
   }
   vertexDown(e,index){if(!this.opened||this.mode!=='region'||!e.isPrimary||e.button!==0)return;
     const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
+    if(e.altKey){
+      e.preventDefault();e.stopPropagation();
+      if(r.points.length<=3){
+        this.onMessage('A polygon region requires at least 3 vertices.',true);
+        return;
+      }
+      this.removeVertex(index);
+      this.onMessage(`Removed vertex ${index+1}. Undo available.`);
+      return;
+    }
     e.preventDefault();e.stopPropagation();this.dragVertices={pointer:e.pointerId,id:r.id,index,candidate:r.points.map(p=>[...p]),start:[e.clientX,e.clientY]};
     e.currentTarget.setPointerCapture(e.pointerId);if(this.engine)this.engine.controls.enabled=false;
   }
   vertexMove(e){const d=this.dragVertices;if(!d||d.pointer!==e.pointerId)return;e.preventDefault();
-    const p=this.pickPlane(e,this.planeY());if(!p)return;
+    const events=(typeof e.getCoalescedEvents==='function')?e.getCoalescedEvents():[e];
+    const ev=events.length?events[events.length-1]:e;
+    const p=this.pickPlane(ev,this.planeY());if(!p)return;
     d.candidate[d.index]=[Math.max(-10000,Math.min(10000,p.x)),Math.max(-10000,Math.min(10000,p.z))];
     const screen=this.project([d.candidate[d.index][0],this.planeY(),d.candidate[d.index][1]]);
     if(screen){e.currentTarget.style.left=screen.x+'px';e.currentTarget.style.top=screen.y+'px';}

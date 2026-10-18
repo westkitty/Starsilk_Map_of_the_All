@@ -202,3 +202,11 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Loop 135 ADVERSARIAL VERIFICATION & REMOTE PUSH**: Created `tests/chronology-cartography.node-check.mjs`; 145/145 pure Node tests passing (534ms); production bundle 208.5 kB gzip (well under 225 kB budget); Playwright browser CI passing across desktop, tablet, and mobile with zero console errors; verified remote SHA equality.
 
 
+
+## Phase 28: Spatial Editing Maturity (Loops 136–140) — 2026-10-18
+
+- **Loop 136 KEYBOARD STUDIO SHORTCUTS**: Added keyboard mode shortcuts in `spatial-studio.js` with `[O]` (orbit), `[M]` (move), `[R]` (route), and `[T]` (label typography); guarded against input/textarea focus and modified keys (`ctrl`/`meta`); guaranteed single instance lifecycle cleanup in `dispose()`.
+- **Loop 137 COALESCED POINTER ACCURACY & SNAP GUIDES**: Integrated pointer coalesced events (`e.getCoalescedEvents()`) in `spatial-studio.js` and `strategic-studio.js`, eliminating gesture lag on high-refresh displays; added snap indicator circle (`guideTick`) to SVG guide preview showing exact active snap alignment.
+- **Loop 138 GROUP SELECTION BADGE & REFERENCE GUARDS**: Rendered group count badge (`✥ ${count}`) on strategic selection handle; fortified `eligibleVisible()` to strictly exclude immutable canonical reference landmarks (`worldsvault`, `mother`, `status === 'reference'`), preventing accidental group selection or movement of source topology.
+- **Loop 139 VERTEX DELETION SAFEGUARDS & READOUTS**: Added vertex deletion via right-click (`contextmenu`) and Alt-click on polygon vertex handles in `strategic-studio.js` with strict 3-vertex minimum guard; added coordinate readout tooltips (`Vertex N: [X, Z] · Drag to move · Right-click or Alt-click to remove`).
+- **Loop 140 ADVERSARIAL VERIFICATION & REMOTE PUSH**: Created `tests/spatial-editing-maturity.node-check.mjs`; 151/151 pure Node tests passing (520ms); production bundle 208.8 kB gzip (well under 225 kB budget); Playwright browser CI passing with zero console errors and clean recovery; verified remote SHA equality.

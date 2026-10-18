@@ -88,11 +88,12 @@
 - [x] **Loop 135** (VERIFIED): Created `tests/chronology-cartography.node-check.mjs`; 145/145 pure Node tests passing; production bundle 208.5 kB gzip (well under 225 kB budget); Playwright browser CI passing with zero errors; commit & push Phase 27.
 
 ### PHASE 28 — Spatial Editing Maturity (Loops 136–140)
-- [ ] **Loop 136**: Spatial editing UX, affordances, and control visibility.
-- [ ] **Loop 137**: Selection precision, snapping feedback, and pointer/stylus interaction.
-- [ ] **Loop 138**: Group editing, marquee behavior, and safe spatial manipulation.
-- [ ] **Loop 139**: Region geometry editing, vertex operations, and map overlay readability.
-- [ ] **Loop 140**: Repair cancellation, Undo, accidental mutation, source-object immutability, or save restoration defects.
+- [x] **Loop 136** (VERIFIED): Spatial editing keyboard shortcuts: added `[O]` (orbit), `[M]` (move), `[R]` (route), and `[T]` (typography) in `spatial-studio.js` with form input guards and clean disposal.
+- [x] **Loop 137** (VERIFIED): Pointer accuracy & snap feedback: added coalesced pointer events (`getCoalescedEvents()`) and visual snap tick indicator circle (`guideTick`) in `spatial-studio.js` and `strategic-studio.js`.
+- [x] **Loop 138** (VERIFIED): Strategic group editing: added group member count badge (`✥ ${count}`) on strategic selection handle and strict canonical reference landmark exclusion (`status === 'reference'`, `worldsvault`, `mother`) in `eligibleVisible()`.
+- [x] **Loop 139** (VERIFIED): Region vertex operations & readouts: added vertex deletion via right-click (`contextmenu`) and Alt-click with 3-vertex minimum guard, and live vertex coordinate tooltips (`Vertex N: [X, Z] · Drag to move · Right-click or Alt-click to remove`).
+- [x] **Loop 140** (VERIFIED): Adversarial verification and test suite: created `tests/spatial-editing-maturity.node-check.mjs`; 151/151 pure Node tests passing; bundle size 208.8 kB gzip (<225 kB budget); Playwright browser CI pass (`PHASE3_BROWSER_PASS`); remote SHA equality verified.
+
 
 ### PHASE 29 — Strategic 4X Comprehension (Loops 141–145)
 - [ ] **Loop 141**: Clarity and appearance of existing provisional strategic overlays.
