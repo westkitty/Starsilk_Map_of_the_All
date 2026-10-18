@@ -211,6 +211,17 @@ export class AtlasEngine {
       onComplete
     };
   }
+  transitionEra(durationMs=350){
+    if(this.reducedMotion||!this.canvas)return;
+    this.canvas.style.transition='opacity 0.12s ease-out';
+    this.canvas.style.opacity='0.68';
+    setTimeout(()=>{
+      if(this.canvas){
+        this.canvas.style.transition='opacity 0.22s ease-in';
+        this.canvas.style.opacity='1';
+      }
+    },120);
+  }
   rebuild(){if(!this.state)return;
     disposeTree(this.group);this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];
     if(this.view.kind==='all')this.buildAll();

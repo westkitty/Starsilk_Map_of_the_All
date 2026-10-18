@@ -129,3 +129,11 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Loop 038 CHOKEPOINT HUBS & BYPASS ROUTING**: Implemented Tarjan's articulation points algorithm `networkArticulationPoints(graph)` in `network-analysis.js` to detect chokepoint hubs; implemented `alternativePath(graph, from, to, excludeRoutes)` to determine bypass routes vs single-point bridge dependencies.
 - **Loop 039 BI-DIRECTIONAL INSPECTION & TESTS**: Wired `onInspect3D` in `main.js` with smooth camera focus transitions; added `VIEW IN WORLDSVAULT GRAPH ↗` button in inspector for reference and canonical entities; wrote comprehensive `tests/network-intelligence.node-check.mjs`.
 - **Loop 040 CLOSURE & ADVERSARIAL VERIFICATION**: 99/99 pure Node tests pass; production bundle at 196.8 kB gzip (under 225 kB budget); Playwright browser CI passes across all 3 viewports (132 desktop, 132 tablet, 81 phone draw calls, 0 errors); clean git checkpoint.
+
+## Phase 09: Historical and Temporal Cartography (Loops 041–045) — 2026-10-17
+
+- **Loop 041 THREE-ERA TIMELINE DEPTH**: Deepened `EPOCHS` metadata in `atlas-data.js` and `temporal-lab.js` across Blood Eclipse War (strictly 170-year duration, Years 0–170), Siege Wall Locking (starless black-hole containment lattice and cosmic absence), and Post-Siege Survey with explicit locked invariant tags (`🔒`) and era info banners.
+- **Loop 042 INTERACTIVE TEMPORAL DELTAS**: Rendered SVG change trails and ghost markers with click-to-focus on added, removed, and shifted draft nodes in 3D Atlas; enabled click-to-focus on all `.temporal-entry` items in diff list.
+- **Loop 043 CANONICAL CHRONOLOGY EVIDENCE**: Added authoritative causal sequence milestones from the Dossier (Year 0 Outbreak, Year 3 Blood Rings, Year 121 Ruby Eclipse in Pharos, Year 170 Heliocide & Siege Wall Locking, Post-Year 170 Hookshot Survey) with outbound Dossier links.
+- **Loop 044 ERA TRANSITION TWEENING**: Implemented `transitionEra()` in `atlas-engine.js` with subtle opacity ease over 350ms to indicate temporal shift without blocking interaction or exceeding frame budgets.
+- **Loop 045 VERIFICATION & TEST SUITE**: Added `tests/temporal-cartography.node-check.mjs`; 105/105 pure Node tests passing; production build at 198.7 kB gzip; Playwright browser CI passing across desktop, tablet, and mobile (132/132/81 draws, 0 errors).

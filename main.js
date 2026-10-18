@@ -236,7 +236,11 @@ function activateEra(id){
   if(id===state.epoch)return;
   studio?.cancel();studio?.routeStop();pendingRoute=null;strategy?.close();networkLab?.close();
   const accepted=change(()=>switchEra(state,id));
-  if(accepted){if(view.id&&!nodeById(state,view.id))enter('all',null);message('Switched independent provisional draft to '+EPOCHS.find(e=>e.id===id)?.title+'.');}
+  if(accepted){
+    if(view.id&&!nodeById(state,view.id))enter('all',null);
+    if(engine)engine.transitionEra?.();
+    message('Switched independent provisional draft to '+EPOCHS.find(e=>e.id===id)?.title+'.');
+  }
 }
 function updateEpoch(){const current=EPOCHS.find(x=>x.id===state.epoch);
   $('eraLabel').textContent=current.title.toUpperCase();const frag=document.createDocumentFragment();

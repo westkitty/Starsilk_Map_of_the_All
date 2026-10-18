@@ -55,6 +55,44 @@ export const CANON_REPAIR_HIGHLIGHTS = Object.freeze([
   { id: 'AT-010', severity: 'CRITICAL', domain: 'ontology', subject: 'Mother is a physical homeworld, not a nonphysical collective', status: 'OPEN' },
 ]);
 
+export const CANON_CHRONOLOGY_MILESTONES = Object.freeze([
+  {
+    eraId: 'war',
+    timeframe: 'YEAR 0',
+    title: 'OUTBREAK OF BLOOD ECLIPSE WAR',
+    detail: 'Drakken weaponize Starsilk against divine authority; interstellar war erupts.',
+    url: `${DOSSIER_URL_BASE}#chronology`
+  },
+  {
+    eraId: 'war',
+    timeframe: 'YEAR 3',
+    title: 'BLOOD RINGS DOCUMENTED',
+    detail: 'Vitrified remnants of shattered planetary systems recorded across early warfronts.',
+    url: `${DOSSIER_URL_BASE}#chronology`
+  },
+  {
+    eraId: 'war',
+    timeframe: 'YEAR 121',
+    title: 'SIEGE OF RUBY ECLIPSE IN PHAROS',
+    detail: 'Major campaign in Pharos; documented invariant marker AT-002.',
+    url: `${DOSSIER_URL_BASE}#chronology`
+  },
+  {
+    eraId: 'locking',
+    timeframe: 'YEAR 170',
+    title: 'HELIOCIDE & SIEGE WALL LOCKING',
+    detail: 'Aureal Starsilk strike triggers Hal\'Ven heliocide response. 170-year war terminates; starless black-hole containment lattice permanently locked.',
+    url: `${DOSSIER_URL_BASE}#chronology`
+  },
+  {
+    eraId: 'post',
+    timeframe: 'POST-YEAR 170',
+    title: 'POST-SIEGE HOOKSHOT SURVEY',
+    detail: 'Reconnection attempts via provisional Hookshot corridors; archival survey and cataloging of surviving sectors.',
+    url: `${DOSSIER_URL_BASE}#chronology`
+  }
+]);
+
 export function findCanonEntity(query) {
   if (!query || typeof query !== 'string') return null;
   const q = query.trim().toLowerCase();

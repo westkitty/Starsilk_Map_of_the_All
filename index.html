@@ -132,6 +132,7 @@
     <header class="temporal-header"><div><span class="temporal-overline">SURVEY INSTRUMENT / 06</span><h2>THE TEMPORAL ATLAS</h2><p>THREE INDEPENDENT DRAFT ERAS</p></div><button id="temporalClose" type="button" aria-label="Close temporal atlas">×</button></header>
     <p class="temporal-disclaimer">Source-confirmed event categories; illustrative geometry. No inferred year markers, physical trajectories, star motion, or canonical territorial history.</p>
     <output id="temporalActive" class="temporal-current">POST-SIEGE SURVEY</output>
+    <div id="temporalEraInfo" class="temporal-era-info" aria-live="polite"></div>
     <label class="temporal-field" for="temporalScrub">SCRUB AMONG INDEPENDENT ERA DRAFTS</label>
     <input id="temporalScrub" type="range" min="0" max="2" step="1" value="2" aria-label="Selected schematic era"/>
     <div class="temporal-era-names" aria-hidden="true"><span>WAR</span><span>WALL LOCKING</span><span>POST-SIEGE</span></div>
@@ -146,6 +147,12 @@
     <div id="temporalMetrics" class="temporal-metrics" aria-label="Count of changed draft objects, routes, layers and regions"></div>
     <label class="temporal-ghost-toggle"><input id="temporalGhost" type="checkbox" checked/> DISPLAY SCHEMATIC CHANGE TRAILS ON 3D MAP</label>
     <div id="temporalDiffList" class="temporal-differences"></div>
+    <div class="temporal-divider"></div>
+    <div class="temporal-milestones-section">
+      <span class="temporal-overline">CANONICAL CHRONOLOGY EVIDENCE</span>
+      <h3>CAUSAL SEQUENCE MILESTONES</h3>
+      <div id="temporalMilestonesList" class="temporal-milestones-list"></div>
+    </div>
     <div class="temporal-actions"><button type="button" id="temporalJump">OPEN BASELINE ERA</button><button type="button" id="temporalCloneBtn" class="temporal-danger">REPLACE BASELINE WITH CURRENT DRAFT</button></div>
     <p class="temporal-foot">Each era has independently editable structures, corridors, regions and layer visibility. Copying is an explicit, undoable draft replacement. Published Dossier evidence remains read-only.</p>
   </section>

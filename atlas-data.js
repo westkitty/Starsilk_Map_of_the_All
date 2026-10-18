@@ -4,9 +4,30 @@ export const VERSION = 1;
 export const STORAGE_KEY = 'starsilk.map-of-the-all.draft.v1';
 export const CANON_BASE = 'https://westkitty.github.io/Starsilk_Character_Dossier';
 export const EPOCHS = [
-  { id: 'war', title: 'Blood Eclipse War', note: 'Blood Rings documented by Year 3; exact locations here are not authored.' },
-  { id: 'locking', title: 'The Siege Wall is locked', note: 'Heliocide containment, black-hole lattice, and costly survival.' },
-  { id: 'post', title: 'Post-Siege survey', note: 'Interpretive visualization only. No canonical epoch number is asserted.' },
+  {
+    id: 'war',
+    title: 'Blood Eclipse War',
+    duration: '170 YEARS (YEARS 0–170)',
+    note: 'Blood Rings documented by Year 3; Year 121 Ruby Eclipse in Pharos. Invariant: strictly 170-year duration (not 17 years).',
+    visualTheme: 'crimson-remnant',
+    canonLocks: ['170-year war duration strictly locked', 'Blood Rings are vitrified remnants of destroyed worlds']
+  },
+  {
+    id: 'locking',
+    title: 'The Siege Wall is locked',
+    duration: 'YEAR 170 (WAR END / PERMANENT CONTAINMENT)',
+    note: 'Tiger heliocide aftermath. Invariant: Siege Wall is a starless black-hole containment lattice and cosmic absence, never a glowing magical barrier.',
+    visualTheme: 'black-hole-lattice',
+    canonLocks: ['Siege Wall is a black-hole containment lattice and cosmic absence', 'Heliocide triggered by Aureal Starsilk strike']
+  },
+  {
+    id: 'post',
+    title: 'Post-Siege survey',
+    duration: 'CONTEMPORARY SURVEY',
+    note: 'Interpretive visualization and Hookshot recovery. Invariant: Illustrative coordinates; no official galactic positions or faction borders authored.',
+    visualTheme: 'archival-survey',
+    canonLocks: ['No authored galaxy coordinates', 'Hookshot corridors are provisional drafts']
+  },
 ];
 export const LAYERS = [
   ['galaxies','Galactic structures'], ['stars','Stellar detail'],

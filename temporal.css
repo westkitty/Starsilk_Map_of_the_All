@@ -45,15 +45,33 @@
 .temporal-empty{margin:8px 3px;color:#9dc0ce;font-size:10px}
 .temporal-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .temporal-danger{border-color:#a08466!important;background:#39291d!important;color:#ffe4c6!important}
-.temporal-foot{margin-top:5px;padding-top:9px;border-top:1px solid #37667a;font-size:9px}
+.temporal-entry{cursor:pointer;transition:background .1s}
+.temporal-entry:hover{background:#11384c}
+.temporal-era-info{display:flex;flex-direction:column;gap:5px;padding:9px 11px;background:#062332;border:1px solid #285e73;border-left:3px solid #62dbf5;border-radius:3px}
+.temporal-era-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.temporal-era-duration{font:700 10px var(--mono);color:#92e9ff;letter-spacing:.08em}
+.temporal-era-badge{font:9px var(--mono);padding:2px 6px;border-radius:2px;background:#15475a;color:#cbf4ff}
+.temporal-era-badge.theme-crimson{background:#4d141e;color:#ffb5c1;border:1px solid #8e2b3e}
+.temporal-era-badge.theme-blackhole{background:#111b27;color:#a5cbde;border:1px solid #36506a}
+.temporal-era-badge.theme-archival{background:#0a3547;color:#9ce7fa;border:1px solid #236c88}
+.temporal-era-locks{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.temporal-lock-tag{font:8px/1.3 var(--mono);padding:2px 5px;background:#071a26;border:1px solid #264a5b;color:#a3c7d6}
+.temporal-milestones-section{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.temporal-milestones-list{display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;padding-right:2px}
+.temporal-milestone-item{display:flex;flex-direction:column;gap:2px;padding:6px 8px;background:#082231;border:1px solid #234d61;border-left:2px solid #57cae4}
+.temporal-milestone-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.temporal-milestone-year{font:700 9px var(--mono);color:#8be7ff;letter-spacing:.06em}
+.temporal-milestone-link{font:9px var(--mono);color:#6cd8f5;text-decoration:none}
+.temporal-milestone-link:hover{text-decoration:underline;color:#b2f0ff}
+.temporal-milestone-desc{font:9px/1.4 var(--mono);color:#c1dee9}
 .temporal-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:7;overflow:visible}
 .temporal-overlay[hidden]{display:none!important}
 .temporal-trail{stroke:#80d9ff;stroke-dasharray:5 5;stroke-width:2;opacity:.86;filter:drop-shadow(0 0 5px #19c4fc)}
-.temporal-ghost{fill:none;stroke:#ddba8f;stroke-width:1.8;stroke-dasharray:3 3}
+.temporal-ghost{fill:none;stroke:#ddba8f;stroke-width:1.8;stroke-dasharray:3 3;pointer-events:auto;cursor:pointer}
 .temporal-current{border-color:#639eb3}
-.temporal-overlay .temporal-current{fill:none;stroke:#9beaff;stroke-width:2.3;filter:drop-shadow(0 0 4px #30cffa)}
-.temporal-added{fill:none;stroke:#73f4d7;stroke-width:2.5}
-.temporal-removed{fill:none;stroke:#e5ae8a;stroke-dasharray:3 4;stroke-width:2}
+.temporal-overlay .temporal-current{fill:none;stroke:#9beaff;stroke-width:2.3;filter:drop-shadow(0 0 4px #30cffa);pointer-events:auto;cursor:pointer}
+.temporal-added{fill:none;stroke:#73f4d7;stroke-width:2.5;pointer-events:auto;cursor:pointer}
+.temporal-removed{fill:none;stroke:#e5ae8a;stroke-dasharray:3 4;stroke-width:2;pointer-events:auto;cursor:pointer}
 @media(max-width:850px){.temporal-panel{top:90px;bottom:120px;right:10px;width:min(355px,calc(100vw - 20px))}}
 @media(max-width:620px){
  .temporal-launch{position:fixed;right:12px;bottom:124px;z-index:34;font-size:9px;min-height:42px;padding:8px 12px;background:#0b4157;border-color:#86d9f0;box-shadow:0 4px 18px #000b}

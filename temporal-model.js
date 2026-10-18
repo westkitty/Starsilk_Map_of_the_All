@@ -98,7 +98,7 @@ function compareCollection(oldItems, newItems, meaningfulEqual = same) {
   const added=[], removed=[], modified=[];
   for (const [id, item] of next) {
     if (!prev.has(id)) added.push(item);
-    else if (!meaningfulEqual(prev.get(id),item)) modified.push({before:prev.get(id),after:item});
+    else if (!meaningfulEqual(prev.get(id),item)) modified.push({id, before:prev.get(id),after:item});
   }
   for (const [id, item] of prev) if (!next.has(id)) removed.push(item);
   return {added, removed, modified};
