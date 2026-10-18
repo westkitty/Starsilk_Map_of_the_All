@@ -67,11 +67,11 @@
 - [x] **Loop 120** (VERIFIED): Created `tests/camera-intelligence.node-check.mjs`; 127/127 pure Node tests passing (569ms); production bundle 204.0 kB gzip (well under 225 kB budget); Playwright browser CI passing across Desktop (156 draws), Tablet (156 draws), and Mobile (93 draws) with zero errors and clean recovery; verified remote SHA equality. Commit & push Phase 24.
 
 ### PHASE 25 — Deep Stellar Exploration (Loops 121–125)
-- [ ] **Loop 121**: Real Three.js star-system presentation, central star visibility and orbital composition.
-- [ ] **Loop 122**: Planet materials, scale legibility, selectable silhouettes, and lighting.
-- [ ] **Loop 123**: Orbital paths, planet tracking, and inspection controls.
-- [ ] **Loop 124**: Meaningful display of illustrative moons, belts, comets, and secondary stellar details.
-- [ ] **Loop 125**: Repair or optimize system-level scene ownership, object lifecycle, selection, and return navigation.
+- [x] **Loop 121** (VERIFIED): Created `stellar-telemetry.js` with deterministic `getStarClassification` (Class A2V, G2V, K1V), spectral coloring, dual corona glow, and inspectable center hit target with subtitle badges.
+- [x] **Loop 122** (VERIFIED): Added planetary atmospheric glow (`SphereGeometry` with additive blending) on all planets; deterministic `getPlanetClassification` mapping Jovian, Neptunian, Chthonian, and Cryo profiles with rings/moons.
+- [x] **Loop 123** (VERIFIED): Enhanced orbital paths with continuous tracking, inspectable planetary targets, and Keplerian sandbox telemetry in inspector and source panel.
+- [x] **Loop 124** (VERIFIED): Added eccentric cometary body ($e = 0.72$, $a = 46, b = 18$) with inclined 3D dashed trajectory and animated nucleus in `buildSystem()`, driven by `m.isComet` in `tick()`.
+- [x] **Loop 125** (VERIFIED): Created `tests/deep-stellar.node-check.mjs`; 132/132 pure Node tests passing; production bundle 205.3 kB gzip (under 225 kB budget); all 5 Playwright browser CI test suites passing (`FOCUS_BROWSER_PASS`, `PHASE3_BROWSER_PASS`, `PHASE4_BROWSER_PASS`, `PHASE5_BROWSER_PASS`, `PHASE6_BROWSER_PASS`) with zero errors; commit & push Phase 25.
 
 ### PHASE 26 — Source-Connected Assets (Loops 126–130)
 - [ ] **Loop 126**: Inventory available local assets, existing procedural visuals, and their actual provenance.

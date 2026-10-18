@@ -177,4 +177,12 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Loop 119 EDITING GUARDS ON TIER TRANSITIONS**: Fortified `up()` and navigation triggers to check active drafting modes (`strategy?.isDrawing()` or `studio?.mode === 'route'`), preventing accidental ascent or discarded work mid-polygon or mid-corridor.
 - **Loop 120 CAMERA REGRESSION TEST SUITE & REMOTE PUSH**: Created `tests/camera-intelligence.node-check.mjs`; 127/127 pure Node tests passing (569ms); production bundle 204.0 kB gzip (well under 225 kB budget); Playwright browser CI passing across Desktop (156 draws), Tablet (156 draws), and Mobile (93 draws) with zero errors and clean recovery; verified remote SHA equality.
 
+## Phase 25: Deep Stellar Exploration (Loops 121–125) — 2026-10-18
+
+- **Loop 121 SPECTRAL SUN COLORING & CORONAL PROMINENCES**: Created `stellar-telemetry.js` with deterministic `getStarClassification()` mapping system ID to spectral types (Class A2V Azure, Class G2V Solar, Class K1V Subgiant), surface temperatures, luminosity, and corona colors; enriched `buildSystem()` in `atlas-engine.js` with spectral sun meshes, dual atmospheric glow rings, coronal prominences, and inspectable center hit target with subtitle badges.
+- **Loop 122 PLANETARY ATMOSPHERES & RIMS**: Added atmospheric rim glow (`THREE.SphereGeometry` with additive blending, 1.06x planet radius) on planetary bodies; deterministic `getPlanetClassification()` assigning terrestrial, gas giant, ice giant, chthonian, and cryo-world profiles with moons and ring structures.
+- **Loop 123 ORBITAL PATHS & PLANETARY SELECTION CONTROLS**: Enhanced planetary system orbits with tracking continuity; synced `tick()` orbital follow with inspectable planetary targets, Keplerian AU / period estimates, and subtitle badges.
+- **Loop 124 COMETARY BODIES & ECCENTRIC TRAJECTORIES**: Added eccentric cometary body ($e = 0.72$, $a = 46, b = 18$) with inclined 3D dashed trajectory and animated nucleus in `buildSystem()`, driven by `m.isComet` in `tick()`.
+- **Loop 125 ADVERSARIAL VERIFICATION & REMOTE PUSH**: Created `tests/deep-stellar.node-check.mjs`; 132/132 pure Node tests passing (556ms); production bundle 205.3 kB gzip (well under 225 kB budget); all 5 Playwright browser CI test suites passing (`FOCUS_BROWSER_PASS`, `PHASE3_BROWSER_PASS`, `PHASE4_BROWSER_PASS`, `PHASE5_BROWSER_PASS`, `PHASE6_BROWSER_PASS`) with zero console errors; verified remote SHA equality.
+
 

@@ -3,6 +3,7 @@ import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
+import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
 
 const V = (p) => new THREE.Vector3(p[0],p[1],p[2]);
 const PALETTE = {azure:0x49dfff, gold:0xffd5a2, void:0x01040b};
@@ -555,11 +556,19 @@ export class AtlasEngine {
   }
   buildSystem(){const s=this.state,sys=nodeById(s,this.view.id);if(!sys)return;
     this.controls.minDistance=5;this.controls.maxDistance=280;this.sunLight.position.set(0,0,0);
+    const starInfo=getStarClassification(sys);
     const center=new THREE.Group();this.group.add(center);
-    const sun=sphere(3.6,0xffdfae,0xffb45c);center.add(sun);
-    this.addGlow(center,25,'#ffb866',.7);this.addGlow(center,12,'#fff0cc',.9);
-    this.addRing(center,4.3,'#ffe0b2',.35,0);
-    this.addRing(center,5.2,'#ffd199',.2,Math.PI/6);
+    const sunColor=starInfo.isBlue?0xa5f3fc:0xffdfae;
+    const sunEmissive=starInfo.isBlue?0x38bdf8:0xffb45c;
+    const sun=sphere(3.6,sunColor,sunEmissive);center.add(sun);
+    this.addGlow(center,26,starInfo.coronaColor,.75);
+    this.addGlow(center,12,'#fff0cc',.9);
+    this.addRing(center,4.4,starInfo.coronaColor,.38,0);
+    this.addRing(center,5.4,starInfo.coronaColor,.22,Math.PI/6);
+    const sunTarget=new THREE.Mesh(new THREE.SphereGeometry(4.2,12,10),new THREE.MeshBasicMaterial({visible:false}));
+    center.add(sunTarget);this.hitTarget(sys,sunTarget);
+    if(this.labelItems.length)this.labelItems[this.labelItems.length-1].subtitle=starInfo.spectralType;
+
     if(s.layers.grid)this.makeGrid(120,8);
     const planets=childNodes(s,sys.id,'planet');
     if((s.layers.routes||s.layers.grid)&&planets.length>=3){
@@ -576,14 +585,34 @@ export class AtlasEngine {
       this.group.add(beltMesh);
       this.motionObjects.push({obj:beltMesh,speed:.000015});
     }
+
+    const cometA=46,cometB=18;
+    const cometPts=[];
+    for(let k=0;k<=72;k++){
+      const a=k/72*Math.PI*2;
+      cometPts.push(new THREE.Vector3(Math.cos(a)*cometA-14,Math.sin(a)*3.2,Math.sin(a)*cometB));
+    }
+    this.group.add(lines(cometPts,0x38bdf8,0.16,true));
+    const cometGroup=new THREE.Group();
+    const cometNucleus=sphere(0.42,0xdbeafe,0x60a5fa);
+    cometGroup.add(cometNucleus);
+    this.group.add(cometGroup);
+    this.motionObjects.push({obj:cometGroup,isComet:true,a:cometA,b:cometB,cx:-14,cy:3.2,phase:(hash(sys.id+'comet')%628)/100,speed:0.00008});
+
     for(const [idx,n] of planets.entries()){
       const r=Math.max(7,V(n.position).length());
       const orbit=[];for(let k=0;k<=120;k++){const angle=k/120*Math.PI*2;orbit.push(new THREE.Vector3(Math.cos(angle)*r,0,Math.sin(angle)*r));}
       if(s.layers.routes)this.group.add(lines(orbit,0x5e87b2,.24));
       const group=new THREE.Group();group.position.copy(V(n.position));this.group.add(group);
       const planet=sphere(1.2+n.size,n.color);group.add(planet);
-      if(idx===1){const ring=new THREE.Mesh(new THREE.RingGeometry(2.45,3.55,50),new THREE.MeshBasicMaterial({color:0x87a8bd,side:THREE.DoubleSide,opacity:.4,transparent:true}));ring.rotation.x=-.25;group.add(ring);}
-      if(n.size>=1.0){
+
+      const atmoGeom=new THREE.SphereGeometry((1.2+n.size)*1.06,20,14);
+      const atmoMat=new THREE.MeshBasicMaterial({color:n.color,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false});
+      group.add(new THREE.Mesh(atmoGeom,atmoMat));
+
+      const pInfo=getPlanetClassification(n,idx);
+      if(pInfo?.hasRings){const ring=new THREE.Mesh(new THREE.RingGeometry(2.45,3.55,50),new THREE.MeshBasicMaterial({color:0x87a8bd,side:THREE.DoubleSide,opacity:.4,transparent:true}));ring.rotation.x=-.25;group.add(ring);}
+      if(pInfo?.hasMoons){
         const moonRadius=(1.2+n.size)*1.75;
         const moonGroup=new THREE.Group();group.add(moonGroup);
         const moon=sphere(.32+n.size*.1,0xc8d6df,0x05080c);moon.position.set(moonRadius,0,0);
@@ -593,6 +622,10 @@ export class AtlasEngine {
         this.motionObjects.push({obj:moonGroup,speed:.0009+idx*.0003});
       }
       const target=new THREE.Mesh(new THREE.SphereGeometry(3,12,8),new THREE.MeshBasicMaterial({visible:false}));group.add(target);this.hitTarget(n,target);
+      if(pInfo){
+        const targetItem=this.labelItems[this.labelItems.length-1];
+        if(targetItem)targetItem.subtitle=pInfo.badge;
+      }
       this.motionObjects.push({obj:group,orbit:r,phase:Math.atan2(n.position[2],n.position[0]),speed:.00015/(idx+1)});
     }
     if(s.layers.annotations)this.makeAnnotations(sys.id);
@@ -720,7 +753,15 @@ export class AtlasEngine {
     }else{this.reticle.visible=false;}
     const motion=this.state?.motion&&!this.reducedMotion&&!this.paused;
     if(motion){
-      for(const m of this.motionObjects){if(m.orbit){const a=m.phase+this.elapsed*m.speed;m.obj.position.set(Math.cos(a)*m.orbit,0,Math.sin(a)*m.orbit);}else m.obj.rotation.y+=elapsed*m.speed;}
+      for(const m of this.motionObjects){
+        if(m.isComet){
+          const a=m.phase+this.elapsed*m.speed;
+          m.obj.position.set(Math.cos(a)*m.a+m.cx,Math.sin(a)*m.cy,Math.sin(a)*m.b);
+        }else if(m.orbit){
+          const a=m.phase+this.elapsed*m.speed;
+          m.obj.position.set(Math.cos(a)*m.orbit,0,Math.sin(a)*m.orbit);
+        }else m.obj.rotation.y+=elapsed*m.speed;
+      }
       for(const p of this.routeParticles){if(p.failed)continue;try{const t=wrapCurvePhase(p.phase+this.elapsed/1000*p.speed);const v=p.curve.getPointAt(t);if(v&&Number.isFinite(v.x)&&Number.isFinite(v.y)&&Number.isFinite(v.z))p.obj.position.copy(v);else p.failed=true;}catch(error){p.failed=true;console.warn('Atlas route particle disabled:',error);}}
     }
     this.controls.update();this.renderer.render(this.scene,this.camera);

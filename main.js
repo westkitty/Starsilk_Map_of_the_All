@@ -12,6 +12,7 @@ import { createPlannerHandoff, validateHandoff, makeHandoffFilename } from './pl
 import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
 import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations } from './canon-registry.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
+import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
 
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
@@ -205,12 +206,23 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
       intro.textContent+='\n\n'+`MORPHOLOGY: ${morph.name} [${morph.code}] · ${morph.arms} spiral arms · Est. ~${morph.estimatedStarsBillions}B stars · Core radius: ${morph.coreDiameterDU} DU. (${morph.classificationNotice})`;
     }
   }
+  if(n.kind==='system'){
+    const starInfo=getStarClassification(n);
+    if(starInfo){
+      intro.textContent+='\n\n'+`STELLAR CLASSIFICATION: ${starInfo.spectralType} · Surface Temp: ~${starInfo.temperatureK} K · Luminosity: ${starInfo.luminositySol} L☉. (${starInfo.notice})`;
+    }
+  }
   if(n.kind==='planet'&&n.parentId){
     const peers=childNodes(state,n.parentId,'planet');
     const idx=peers.findIndex(p=>p.id===n.id);
-    const au=(0.5+Math.max(0,idx)*0.62).toFixed(2);
-    const period=Math.round(365.25*Math.pow(Number(au),1.5));
-    intro.textContent+='\n\n'+`HYPOTHETICAL ORBIT: ~${au} AU · ~${period} days (Keplerian sandbox period for System Planner export; not canon measurements).`;
+    const pInfo=getPlanetClassification(n,Math.max(0,idx));
+    if(pInfo){
+      intro.textContent+='\n\n'+`PLANETARY PROFILE: ${pInfo.classification} [${pInfo.badge}] · Semi-Major Axis: ~${pInfo.approxAU} AU · Orbital Period: ~${pInfo.approxPeriodDays} days · Moons: ${pInfo.hasMoons?'Detected':'None'} · Rings: ${pInfo.hasRings?'Present':'None'}. (${pInfo.notice})`;
+    }else{
+      const au=(0.5+Math.max(0,idx)*0.62).toFixed(2);
+      const period=Math.round(365.25*Math.pow(Number(au),1.5));
+      intro.textContent+='\n\n'+`HYPOTHETICAL ORBIT: ~${au} AU · ~${period} days (Keplerian sandbox period for System Planner export; not canon measurements).`;
+    }
   }
   $('inspectorStatus').textContent=n.status==='reference'?'SOURCE IDENTITY / READ ONLY':'DRAFT COORDINATE / NOT CANON';
   $('objectSigil').style.borderColor=n.color;
@@ -252,6 +264,30 @@ function updateSources(){
       enterBtn.title='Descend to planetary systems within this galaxy';
       enterBtn.addEventListener('click',()=>enter('galaxy',n.id));
       card.append(enterBtn);
+      frag.append(card);
+    }
+  }else if(n?.kind==='system'){
+    const starInfo=getStarClassification(n);
+    if(starInfo){
+      const card=el('div','stellar-telemetry-card');
+      card.append(
+        el('div','telemetry-title',`STELLAR CLASSIFICATION · ${starInfo.starName}`),
+        el('div','telemetry-grid',`SPECTRAL: ${starInfo.spectralType} · TEMP: ~${starInfo.temperatureK} K · LUM: ${starInfo.luminositySol} L☉`),
+        el('div','telemetry-disclaimer',`EDITORIAL: ${starInfo.notice}`)
+      );
+      frag.append(card);
+    }
+  }else if(n?.kind==='planet'){
+    const peers=n.parentId?childNodes(state,n.parentId,'planet'):[];
+    const idx=peers.findIndex(p=>p.id===n.id);
+    const pInfo=getPlanetClassification(n,Math.max(0,idx));
+    if(pInfo){
+      const card=el('div','stellar-telemetry-card');
+      card.append(
+        el('div','telemetry-title',`PLANETARY TELEMETRY · ${pInfo.planetName} [${pInfo.badge}]`),
+        el('div','telemetry-grid',`CLASS: ${pInfo.classification} · ORBIT: ~${pInfo.approxAU} AU · PERIOD: ~${pInfo.approxPeriodDays} D`),
+        el('div','telemetry-disclaimer',`EDITORIAL: ${pInfo.notice}`)
+      );
       frag.append(card);
     }
   }
