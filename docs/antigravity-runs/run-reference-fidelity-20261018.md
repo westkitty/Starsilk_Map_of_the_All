@@ -39,7 +39,7 @@
 | **Phase 08** | Loops 36–40 | Starsilk Flow Depth & Environmental Illumination | VERIFIED | `e72fa86` |
 | **Phase 09** | Loops 41–45 | Luminous Azure Network Triangulation | VERIFIED | `6e71b48` |
 | **Phase 10** | Loops 46–50 | Network Readability & De-cluttering | VERIFIED | `6e71b48` |
-| **Phase 11** | Loops 51–55 | Real Delete Engine — Core Architecture | Planned | — |
+| **Phase 11** | Loops 51–55 | Real Delete Engine — Core Architecture | VERIFIED | c869b483 |
 | **Phase 12** | Loops 56–60 | Dependency Cascade, Multi-Delete & Undo/Redo | Planned | — |
 | **Phase 13** | Loops 61–65 | True Delete Persistence & Reload Verification | Planned | — |
 | **Phase 14** | Loops 66–70 | Visual Subtraction & Procedural Suppression | Planned | — |
@@ -51,3 +51,22 @@
 | **Phase 20** | Loops 96–100 | Final Convergence, Acceptance & Closure | Planned | — |
 
 ---
+
+## Phase 11 — Verified Delete Engine (Loops 51–55), 2026-10-18
+
+- **51 — Pure deletion contract:** Added deletion-engine.js with read-only planDeletion() and atomic deleteObject(), explicitly typed node/route/region actions, descendant/corridor/region consequence enumeration, and legacy removeNode() delegation.
+- **52 — Guarded keyboard deletion:** Delete removes a selected editable draft after confirmation; Backspace deletes in a compatible editing context and retains ascent behavior otherwise. Input fields, contenteditable areas, dialogs, active route drawing and strategic drawing remain protected.
+- **53 — Contextual inspector / UX:** The inspector identifies the deletion action, displays dependent draft node, corridor and region counts before confirmation, preserves immutable-source FORK AS DRAFT, and provides Undo guidance.
+- **54 — LAW source protection:** The data-layer contract refuses deletion of read-only canonical identities, descendant references, source routes, and source regions before any state mutation. Ordinary draft corridor and sector removal now reuse the same guarded domain API.
+- **55 — Verification and permanence:** Added tests/deletion-engine.node-check.mjs (eight focused tests) and scripts/delete-browser-ci.mjs covering confirm/cancel, dependency cascade, Undo/Redo, reload persistence, canonical protection, input guards and mobile inspector touch. Registered the suite in package.json and GitHub Actions.
+
+**Observed gate results:**
+- npm run check: 224/224 Node tests PASS, Vite production build PASS.
+- Browser: five existing suites PASS (focus, spatial, strategic, network, temporal), plus new deletion suite PASS across desktop and mobile paths where scripted.
+- Bundle gzip total: 222,379 bytes / 225,000-byte maximum (2,621 bytes spare). Future visual phases should reduce bundle weight before significant additions.
+- git diff --check: PASS. Feature-branch implementation commit c869b483254c1ed26f088dea63f1f562a2846a15, pushed and remote SHA confirmed.
+- Historical-era isolation: focused Node test PASS; physical S Pen/Tab S9 not tested.
+
+**Not claimed:** Production merge, GitHub Pages deployment for Phase 11, physical tablet validation, completion of future multi-selection and procedural-suppression phases.
+
+**Next:** Phase 12 — multi-delete, cross-object dependency handling, and end-to-end Undo/Redo for compound selection.

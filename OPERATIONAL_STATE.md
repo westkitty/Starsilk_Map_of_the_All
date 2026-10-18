@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 14
+revision: 15
 
 ## Current baseline
 
@@ -315,3 +315,13 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Total Browser CI Suites**: 5 / 5 suites pass across Desktop, Tablet (1280x800), and Mobile (412x915).
 - **Production Bundle**: 218.2 kB gzip (Strict budget: < 225.0 kB gzip; 6.7 kB headroom preserved).
 - **Invariant Integrity**: 100% verified across 170-year War, black-hole Siege Wall, WorldsVault topology, Drakken non-approval, and independent System Planner orbital simulation.
+
+## Campaign Three — Phase 11 Verified Checkpoint (2026-10-18)
+
+- Feature branch feature/omni-uplift-100, implementation commit c869b483254c1ed26f088dea63f1f562a2846a15, pushed and remotely confirmed.
+- Introduced pure source-safe deletion; draft node deletion previews/removes editable descendants, connected draft routes and dependent regions in one model edit. Direct corridor and region removal also use this engine.
+- Canon/source reference deletion is prohibited in the data layer, not merely by the UI. Confirmations state dependent counts; Delete and context-sensitive Backspace are guarded against text fields, dialogs and active drawing. Inspector retains immutable-source fork.
+- Verified 224/224 Node tests, all five existing browser acceptance suites, and a new delete browser suite (mobile inspector, cancel, Undo/Redo, reload persistence and source protection).
+- Build remains under the strict 225,000-byte gzip ceiling at 222,379 bytes. 2,621 bytes of headroom remain; next phases should prioritize bundle savings.
+- Preserves starsilk.map-of-the-all.draft.v1, JSON v1 compatibility and separate war / locking / post snapshots. No Dossier writes, physical device verification or new main deployment claimed.
+- Phase 12 PENDING: multi-selection deletion and advanced cross-editor recovery with browser regression tests.
