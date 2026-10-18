@@ -22,6 +22,11 @@ export class SpatialStudio {
     this.routeSvg.classList.add('studio-route-preview');this.routeSvg.setAttribute('aria-hidden','true');
     this.routePath=document.createElementNS('http://www.w3.org/2000/svg','path');this.routeSvg.append(this.routePath);
     this.canvas.parentElement.append(this.routeSvg);
+    this.guideSvg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    this.guideSvg.classList.add('studio-guide-preview');this.guideSvg.setAttribute('aria-hidden','true');this.guideSvg.hidden=true;
+    this.guideLine=document.createElementNS('http://www.w3.org/2000/svg','line');
+    this.guideSvg.append(this.guideLine);
+    this.canvas.parentElement.append(this.guideSvg);
     this.modeButtons=[...panel.querySelectorAll('[data-studio-mode]')];
     for(const btn of this.modeButtons)btn.addEventListener('click',()=>this.setMode(btn.dataset.studioMode));
     panel.querySelector('#studioAxis').addEventListener('change',e=>{this.axis=e.target.value;this.cancel();});
@@ -119,12 +124,19 @@ export class SpatialStudio {
     if(!validMoveTarget(n,this.getView()))return;
     const hit=this.rayPoint(e,n.position[1]);if(!hit){this.message('Tilt the map for horizontal movement, or choose Y axis.',true);return;}
     e.preventDefault();e.stopPropagation();
-    this.drag={pointer:e.pointerId,id:n.id,origin:[...n.position],start:hit,client:[e.clientX,e.clientY],candidate:[...n.position],moved:false,controlsEnabled:this.engine.controls.enabled};
+    const startScreen=this.screenOf(n.id);
+    this.drag={pointer:e.pointerId,id:n.id,origin:[...n.position],start:hit,startScreen,client:[e.clientX,e.clientY],candidate:[...n.position],moved:false,controlsEnabled:this.engine.controls.enabled};
     this.engine.controls.enabled=false;
     this.handle.setPointerCapture(e.pointerId);this.handle.classList.add('dragging');this.ghost.hidden=false;
     this.updateMoveReadout(this.drag.candidate);
   }
-  updateMoveReadout(coords){this.ghost.textContent=`DRAFT X ${coords[0].toFixed(2)} / Y ${coords[1].toFixed(2)} / Z ${coords[2].toFixed(2)}`;}
+  updateMoveReadout(coords){
+    const d=this.drag;
+    const dx=d?coords[0]-d.origin[0]:0,dy=d?coords[1]-d.origin[1]:0,dz=d?coords[2]-d.origin[2]:0;
+    const deltaStr=this.axis==='y'?`ΔY ${dy>=0?'+':''}${dy.toFixed(1)}`:`Δ[${dx>=0?'+':''}${dx.toFixed(1)}, ${dz>=0?'+':''}${dz.toFixed(1)}]`;
+    const snapStr=this.snap?` · SNAP ${this.snap}`:'';
+    this.ghost.textContent=`DRAFT [${coords[0].toFixed(1)}, ${coords[1].toFixed(1)}, ${coords[2].toFixed(1)}] (${deltaStr}${snapStr})`;
+  }
   onHandleMove(e){const d=this.drag;if(!d||d.pointer!==e.pointerId)return;e.preventDefault();
     const moved=Math.hypot(e.clientX-d.client[0],e.clientY-d.client[1]);if(moved>3)d.moved=true;
     if(!d.moved)return;
@@ -137,14 +149,28 @@ export class SpatialStudio {
       delta=[next.x-d.start.x,0,next.z-d.start.z];
     }
     d.candidate=draftPosition(d.origin,delta,this.axis,this.snap);
-    const rect=this.canvas.getBoundingClientRect();this.handle.style.left=Math.max(0,Math.min(rect.width,e.clientX-rect.left))+'px';
-    this.handle.style.top=Math.max(0,Math.min(rect.height,e.clientY-rect.top))+'px';
+    const rect=this.canvas.getBoundingClientRect();
+    const curX=Math.max(0,Math.min(rect.width,e.clientX-rect.left));
+    const curY=Math.max(0,Math.min(rect.height,e.clientY-rect.top));
+    this.handle.style.left=curX+'px';
+    this.handle.style.top=curY+'px';
     this.ghost.style.left=this.handle.style.left;this.ghost.style.top=this.handle.style.top;
+    if(d.startScreen){
+      this.guideSvg.hidden=false;
+      this.guideLine.setAttribute('x1',String(d.startScreen.x));
+      this.guideLine.setAttribute('y1',String(d.startScreen.y));
+      this.guideLine.setAttribute('x2',String(curX));
+      this.guideLine.setAttribute('y2',String(curY));
+    }
     this.updateMoveReadout(d.candidate);
   }
   onHandleEnd(e){if(!this.drag||e.pointerId!==this.drag.pointer)return;
     const d=this.drag;this.cancel();
-    if(d.moved&&d.candidate.some((v,i)=>Math.abs(v-d.origin[i])>1e-7))this.onMove(d.id,d.candidate);
+    if(d.moved&&d.candidate.some((v,i)=>Math.abs(v-d.origin[i])>1e-7)){
+      this.onMove(d.id,d.candidate);
+      const n=this.getState().nodes.find(x=>x.id===d.id);
+      if(n)this.message(`Moved ${n.name} to [${d.candidate[0].toFixed(1)}, ${d.candidate[1].toFixed(1)}, ${d.candidate[2].toFixed(1)}]. Undo available.`);
+    }
   }
   onLabelDown(e){if(this.mode!=='label'||!e.isPrimary||e.button!==0)return;
     const button=e.target.closest?.('.world-label');if(!button)return;
@@ -189,10 +215,10 @@ export class SpatialStudio {
   cancel(){
     if(this.drag){this.engine.controls.enabled=this.drag.controlsEnabled;try{this.handle.releasePointerCapture(this.drag.pointer);}catch{}this.drag=null;}
     if(this.labelDrag){const d=this.labelDrag;d.button.style.removeProperty('transform');d.button.classList.remove('studio-label-dragging');try{d.button.releasePointerCapture(d.pointer);}catch{}this.labelDrag=null;}
-    this.handle.classList.remove('dragging');this.ghost.hidden=true;this.updateHandle();
+    this.handle.classList.remove('dragging');this.ghost.hidden=true;this.guideSvg.hidden=true;this.updateHandle();
   }
   dispose(){this.cancel();if(this.engine)this.engine.controls.removeEventListener('change',this.engineChange);
     window.removeEventListener('resize',this.resizeHandler);document.removeEventListener('keydown',this.escapeHandler,true);
-    this.handle.remove();this.ghost.remove();this.routeSvg.remove();this.labelStyles.remove();
+    this.handle.remove();this.ghost.remove();this.routeSvg.remove();this.guideSvg.remove();this.labelStyles.remove();
   }
 }

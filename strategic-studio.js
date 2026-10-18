@@ -47,7 +47,23 @@ export class StrategicStudio {
     this.canvas.addEventListener('pointercancel',this._cancel=()=>this.cancelGesture());
     this._resize=()=>this.updateGuides();window.addEventListener('resize',this._resize);
     this._keys=e=>{if(!this.opened||e.target.closest('input,textarea,select')||e.ctrlKey||e.metaKey)return;
-      if(e.key==='Escape'&&(this.drawing||this.gesture||this.dragVertices)){this.cancelDrawing();this.cancelGesture();e.preventDefault();e.stopImmediatePropagation();}
+      if(e.key==='Escape'&&(this.drawing||this.gesture||this.dragVertices)){
+        this.cancelDrawing();this.cancelGesture();e.preventDefault();e.stopImmediatePropagation();return;
+      }
+      if(this.drawing){
+        if(e.key==='Backspace'||e.key==='Delete'){
+          if(this.drawingPoints.length>0){
+            this.drawingPoints.pop();
+            this.$('strategyFinishDraw').disabled=this.drawingPoints.length<3;
+            this.$('strategyDrawHint').textContent=`Drawing provisional region (${this.drawingPoints.length} vertices): Tap to place, Backspace to undo, Enter to finish, ESC to cancel.`;
+            this.updateGuides();this.onMessage(`Removed vertex (${this.drawingPoints.length} remaining).`);
+            e.preventDefault();e.stopImmediatePropagation();
+          }
+        }else if(e.key==='Enter'){
+          if(this.drawingPoints.length>=3){this.finishDrawing();e.preventDefault();e.stopImmediatePropagation();}
+          else{this.onMessage('A region requires at least 3 non-collinear vertices.',true);}
+        }
+      }
     };document.addEventListener('keydown',this._keys,true);
     this.setMode('group');this.close();
   }
@@ -217,7 +233,7 @@ export class StrategicStudio {
     this.onMessage('Draft survey boundary created from selected markers. No sovereign territory asserted.');
   }catch(e){this.onMessage(e.message,true);}}
   startDrawing(){if(this.getView().kind==='system'){this.onMessage('Region polygons are supported at cosmic and galactic scales.',true);return;}
-    this.cancelGesture();this.drawing=true;this.drawingPoints=[];this.$('strategyFinishDraw').disabled=true;this.$('strategyDrawHint').textContent='Tap 3–24 vertices on the map. FINISH creates a draft polygon; CANCEL discards it.';
+    this.cancelGesture();this.drawing=true;this.drawingPoints=[];this.$('strategyFinishDraw').disabled=true;this.$('strategyDrawHint').textContent='Tap 3–24 vertices on the map. Enter/FINISH creates a draft polygon, Backspace removes last, ESC discards.';
     this.updateGuides();
   }
   finishDrawing(){if(!this.drawing)return;const failure=validatePolygon(this.drawingPoints);if(failure){this.onMessage(failure,true);return;}
@@ -244,7 +260,9 @@ export class StrategicStudio {
     if(!this.opened)return;
     if(this.mode==='region'&&this.drawing&&e.isPrimary&&e.button===0){const pos=this.pickPlane(e,this.planeY());
       if(pos&&this.drawingPoints.length<MAX_VERTICES){this.drawingPoints.push([Math.min(10000,Math.max(-10000,pos.x)),Math.min(10000,Math.max(-10000,pos.z))]);
-        this.$('strategyFinishDraw').disabled=this.drawingPoints.length<3;this.updateGuides();}return;}
+        this.$('strategyFinishDraw').disabled=this.drawingPoints.length<3;
+        this.$('strategyDrawHint').textContent=`Drawing provisional region: ${this.drawingPoints.length} vertices. Tap to place, Backspace to undo, Enter to finish, ESC to cancel.`;
+        this.updateGuides();}return;}
     const d=this.gesture;if(d?.type!=='marquee'||d.pointer!==e.pointerId)return;this.gesture=null;
     if(d.moved){const x0=Math.min(d.start[0],d.current[0]),x1=Math.max(d.start[0],d.current[0]),y0=Math.min(d.start[1],d.current[1]),y1=Math.max(d.start[1],d.current[1]);
       const selected=this.eligibleVisible().filter(n=>{const p=this.project(n.position);return p&&p.x>=x0&&p.x<=x1&&p.y>=y0&&p.y<=y1;}).map(n=>n.id);

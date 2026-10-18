@@ -31,8 +31,9 @@
 .studio-gesture-readout{position:absolute;z-index:10;transform:translate(22px,20px);min-width:165px;
   color:#dffaff;background:#061823ed;border:1px solid #4eb6d8;padding:8px 10px;pointer-events:none;
   font:10px/1.5 var(--mono);font-variant-numeric:tabular-nums;box-shadow:0 8px 24px #000a}
-.studio-route-preview{position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;overflow:visible}
+.studio-route-preview,.studio-guide-preview{position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;overflow:visible}
 .studio-route-preview path{fill:none;stroke:#4de9ff;stroke-width:2.5;stroke-dasharray:8 5;filter:drop-shadow(0 0 5px #58e5ff);vector-effect:non-scaling-stroke}
+.studio-guide-preview line{stroke:#52deff;stroke-width:2;stroke-dasharray:4 4;filter:drop-shadow(0 0 4px #52deff);vector-effect:non-scaling-stroke}
 .atlas[data-studio-mode='label'] .world-label:not([disabled]){cursor:grab;border-bottom:1px dotted #65dfff}
 .studio-label-dragging{cursor:grabbing!important;text-shadow:0 0 12px #a0f6ff!important;z-index:3}
 .atlas[data-lens='signal'] #spaceCanvas{filter:saturate(1.43) contrast(1.2) brightness(1.1)}
@@ -40,7 +41,7 @@
 .atlas[data-lens='cartographer'] #spaceCanvas{filter:grayscale(.67) sepia(.17) hue-rotate(145deg) saturate(.95) contrast(1.25) brightness(.79)}
 .atlas[data-lens='cartographer'] .scene-grain{opacity:.95}
 .atlas[data-lens='cartographer'] .world-label{letter-spacing:.15em;text-shadow:0 1px 5px #000,0 0 8px #36cbff}
-.atlas.focus-view .studio-panel,.atlas.focus-view .studio-handle,.atlas.focus-view .studio-route-preview,.atlas.focus-view .studio-gesture-readout{opacity:0;pointer-events:none}
+.atlas.focus-view .studio-panel,.atlas.focus-view .studio-handle,.atlas.focus-view .studio-route-preview,.atlas.focus-view .studio-guide-preview,.atlas.focus-view .studio-gesture-readout{opacity:0;pointer-events:none}
 @media(max-width:1200px){.studio-panel{top:87px;width:min(400px,calc(100vw - 525px))}.studio-hint{font-size:8px}}
 @media(max-width:850px){.studio-panel{top:72px;width:min(350px,calc(100vw - 443px));padding:5px 6px}.studio-modes button{min-height:38px;font-size:9px}.studio-hint{display:none}}
 @media(max-width:620px){
