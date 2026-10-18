@@ -319,6 +319,28 @@ export class AtlasEngine {
     const m=new THREE.MeshBasicMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false});
     const mesh=new THREE.Mesh(g,m);mesh.rotation.x=-Math.PI/2+tilt;parent.add(mesh);return mesh;
   }
+  addStarburst(parent,size,color='#ffffff',opacity=0.75){
+    const pts=[
+      new THREE.Vector3(-size,0,0),new THREE.Vector3(size,0,0),
+      new THREE.Vector3(0,0,-size),new THREE.Vector3(0,0,size),
+    ];
+    const g=new THREE.BufferGeometry().setFromPoints(pts);
+    g.computeBoundingSphere();
+    const m=new THREE.LineBasicMaterial({color:new THREE.Color(color),transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false});
+    const starburst=new THREE.LineSegments(g,m);
+    parent.add(starburst);
+    const diamondPts=[
+      new THREE.Vector3(0,0,size*.35),
+      new THREE.Vector3(size*.12,0,0),
+      new THREE.Vector3(0,0,-size*.35),
+      new THREE.Vector3(-size*.12,0,0),
+      new THREE.Vector3(0,0,size*.35),
+    ];
+    const dg=new THREE.BufferGeometry().setFromPoints(diamondPts);
+    dg.computeBoundingSphere();
+    parent.add(new THREE.Line(dg,m));
+    return starburst;
+  }
   /**
    * Stylized volumetric galaxy: the cloudy spiral disc is a single transparent
    * mesh, and its luminous stars live in one GPU particle batch. This is
@@ -511,10 +533,19 @@ export class AtlasEngine {
         if(n.id==='perseus-confluence'){
           this.addGlow(group,52*n.size,'#ffd5a2',.48);
           this.addGlow(group,15*n.size,'#ffffff',.82);
+          this.addStarburst(group,14*n.size,'#fffbeb',.8);
+          this.addRing(group,18*n.size,'#fde047',.24,0);
         } else if(n.id==='centauri-marches'){
           this.addGlow(group,40*n.size,'#c084fc',.35);
+          this.addStarburst(group,11*n.size,'#c084fc',.75);
+          this.addRing(group,16*n.size,'#a855f7',.20,0);
+        } else if(n.id==='halcyon-arm'){
+          this.addStarburst(group,11*n.size,'#bae6fd',.75);
+          this.addRing(group,16*n.size,'#38bdf8',.20,0);
         } else if(n.id==='ember-span'){
           this.addGlow(group,42*n.size,'#fb923c',.38);
+        } else if(n.id==='southern-territories'){
+          this.addRing(group,16*n.size,n.color,.18,.35);
         }
         this.addRing(group,12*n.size,n.color,.20,.24);
         this.createPickTarget(13*n.size,n,group);
@@ -531,6 +562,8 @@ export class AtlasEngine {
         if(s.layers.grid)this.makeDropStem(this.group,n.position,-22,0x6bbfe8,n.size,true);
         const crystal=new THREE.Mesh(new THREE.IcosahedronGeometry(4*n.size,1),new THREE.MeshStandardMaterial({color:n.color,wireframe:true,transparent:true,opacity:.75,emissive:n.color,emissiveIntensity:1.25}));group.add(crystal);
         this.addGlow(group,13,n.color,.6);this.addRing(group,7,n.color,.55);
+        this.addStarburst(group,10*n.size,'#e0f2fe',.85);
+        this.addRing(group,9*n.size,'#38bdf8',.3,0);
         this.createPickTarget(7,n,group);
       }
     }

@@ -33,8 +33,8 @@
 | **Phase 02** | Loops 06–10 | Cartographic Drop Stems & Void Architecture | VERIFIED | `a63c3ff` |
 | **Phase 03** | Loops 11–15 | The Siege Wall Reconstruction | VERIFIED | `674bde7` |
 | **Phase 04** | Loops 16–20 | Large-Scale Structure & Negative Space Harmony | VERIFIED | `efe030c` |
-| **Phase 05** | Loops 21–25 | Primary Galactic Hubs & Spiral Morphologies | VERIFIED | `git rev-parse HEAD` |
-| **Phase 06** | Loops 26–30 | Secondary Galaxies & Administrative Center Starbursts | Planned | — |
+| **Phase 05** | Loops 21–25 | Primary Galactic Hubs & Spiral Morphologies | VERIFIED | `55793e6` |
+| **Phase 06** | Loops 26–30 | Secondary Galaxies & Administrative Center Starbursts | VERIFIED | `git rev-parse HEAD` |
 | **Phase 07** | Loops 31–35 | The Braided Starsilk Flow Foundation | Planned | — |
 | **Phase 08** | Loops 36–40 | Starsilk Flow Depth & Environmental Illumination | Planned | — |
 | **Phase 09** | Loops 41–45 | Luminous Azure Network Triangulation | Planned | — |
