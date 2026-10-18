@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {deleteObject} from './deletion-engine.js';
 import {eligibleGroup,translatedGroup,regionFromGroup,validatePolygon,regionReport,strategicAnalysis,pointInPolygon,polygonCentroid,polygonBounds,strategicPosture,convexHull,MAX_REGIONS,MAX_VERTICES} from './strategic-model.js';
 
 /**
@@ -321,7 +322,7 @@ export class StrategicStudio {
   }
   deleteRegion(){const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
     if(!window.confirm('Delete this editorial draft sector? Undo restores it.'))return;
-    this.onChange(s=>{s.regions=s.regions.filter(x=>x.id!==r.id);});this.regionId=null;this.sync();
+    this.onChange(s=>deleteObject(s,r.id,{type:'region'}));this.regionId=null;this.sync();
   }
   selectEnclosed(){
     const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;

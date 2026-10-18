@@ -9,7 +9,8 @@ import { SpatialStudio } from './spatial-studio.js';
 import { validateCorridor } from './studio-math.js';
 import { initSourceGraph } from './source-graph-ui.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename, getHandoffSystemMetadata } from './planner-handoff.js';
-import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, normalizeDraft, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
+import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, normalizeDraft, addNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
+import {planDeletion, deleteObject} from './deletion-engine.js';
 import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations, WORLDSVAULT_IDENTITIES, CANON_REVISION_METADATA } from './canon-registry.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -233,7 +234,7 @@ function updateRoutes(){
     const label=el('span','',(a?.name||route.from)+' / '+(b?.name||route.to));
     const mode=button(route.kind==='hookshot'?'H':'S','route-mode',()=>{change(()=>{route.kind=route.kind==='hookshot'?'starsilk':'hookshot';});});
     mode.title='Toggle illustrative Hookshot / Starsilk representation';
-    const del=button('×','route-delete',()=>{change(()=>{state.routes=state.routes.filter(r=>r.id!==route.id);});});
+    const del=button('×','route-delete',()=>{if(change(()=>deleteObject(state,route.id,{type:'route'})))message('Draft corridor removed. Undo available.');});
     del.title='Remove draft corridor';del.setAttribute('aria-label','Remove corridor '+label.textContent);
     row.append(label,mode,del);frag.append(row);
   }
@@ -287,7 +288,8 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
   const readOnly=n.status==='reference';
   for(const field of gui.form.querySelectorAll('input,textarea,select'))field.disabled=readOnly;
   $('applyBtn').disabled=readOnly;$('enterBtn').disabled=!['galaxy','system'].includes(n.kind);
-  $('deleteBtn').textContent=readOnly?'FORK AS DRAFT':'DELETE DRAFT';
+  $('deleteBtn').textContent=readOnly?'FORK AS DRAFT':'DELETE SELECTED DRAFT';
+  $('deleteBtn').title=readOnly?'Copy the immutable reference to an editable draft; the source stays intact':'Delete the selected draft and any dependent drafts, with confirmation and Undo';
   $('connectBtn').disabled=readOnly||!['galaxy','system','planet'].includes(n.kind);
 }
 function updateSources(){
@@ -776,13 +778,34 @@ function saveInspector(ev){ev.preventDefault();const n=nodeById(state,state.sele
   if(change(()=>{n.name=$('objName').value.trim();n.description=$('objDescription').value.trim();n.position=nums;
     n.color=$('objColor').value;n.size=sz;n.label={show:$('objLabelShow').checked,color:$('objLabelColor').value,size:fs,family:$('objLabelFamily').value, ...(n.label.offset?{offset:[...n.label.offset]}:{})};}))message('Draft geometry and typography updated.');
 }
-function removeOrFork(){const n=nodeById(state,state.selected);if(!n)return;
+function removeOrFork(){
+  const n=nodeById(state,state.selected);if(!n)return;
   if(n.status==='reference'){
-    let id;change(()=>{id=uniqueId(state,'draft-reference');state.nodes.push({...structuredClone(n),id,name:n.name+' / DRAFT',status:'draft',sourceUrl:null});});
-    select(id);message('Created an editable draft. The source reference remains protected.');return;
+    let id;
+    if(change(()=>{id=uniqueId(state,'draft-reference');state.nodes.push({...structuredClone(n),id,name:n.name+' / DRAFT',status:'draft',sourceUrl:null});})){
+      select(id);message('Created an editable draft. The source reference remains protected.');
+    }
+    return;
   }
-  if(!confirm('Delete this draft object and any children or connected routes?'))return;
-  change(()=>{removeNode(state,n.id);});message('Draft object deleted.');
+  let plan;
+  try{plan=planDeletion(state,n.id,{type:'node'});}catch(error){message('Delete refused: '+error.message,true);return;}
+  const dependencies=plan.nodeCount-1;
+  const warning='Delete '+n.name+' (draft)?'
+    +'\nDependent draft objects: '+dependencies
+    +'\nConnected draft routes: '+plan.routeCount
+    +'\nDependent draft regions: '+plan.regionCount
+    +'\nOnly the current era is affected. Undo restores this deletion.';
+  if(!confirm(warning))return;
+  studio?.cancel();studio?.routeStop();strategy?.cancelGesture();strategy?.cancelDrawing();pendingRoute=null;
+  const previousView=view;
+  const leavingView=Boolean(view.id&&plan.nodeIds.includes(view.id));
+  if(leavingView)view={kind:'all',id:null};
+  if(change(()=>deleteObject(state,n.id,{type:'node'}))){
+    if(leavingView){engine?.setView(view);updateUI();}
+    message('Deleted '+plan.nodeCount+' draft object(s), '+plan.routeCount+' corridor(s), '+plan.regionCount+' region(s). Undo available.');
+  }else{
+    view=previousView;
+  }
 }
 function connectRoute(){const n=nodeById(state,state.selected);if(!n||n.status!=='draft')return;
   studio?.setMode('route');pendingRoute=n.id;studio?.routeStart(n.id);
@@ -923,7 +946,7 @@ function bind(){
     }
   });
   document.addEventListener('keydown',ev=>{
-    if(ev.target?.closest?.('input,textarea,select,[contenteditable]')||$('helpDialog').open||$('sourceGraphDialog').open||$('importConfirmDialog')?.open)return;
+    if(ev.target?.closest?.('input,textarea,select,[contenteditable],[role="textbox"]')||document.querySelector('dialog[open]'))return;
     if((ev.ctrlKey||ev.metaKey)&&!ev.altKey){
       const k=ev.key.toLowerCase();
       if(!ev.shiftKey&&k==='z'){ev.preventDefault();undo();return;}
@@ -937,7 +960,15 @@ function bind(){
     else if(ev.key.toLowerCase()==='h'){toggleFocus();}
     else if(ev.key.toLowerCase()==='f'){focusSelected();}
     else if(ev.key==='Escape'){ev.preventDefault();up();gui.right.classList.remove('mobile-open');}
-    else if(ev.key==='Backspace'&&!ev.target?.closest?.('input,textarea,select')){ev.preventDefault();up();}
+    else if((ev.key==='Delete'||(ev.key==='Backspace'&&
+        (['move','label'].includes(studio?.mode)||strategy?.opened||!gui.right.hidden)))&&
+        state.selected&&!strategy?.drawing&&!strategy?.gesture&&studio?.mode!=='route'){
+      ev.preventDefault();
+      const selected=nodeById(state,state.selected);
+      if(selected?.status==='draft')removeOrFork();
+      else message('This source identity is immutable. Use FORK AS DRAFT instead.',true);
+    }
+    else if(ev.key==='Backspace'){ev.preventDefault();up();}
     else if(ev.key==='0'){ev.preventDefault();engine?.resetViewCamera(true);message('Camera reset to default.');}
     else if(ev.key==='Home'){enter('all',null);}
   });

@@ -64,7 +64,8 @@
       <div class="two-col"><label>LABEL COLOR <input type="color" id="objLabelColor"/></label><label>FONT SIZE <input id="objLabelSize" type="number" min="9" max="36" step="1"/></label></div>
       <label>FONT FAMILY <select id="objLabelFamily"><option value="display">EDITORIAL / SERIF</option><option value="mono">CARTOGRAPHIC / MONO</option></select></label>
       <div class="editor-actions"><button type="submit" class="primary-button" id="applyBtn">APPLY CHANGES</button><button type="button" class="button-outline" id="enterBtn">ENTER</button><button type="button" class="button-outline" id="focusBtn">FOCUS</button></div>
-      <div class="editor-actions"><button type="button" class="text-btn" id="connectBtn">CONNECT ROUTE</button><button type="button" class="text-btn destructive" id="deleteBtn">DELETE DRAFT</button></div>
+      <div class="editor-actions"><button type="button" class="text-btn" id="connectBtn">CONNECT ROUTE</button><button type="button" class="text-btn destructive" id="deleteBtn" aria-describedby="deleteHint">DELETE SELECTED DRAFT</button></div>
+      <p id="deleteHint" class="small-note">DELETE removes the selected editable draft. Backspace removes it in an editing panel; otherwise Backspace navigates upward. Source references cannot be deleted. Undo restores accepted deletions.</p>
     </form>
     <section class="orbital-handoff" aria-label="Orbital handoff to system planner">
       <div class="panel-heading"><span>ORBITAL LABORATORY</span><small>NON-CANON</small></div>

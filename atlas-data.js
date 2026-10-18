@@ -1,4 +1,5 @@
 import {validateRegions} from './strategic-model.js';
+import {deleteObject} from './deletion-engine.js';
 import {validateTimeline, sanitizeTimeline} from './temporal-model.js';
 export const VERSION = 1;
 export const STORAGE_KEY = 'starsilk.map-of-the-all.draft.v1';
@@ -167,13 +168,8 @@ export function sanitizeAtlas(value) {
   return data;
 }
 export function removeNode(state,id){
-  const removal=new Set([id]);let changed=true;
-  while(changed){changed=false;for(const n of state.nodes)if(n.parentId&&removal.has(n.parentId)&&!removal.has(n.id)){removal.add(n.id);changed=true;}}
-  state.nodes=state.nodes.filter(n=>!removal.has(n.id));
-  state.routes=state.routes.filter(r=>!removal.has(r.from)&&!removal.has(r.to));
-  if(Array.isArray(state.regions))state.regions=state.regions.filter(r=>!removal.has(r.parentId));
-  if(removal.has(state.selected))state.selected=null;
-  return removal.size;
+  // Retained v1 API: route all mutations through the source-safe deletion engine.
+  return deleteObject(state,id,{type:'node'}).nodeCount;
 }
 export function uniqueId(state,prefix){let id;do{id=prefix+'-'+Math.random().toString(36).slice(2,9);}while(state.nodes.some(n=>n.id===id));return id;}
 export function addNode(state,kind,parentId=null){
