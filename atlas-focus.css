@@ -20,7 +20,7 @@
 .atlas-pull-tab{display:flex;align-items:center;gap:6px;flex-shrink:0;padding:10px 10px 8px;min-height:40px;
   color:#a1bfcf;border:1px solid rgba(83,156,185,.14);border-bottom:2px solid rgba(71,184,219,.25);
   background:rgba(2,12,22,.62);font:600 10px/1 var(--mono);letter-spacing:.08em;white-space:nowrap;
-  border-radius:4px 4px 0 0;transition:background .18s,border-color .18s,color .18s}
+  border-radius:4px 4px 0 0;transition:background var(--transition-fast),border-color var(--transition-fast),color var(--transition-fast)}
 .atlas-pull-tab:hover,.atlas-pull-tab.active{color:#edfbff;background:rgba(10,48,66,.95);border-color:#53bfdc;border-bottom-color:#b0f3ff}
 .atlas-pull-tab .tab-key{display:inline-flex;align-items:center;justify-content:center;min-width:13px;height:13px;
   padding:0 2px;border-radius:2px;background:rgba(83,156,185,.18);border:1px solid rgba(83,156,185,.35);
@@ -102,7 +102,7 @@
 .first-action-hud{position:absolute;z-index:18;bottom:48px;left:50%;transform:translateX(-50%);
   display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(2,14,25,.76);
   border:1px solid rgba(83,156,185,.35);border-radius:20px;backdrop-filter:blur(12px);
-  box-shadow:0 8px 32px rgba(0,0,0,.6);pointer-events:auto;transition:opacity .35s ease,transform .35s ease;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);pointer-events:auto;transition:opacity var(--transition-normal),transform var(--transition-normal);
   max-width:calc(100vw - 32px);box-sizing:border-box}
 .first-action-hud.dimmed{opacity:.38}
 .first-action-hud.dimmed:hover{opacity:1}
@@ -155,7 +155,7 @@
   .first-action-hud{bottom:40px;padding:4px 8px;gap:5px}
   .first-action-hud .hud-pill:nth-child(n+3){display:none}
 }
-@media(prefers-reduced-motion:reduce){.atlas-pull-tab{transition:none}}
+@media(prefers-reduced-motion:reduce){.atlas-pull-tab,.first-action-hud,.header-canon-pill,.drawer-close{transition:none!important}}
 
 /* Only shown when a rejected local draft needs user-directed recovery. */
 .atlas.atlas-minimal .atlas-recovery-tools{display:grid;gap:9px;margin:4px 0 16px;padding:12px;
