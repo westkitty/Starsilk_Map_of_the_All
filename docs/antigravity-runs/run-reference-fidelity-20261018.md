@@ -34,9 +34,9 @@
 | **Phase 03** | Loops 11–15 | The Siege Wall Reconstruction | VERIFIED | `674bde7` |
 | **Phase 04** | Loops 16–20 | Large-Scale Structure & Negative Space Harmony | VERIFIED | `efe030c` |
 | **Phase 05** | Loops 21–25 | Primary Galactic Hubs & Spiral Morphologies | VERIFIED | `55793e6` |
-| **Phase 06** | Loops 26–30 | Secondary Galaxies & Administrative Center Starbursts | VERIFIED | `git rev-parse HEAD` |
-| **Phase 07** | Loops 31–35 | The Braided Starsilk Flow Foundation | Planned | — |
-| **Phase 08** | Loops 36–40 | Starsilk Flow Depth & Environmental Illumination | Planned | — |
+| **Phase 06** | Loops 26–30 | Secondary Galaxies & Administrative Center Starbursts | VERIFIED | `dc9cce4` |
+| **Phase 07** | Loops 31–35 | The Braided Starsilk Flow Foundation | VERIFIED | `e72fa86` |
+| **Phase 08** | Loops 36–40 | Starsilk Flow Depth & Environmental Illumination | VERIFIED | `e72fa86` |
 | **Phase 09** | Loops 41–45 | Luminous Azure Network Triangulation | Planned | — |
 | **Phase 10** | Loops 46–50 | Network Readability & De-cluttering | Planned | — |
 | **Phase 11** | Loops 51–55 | Real Delete Engine — Core Architecture | Planned | — |

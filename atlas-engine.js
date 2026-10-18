@@ -43,6 +43,60 @@ function disposeTree(root){
   root.clear();
 }
 const sphere = (radius,color,emissive=0x000000) => new THREE.Mesh(new THREE.SphereGeometry(radius,24,16),new THREE.MeshStandardMaterial({color,emissive,roughness:.7,metalness:.12}));
+function makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity=0.5,speed=2.0,pulseFreq=10.0}){
+  return new THREE.ShaderMaterial({
+    uniforms:{
+      uTime:{value:0},
+      uColorCore:{value:new THREE.Color(colorCore)},
+      uColorBody:{value:new THREE.Color(colorBody)},
+      uColorGlow:{value:new THREE.Color(colorGlow)},
+      uOpacity:{value:opacity},
+      uSpeed:{value:speed},
+      uPulseFreq:{value:pulseFreq}
+    },
+    vertexShader:String.raw`
+      varying vec2 vUv;
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      void main(){
+        vUv=uv;
+        vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
+        vViewPosition=-mvPosition.xyz;
+        vNormal=normalize(normalMatrix*normal);
+        gl_Position=projectionMatrix*mvPosition;
+      }
+    `,
+    fragmentShader:String.raw`
+      uniform float uTime;
+      uniform vec3 uColorCore;
+      uniform vec3 uColorBody;
+      uniform vec3 uColorGlow;
+      uniform float uOpacity;
+      uniform float uSpeed;
+      uniform float uPulseFreq;
+      varying vec2 vUv;
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      void main(){
+        float edgeFade=smoothstep(0.0,0.08,vUv.y)*smoothstep(1.0,0.92,vUv.y);
+        vec3 viewDir=normalize(vViewPosition);
+        float fresnel=1.0-abs(dot(vNormal,viewDir));
+        float coreIntensity=pow(1.0-fresnel,2.5);
+        float flow=vUv.y*32.0-uTime*uSpeed;
+        float wave=sin(flow)*0.5+0.5;
+        float pulse=pow(sin(vUv.y*uPulseFreq-uTime*(uSpeed*0.75))*0.5+0.5,6.0);
+        vec3 col=mix(uColorGlow,uColorBody,fresnel*0.65+wave*0.35);
+        col=mix(col,uColorCore,coreIntensity*0.85+pulse*0.6);
+        float alpha=uOpacity*edgeFade*(0.35+0.45*wave+0.45*pulse+0.25*fresnel);
+        gl_FragColor=vec4(col,alpha);
+      }
+    `,
+    transparent:true,
+    blending:THREE.AdditiveBlending,
+    depthWrite:false,
+    side:THREE.DoubleSide
+  });
+}
 export class AtlasEngine {
   constructor(canvas,labelsRoot,callbacks){
     this.canvas=canvas;this.labelsRoot=labelsRoot;this.callbacks=callbacks;
@@ -66,7 +120,7 @@ export class AtlasEngine {
     this.bg=new THREE.Group();this.scene.add(this.bg);
     this.scene.add(new THREE.AmbientLight(0x8db9ec,1.2));
     this.sunLight=new THREE.PointLight(0xffe0b8,24,500);this.scene.add(this.sunLight);
-    this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];this.labelNodes=new Map();
+    this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];this.animatedShaders=[];this.labelNodes=new Map();
     this.raycaster=new THREE.Raycaster();this.pointer=new THREE.Vector2();
     this.view={kind:'all',id:null};this.state=null;this.resizeObserver=new ResizeObserver(()=>this.resize());
     this.resizeObserver.observe(canvas.parentElement);
@@ -304,7 +358,7 @@ export class AtlasEngine {
       else if(ep==='locking'){this.scene.fog.color.setHex(0x020812);this.scene.fog.density=0.0013;}
       else{this.scene.fog.color.setHex(0x010408);this.scene.fog.density=0.0010;}
     }
-    disposeTree(this.group);this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];
+    disposeTree(this.group);this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];this.animatedShaders=[];
     if(this.view.kind==='all')this.buildAll();
     if(this.view.kind==='galaxy')this.buildGalaxy();
     if(this.view.kind==='system')this.buildSystem();
@@ -770,16 +824,150 @@ export class AtlasEngine {
       }
     }
     if(parentId===null&&this.state.layers.starsilk){
-      const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-158,-11,65),new THREE.Vector3(-90,-9,77),new THREE.Vector3(-35,-15,87),new THREE.Vector3(30,-8,72),new THREE.Vector3(95,-10,80),new THREE.Vector3(152,-7,65)]);
-      const outerVeil=new THREE.Mesh(new THREE.TubeGeometry(curve,128,2.2,7,false),new THREE.MeshBasicMaterial({color:0x0284c7,transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false}));
-      const innerCore=new THREE.Mesh(new THREE.TubeGeometry(curve,128,0.95,7,false),new THREE.MeshBasicMaterial({color:0x06b6d4,transparent:true,opacity:.38,blending:THREE.AdditiveBlending,depthWrite:false}));
-      this.group.add(outerVeil,innerCore);
-      this.group.add(lines(curve.getPoints(128),0xbaf3ff,.78));
-      for(let i=0;i<16;i++){
-        const particle=this.addGlow(this.group,i%3?2.8:4.5,'#38bdf8',.72);
-        this.routeParticles.push({obj:particle,curve,phase:i/16,speed:.042});
+      this.makeStarsilkFlow();
+    }
+  }
+  makeStarsilkFlow(){
+    const ep=this.state.epoch;
+    const isWar=ep==='war';
+    const isLocking=ep==='locking';
+
+    // Invariant-respecting chromatic palette
+    const colorCore=isWar?0xfffbeb:0xf0fdf4;
+    const colorBody=isWar?0xf59e0b:(isLocking?0x06b6d4:0x38bdf8);
+    const colorGlow=isWar?0x991b1b:(isLocking?0x0369a1:0x0284c7);
+
+    // Loop 31: Sinuous horizontal spline trajectory across lower-middle archipelago matching References 01–03
+    const masterControlPoints=[
+      new THREE.Vector3(-192,-12,58),
+      new THREE.Vector3(-145,-10,72),
+      new THREE.Vector3(-102,-13,84),
+      new THREE.Vector3(-55,-15,92),
+      new THREE.Vector3(-12,-10,86),
+      new THREE.Vector3(32,-8,76),
+      new THREE.Vector3(75,-12,82),
+      new THREE.Vector3(116,-14,80),
+      new THREE.Vector3(155,-11,68),
+      new THREE.Vector3(192,-8,52)
+    ];
+    const masterCurve=new THREE.CatmullRomCurve3(masterControlPoints);
+
+    // Loop 32: Multi-strand braided ribbon geometry with differentiated strand thicknesses and twists
+    const SAMPLES=180;
+    const points1=[];
+    const points2=[];
+    const points3=[];
+    const points4=[];
+
+    const up=new THREE.Vector3(0,1,0);
+    for(let i=0;i<=SAMPLES;i++){
+      const t=i/SAMPLES;
+      const p=masterCurve.getPointAt(t);
+      const tangent=masterCurve.getTangentAt(t);
+      const binormal=new THREE.Vector3().crossVectors(tangent,up).normalize();
+      const norm=new THREE.Vector3().crossVectors(binormal,tangent).normalize();
+
+      // Strand 1: Lumbar backbone strand
+      const w1=Math.sin(t*16.0)*1.6;
+      const h1=Math.cos(t*12.0)*0.8;
+      points1.push(p.clone().addScaledVector(binormal,w1).addScaledVector(norm,h1));
+
+      // Strand 2: Helical counter-braid
+      const w2=Math.sin(t*16.0+Math.PI)*2.2;
+      const h2=Math.cos(t*16.0+Math.PI)*1.1;
+      points2.push(p.clone().addScaledVector(binormal,w2).addScaledVector(norm,h2));
+
+      // Strand 3: Harmonic ribbon
+      const w3=Math.sin(t*32.0+1.2)*1.4;
+      const h3=Math.sin(t*24.0)*1.2;
+      points3.push(p.clone().addScaledVector(binormal,w3).addScaledVector(norm,h3));
+
+      // Strand 4: Wispy gossamer outer filament
+      const w4=Math.sin(t*10.0-0.5)*3.2+Math.cos(t*26.0)*0.9;
+      const h4=Math.sin(t*18.0+0.8)*1.4;
+      points4.push(p.clone().addScaledVector(binormal,w4).addScaledVector(norm,h4));
+    }
+
+    const curve1=new THREE.CatmullRomCurve3(points1);
+    const curve2=new THREE.CatmullRomCurve3(points2);
+    const curve3=new THREE.CatmullRomCurve3(points3);
+    const curve4=new THREE.CatmullRomCurve3(points4);
+
+    // Loop 33: Luminous electric azure/cyan custom shader materials
+    const matVeil=makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity:0.16,speed:1.2,pulseFreq:6.0});
+    const matStrand1=makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity:0.65,speed:2.2,pulseFreq:12.0});
+    const matStrand2=makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity:0.48,speed:2.5,pulseFreq:14.0});
+    const matStrand3=makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity:0.38,speed:2.8,pulseFreq:16.0});
+
+    this.animatedShaders.push(matVeil,matStrand1,matStrand2,matStrand3);
+
+    // Geometries
+    const meshVeil=new THREE.Mesh(new THREE.TubeGeometry(masterCurve,160,3.2,8,false),matVeil);
+    const mesh1=new THREE.Mesh(new THREE.TubeGeometry(curve1,160,0.85,7,false),matStrand1);
+    const mesh2=new THREE.Mesh(new THREE.TubeGeometry(curve2,160,0.58,6,false),matStrand2);
+    const mesh3=new THREE.Mesh(new THREE.TubeGeometry(curve3,160,0.38,5,false),matStrand3);
+
+    this.group.add(meshVeil,mesh1,mesh2,mesh3);
+
+    // Crisp luminous filament lines
+    this.group.add(lines(curve1.getPoints(160),isWar?0xfde68a:0xe0f2fe,0.85));
+    this.group.add(lines(curve2.getPoints(160),isWar?0xf59e0b:0x7dd3fc,0.72));
+    this.group.add(lines(curve3.getPoints(160),isWar?0xd97706:0x38bdf8,0.60));
+    this.group.add(lines(curve4.getPoints(160),isWar?0xb45309:0x0284c7,0.48));
+
+    // Loop 34: Embedded flow nodes at harmonic intersection points
+    const nodeIntervals=[0.12,0.26,0.39,0.52,0.65,0.78,0.90];
+    for(let k=0;k<nodeIntervals.length;k++){
+      const pos=masterCurve.getPointAt(nodeIntervals[k]);
+      const nodeGroup=new THREE.Group();
+      nodeGroup.position.copy(pos);
+      this.group.add(nodeGroup);
+
+      const coreDot=sphere(0.65,0xffffff,colorBody);
+      const ringGeom=new THREE.RingGeometry(1.6,2.1,32);
+      const ringMat=new THREE.MeshBasicMaterial({color:colorBody,transparent:true,opacity:0.55,side:THREE.DoubleSide});
+      const navRing=new THREE.Mesh(ringGeom,ringMat);
+      navRing.rotation.x=Math.PI*0.5;
+      nodeGroup.add(coreDot,navRing);
+
+      this.addGlow(nodeGroup,5.5,isWar?'#f59e0b':'#38bdf8',0.8);
+      this.motionObjects.push({obj:navRing,speed:0.00035});
+    }
+
+    // Traveling energy pulse particles
+    const curves=[curve1,curve2,curve3,curve4];
+    for(let c=0;c<curves.length;c++){
+      const count=c<2?8:6;
+      const targetCurve=curves[c];
+      for(let p=0;p<count;p++){
+        const particle=this.addGlow(this.group,p%3?2.8:4.8,isWar?'#fbbf24':'#38bdf8',0.75);
+        this.routeParticles.push({
+          obj:particle,
+          curve:targetCurve,
+          phase:p/count+(c*0.12),
+          speed:0.038+(c*0.008)
+        });
       }
     }
+
+    // Loop 36: Ambient blue glow reflection onto nearby dust clouds and archipelago underbelly
+    const reflectionPoints=[
+      new THREE.Vector3(-45,-18,88),
+      new THREE.Vector3(40,-16,78),
+      new THREE.Vector3(120,-18,76)
+    ];
+    for(const rPos of reflectionPoints){
+      const light=new THREE.PointLight(isWar?0xd97706:0x0284c7,2.8,55,2);
+      light.position.copy(rPos);
+      this.group.add(light);
+    }
+
+    // Reference 01 Typography label
+    const flowLabel={id:'starsilk-flow-master',name:'STARSILK FLOW',status:'reference',label:{show:true,size:10,color:isWar?'#fcd34d':'#7dd3fc',family:'mono'}};
+    const flowObj=new THREE.Object3D();
+    flowObj.position.set(-25,-10,88);
+    this.group.add(flowObj);
+    this.labelItems.push({node:flowLabel,obj:flowObj,subtitle:'THE LIVING WEAVE / SUBSTRATE'});
   }
   makeRemnantRings(){
     const pos=[[-70,-12,48],[63,5,49]];
@@ -1051,6 +1239,7 @@ export class AtlasEngine {
         }else m.obj.rotation.y+=elapsed*m.speed;
       }
       for(const p of this.routeParticles){if(p.failed)continue;try{const t=wrapCurvePhase(p.phase+this.elapsed/1000*p.speed);const v=p.curve.getPointAt(t);if(v&&Number.isFinite(v.x)&&Number.isFinite(v.y)&&Number.isFinite(v.z))p.obj.position.copy(v);else p.failed=true;}catch(error){p.failed=true;console.warn('Atlas route particle disabled:',error);}}
+      for(const s of this.animatedShaders){if(s.uniforms?.uTime)s.uniforms.uTime.value=this.elapsed*0.001;}
     }
     this.controls.update();this.renderer.render(this.scene,this.camera);
     if(++this.frame%3===0)this.updateLabels();
