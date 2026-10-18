@@ -808,23 +808,118 @@ export class AtlasEngine {
     this.labelItems.push({node:wallLabel,obj:o,subtitle:'BLACK-HOLE LATTICE / ABSENCE'});
   }
   makeRoutes(parentId=null){
+    const selectedId=this.state.selected;
     for(const r of this.state.routes){
       if((r.kind==='starsilk'&&!this.state.layers.starsilk)||(r.kind==='hookshot'&&!this.state.layers.routes))continue;
       const a=nodeById(this.state,r.from),b=nodeById(this.state,r.to);if(!a||!b||a.parentId!==parentId||b.parentId!==parentId)continue;
       const p=V(a.position),q=V(b.position),m=p.clone().add(q).multiplyScalar(.5);m.y+=9;
       const c=new THREE.QuadraticBezierCurve3(p,m,q);
-      const samples=c.getPoints(48);const azure=r.kind==='starsilk';
-      this.group.add(lines(samples,azure?0x60ebff:0xb6c8d6,azure?.82:.26,!azure));
-      if(azure){
-        const halo=new THREE.Mesh(new THREE.TubeGeometry(c,54,.32,5,false),new THREE.MeshBasicMaterial({color:0x0ea5e9,transparent:true,opacity:.22,blending:THREE.AdditiveBlending,depthWrite:false}));this.group.add(halo);
-        for(let i=0;i<5;i++){
-          const particle=this.addGlow(this.group,3.2,'#78f0ff',.7);
-          this.routeParticles.push({obj:particle,curve:c,phase:i/5,speed:.055});
+      const samples=c.getPoints(48);
+      const azure=r.kind==='starsilk';
+      const isIncident=selectedId&&(r.from===selectedId||r.to===selectedId||r.id===selectedId);
+
+      // Loop 47: Dynamic route highlighting for selected corridors
+      const lineColor=isIncident?0xfff3c4:(azure?0x60ebff:0x7dd3fc);
+      const lineOpacity=isIncident?0.95:(azure?0.85:0.42);
+      this.group.add(lines(samples,lineColor,lineOpacity,!azure));
+
+      // Loop 48: Luminous tube halo separating Starsilk from Hookshot corridors
+      const haloRadius=azure?(isIncident?0.55:0.35):(isIncident?0.42:0.22);
+      const haloColor=isIncident?0xf59e0b:(azure?0x0ea5e9:0x0284c7);
+      const haloOpacity=isIncident?0.45:(azure?0.25:0.14);
+      const halo=new THREE.Mesh(new THREE.TubeGeometry(c,54,haloRadius,5,false),new THREE.MeshBasicMaterial({color:haloColor,transparent:true,opacity:haloOpacity,blending:THREE.AdditiveBlending,depthWrite:false}));
+      this.group.add(halo);
+
+      if(azure||isIncident){
+        const particleCount=isIncident?6:4;
+        for(let i=0;i<particleCount;i++){
+          const particle=this.addGlow(this.group,isIncident?3.8:3.0,isIncident?'#fde047':'#78f0ff',.75);
+          this.routeParticles.push({obj:particle,curve:c,phase:i/particleCount,speed:isIncident?.07:.045});
         }
       }
     }
+    if(parentId===null&&this.state.layers.routes){
+      this.makeSecondaryNetwork();
+    }
     if(parentId===null&&this.state.layers.starsilk){
       this.makeStarsilkFlow();
+    }
+  }
+  makeSecondaryNetwork(){
+    // Loop 41-44: Multi-tier organic geometric triangulation network matching Reference 01 & 03
+    const s=this.state;
+    const galaxies=childNodes(s,null,'galaxy');
+    const galWorldMap=new Map();
+
+    for(const g of galaxies){
+      const gPos=V(g.position);
+      const systems=childNodes(s,g.id,'system');
+      const sysPositions=[];
+
+      for(let i=0;i<systems.length;i++){
+        const sys=systems[i];
+        const worldPos=gPos.clone().add(V(sys.position));
+        sysPositions.push({sys,worldPos});
+
+        // Loop 43: Radial secondary corridor from galaxy core to child system
+        const radLine=lines([gPos,worldPos],0x38bdf8,0.25,true);
+        this.group.add(radLine);
+
+        // Loop 44: Hookshot node beads and major-system concentric navigation rings
+        const isMajor=i===0||i===2;
+        const bead=sphere(isMajor?0.55:0.38,0xffffff,0x38bdf8);
+        bead.position.copy(worldPos);
+        this.group.add(bead);
+        this.addGlow(this.group,isMajor?5.5:3.8,'#38bdf8',isMajor?0.7:0.45);
+
+        if(isMajor){
+          const ringGeom=new THREE.RingGeometry(1.4,1.8,24);
+          const ringMat=new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:0.35,side:THREE.DoubleSide});
+          const ring=new THREE.Mesh(ringGeom,ringMat);
+          ring.position.copy(worldPos);
+          ring.rotation.x=Math.PI*0.5;
+          this.group.add(ring);
+          this.motionObjects.push({obj:ring,speed:0.0003});
+        }
+      }
+
+      // Intra-galaxy perimeter triangulation loop
+      for(let i=0;i<sysPositions.length;i++){
+        const next=(i+1)%sysPositions.length;
+        const perimLine=lines([sysPositions[i].worldPos,sysPositions[next].worldPos],0x0284c7,0.18,true);
+        this.group.add(perimLine);
+      }
+
+      galWorldMap.set(g.id,sysPositions);
+    }
+
+    // Inter-galaxy secondary exploratory bridging links
+    const interPairs=[
+      ['halcyon-arm','north-reach',1,3],
+      ['halcyon-arm','triangulum',2,0],
+      ['triangulum','perseus-confluence',1,3],
+      ['perseus-confluence','centauri-marches',2,0],
+      ['centauri-marches','ember-span',1,3],
+      ['centauri-marches','southern-territories',2,0],
+      ['ember-span','southern-territories',1,3]
+    ];
+
+    for(const [gA,gB,idxA,idxB] of interPairs){
+      const listA=galWorldMap.get(gA);
+      const listB=galWorldMap.get(gB);
+      if(!listA||!listB||!listA[idxA]||!listB[idxB])continue;
+
+      const pA=listA[idxA].worldPos;
+      const pB=listB[idxB].worldPos;
+      const interLine=lines([pA,pB],0x0ea5e9,0.22,true);
+      this.group.add(interLine);
+
+      // Filament junction bead at cross-corridor midpoint
+      const mid=pA.clone().add(pB).multiplyScalar(0.5);
+      const midBead=sphere(0.35,0xffffff,0x60ebff);
+      midBead.position.copy(mid);
+      this.group.add(midBead);
+      this.addGlow(this.group,3.2,'#60ebff',0.5);
     }
   }
   makeStarsilkFlow(){
