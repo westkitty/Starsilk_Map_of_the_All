@@ -260,7 +260,20 @@ function exportPlannerHandoff(){
     message('Hypothetical system exported. Open System Planner and use IMPORT; nothing has been auto-loaded.');
   }catch(e){message('Orbital export refused: '+e.message,true);}
 }
-function updateUI(){updateBreadcrumb();updateLayers();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();
+function updateScaleGauge(){
+  const textEl=$('scaleGaugeText');
+  if(!textEl)return;
+  if(view.kind==='all'){
+    textEl.textContent='UNIVERSAL CONTINUUM · 500 DU (~100 MLY FRAME)';
+  }else if(view.kind==='galaxy'){
+    const g=nodeById(state,view.id);
+    textEl.textContent=`GALACTIC SECTOR · 100 DU (${g?g.name:'SECTOR'} · ~80 kLY FRAME)`;
+  }else if(view.kind==='system'){
+    const sys=nodeById(state,view.id);
+    textEl.textContent=`STELLAR SYSTEM · ~5 AU SANDBOX (${sys?sys.name:'STAR'} · SSP COMPATIBLE)`;
+  }
+}
+function updateUI(){updateBreadcrumb();updateLayers();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();
   $('quality').value=state.quality;$('motionBtn').textContent=state.motion?'MOTION ON':'MOTION OFF';
   studio?.sync();strategy?.sync();networkLab?.sync();temporal?.sync();
 }

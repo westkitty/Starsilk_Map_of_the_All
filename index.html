@@ -25,6 +25,13 @@
     <div id="searchResults" class="search-results" hidden></div>
     <div class="panel-heading inline"><span>VISIBLE STRUCTURES</span><button id="allLayersBtn" class="text-btn">ALL / NONE</button></div>
     <div id="layerControls" class="layer-controls"></div>
+    <div class="panel-heading inline"><span>CARTOGRAPHIC LEGEND</span><small>SEMANTICS</small></div>
+    <div class="carto-legend" id="cartoLegend">
+      <div class="legend-item"><span class="legend-glyph glyph-ref">◆</span><span class="legend-label">SOURCE TOPOLOGY</span><span class="legend-desc">Canon Dossier entity; unauthored coordinate</span></div>
+      <div class="legend-item"><span class="legend-glyph glyph-draft">●</span><span class="legend-label">DRAFT OBJECT</span><span class="legend-desc">Provisional editable structure</span></div>
+      <div class="legend-item"><span class="legend-glyph glyph-wall">■</span><span class="legend-label">SIEGE WALL</span><span class="legend-desc">Black-hole containment lattice</span></div>
+      <div class="legend-item"><span class="legend-glyph glyph-strand">—</span><span class="legend-label">STARSILK TRACE</span><span class="legend-desc">Azure strand corridor</span></div>
+    </div>
     <div class="panel-heading inline"><span>SURVEY CONTENT</span><small>PROVISIONAL</small></div>
     <div id="nodeList" class="node-list"></div>
     <div class="panel-heading inline"><span>DRAFT CORRIDORS</span><small>EDITABLE</small></div><div id="routeList" class="route-list"></div>
@@ -146,6 +153,7 @@
     <div class="studio-subsettings" id="studioTypeSettings" hidden><label>TYPE SCALE <input id="studioTypeScale" class="studio-type-range" type="range" min="0.6" max="2" step="0.05" value="1"/><output class="studio-type-value" id="studioTypeScaleValue" for="studioTypeScale">100%</output></label></div>
   </section>
   <div class="side-tools" id="sideTools"><button id="homeBtn" title="Return to The All" aria-label="Return to The All">&#9678;</button><button id="topBtn" title="Top-down camera" aria-label="Top-down camera">&#9635;</button><button id="resetCameraBtn" title="Reset camera" aria-label="Reset camera">&#8635;</button></div>
+  <div id="hudScaleGauge" class="hud-scale-gauge" aria-label="Cartographic scale gauge"><div class="scale-gauge-bar"><span class="scale-gauge-tick"></span><span class="scale-gauge-segment"></span><span class="scale-gauge-tick"></span></div><span class="scale-gauge-text" id="scaleGaugeText">UNIVERSAL CONTINUUM · 500 DU</span></div>
   <div id="hudNote" class="hud-note"><span class="crosshair">+</span> DRAG TO ORBIT <span class="separator">/</span> PINCH OR SCROLL TO ZOOM <span class="separator">/</span> DOUBLE-CLICK TO ENTER</div>
   <footer class="bottom-bar"><div class="era-title"><span class="eyebrow">TEMPORAL LENS</span><strong id="eraLabel">POST-SIEGE SURVEY</strong></div><div class="era-options" id="eraOptions"></div><div class="bottom-utility"><label>QUALITY <select id="quality"><option value="battery">BATTERY</option><option value="balanced">BALANCED</option><option value="cinematic">CINEMATIC</option></select></label><button id="motionBtn" title="Toggle ambient animation">MOTION ON</button><button id="exportBtn" class="primary-button">EXPORT &#8599;</button><button id="importBtn" class="button-outline">IMPORT</button><input id="fileInput" type="file" accept="application/json,.json" hidden/></div></footer>
   <dialog id="sourceGraphDialog" class="source-graph-dialog" aria-labelledby="sourceGraphHeading">
