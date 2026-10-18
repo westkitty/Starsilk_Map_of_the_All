@@ -610,15 +610,17 @@ export class AtlasEngine {
       }
       btn.dataset.status=n.status||'draft';
       btn.dataset.kind=n.kind||'';
-      const badgeText=n.status==='reference'?(item.subtitle||'SOURCE TOPOLOGY'):(item.subtitle||'');
-      btn.innerHTML=`<span class="label-name">${n.name}</span>${badgeText?`<span class="label-badge">${badgeText}</span>`:''}`;
+      const isRef=n.status==='reference';
+      const pipClass=isRef?'pip-canon':(n.kind==='galaxy'?'pip-draft':'pip-aux');
+      const badgeText=isRef?(item.subtitle||'SOURCE TOPOLOGY'):(item.subtitle||'');
+      btn.innerHTML=`<span class="label-pip ${pipClass}" aria-hidden="true"></span><span class="label-name">${n.name}</span>${badgeText?`<span class="label-badge">${badgeText}</span>`:''}`;
       btn.classList.toggle('selected',state.selected===n.id);
       btn.style.left=x+'px';btn.style.top=y+'px';btn.style.fontSize=font+'px';
       btn.style.color=n.label?.color||'#dff5ff';
       btn.style.fontFamily=n.label?.family==='mono'?'var(--mono)':'var(--display)';
       const alpha=state.selected===n.id?1.0:clamp(1.2-(d/700),0.42,1.0);
       btn.style.opacity=alpha;
-      btn.title=item.subtitle?`${n.name} — ${item.subtitle}`:(n.status==='reference'?`${n.name} (Canonical source topology; unauthored coordinates)`:n.name);
+      btn.title=item.subtitle?`${n.name} — ${item.subtitle}`:(isRef?`${n.name} — Canonical Source Topology (Immutable · Unauthored Coordinates)`:(n.kind==='galaxy'?`${n.name} — Draft Galaxy (Click to Inspect · Double-Click to Enter · Editable)`:n.name));
     }
     for(const [id,element] of this.labelNodes){if(!live.has(id)){element.remove();this.labelNodes.delete(id);}}
   }

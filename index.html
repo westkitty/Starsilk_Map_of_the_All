@@ -16,9 +16,11 @@
   <header class="top-bar">
     <div class="brandmark" aria-hidden="true"><span class="brandmark-a">S</span><span class="brandmark-line"></span></div>
     <div class="branding"><div class="eyebrow">STARSILK <span class="brand-sep">/</span> CARTOGRAPHIC DIRECTORATE</div><h1>THE MAP OF THE ALL</h1><div class="minor">DRAFT ATLAS <span class="dot-amber"></span> UNAUTHORED COORDINATES <span class="separator">/</span> SURVEY 001</div></div>
+    <button id="canonHeaderPill" class="header-canon-pill" type="button" title="127 Stable Dossier Records Ingested · Invariants Locked 🔒 (Click to explore canonical entities)" aria-label="127 Canonical Records Ingested. Click to explore source topology."><span class="canon-pill-glyph" aria-hidden="true">◆</span><span class="canon-pill-text">127 CANON IDS</span><span class="canon-pill-lock" aria-hidden="true">🔒</span></button>
     <div class="header-actions"><div class="status-label" id="savedStatus" role="status">LOCAL DRAFT</div><button id="temporalOpen" class="quiet-btn temporal-header-entry" type="button" aria-expanded="false" aria-controls="temporalPanel">ERA STUDIO ✧</button><button id="networkOpen" class="quiet-btn" title="Open draft corridor network analysis">NETWORK LAB</button><button id="strategyOpen" class="quiet-btn strategic-entry" title="Open group transforms and draft territory authoring">STRATEGY LAB ✥</button><button id="sourceGraphOpen" class="quiet-btn" title="Read-only WorldsVault relationship graph">SOURCE GRAPH · 11 / 6</button><button id="presentBtn" class="quiet-btn" title="Hide the interface (H)">FOCUS VIEW <span aria-hidden="true">&#8599;</span></button><button id="helpBtn" class="quiet-btn" aria-label="Open controls help">?</button></div>
   </header>
   <aside class="left-panel" id="leftPanel">
+    <button id="closeNavPanel" class="mobile-close drawer-close" type="button" aria-label="Close Explore drawer">× CLOSE NAVIGATOR</button>
     <div class="panel-heading"><span>ATLAS NAVIGATOR</span><small>01 / 04</small></div>
     <div class="breadcrumb" id="breadcrumb" aria-label="Navigation path"></div>
     <div class="search-box"><span aria-hidden="true">&#9906;</span><input id="search" type="search" aria-label="Find a galaxy, system, planet or annotation" placeholder="Find an object...  /" autocomplete="off"/></div>
@@ -169,6 +171,13 @@
     <div class="studio-subsettings" id="studioTypeSettings" hidden><label>TYPE SCALE <input id="studioTypeScale" class="studio-type-range" type="range" min="0.6" max="2" step="0.05" value="1"/><output class="studio-type-value" id="studioTypeScaleValue" for="studioTypeScale">100%</output></label></div>
   </section>
   <div class="side-tools" id="sideTools"><button id="homeBtn" title="Return to The All" aria-label="Return to The All">&#9678;</button><button id="topBtn" title="Top-down camera" aria-label="Top-down camera">&#9635;</button><button id="resetCameraBtn" title="Reset camera" aria-label="Reset camera">&#8635;</button></div>
+  <div id="firstActionHud" class="first-action-hud" role="region" aria-label="First action quick guide">
+    <div class="hud-pill"><kbd class="hud-key">CLICK</kbd><span>INSPECT GALAXY</span></div>
+    <div class="hud-pill"><kbd class="hud-key">DBL-CLICK</kbd><span>ENTER SYSTEMS</span></div>
+    <div class="hud-pill"><kbd class="hud-key">DRAG</kbd><span>ORBIT COSMOS</span></div>
+    <div class="hud-pill"><kbd class="hud-key">1–6</kbd><span>DRAWERS</span></div>
+    <button id="dismissHudBtn" class="hud-dismiss-btn" type="button" title="Dismiss quick guide (press ? to open help)" aria-label="Dismiss quick guide">✕</button>
+  </div>
   <div id="hudScaleGauge" class="hud-scale-gauge" aria-label="Cartographic scale gauge"><div class="scale-gauge-bar"><span class="scale-gauge-tick"></span><span class="scale-gauge-segment"></span><span class="scale-gauge-tick"></span></div><span class="scale-gauge-text" id="scaleGaugeText">UNIVERSAL CONTINUUM · 500 DU</span></div>
   <div id="hudNote" class="hud-note"><span class="crosshair">+</span> DRAG TO ORBIT <span class="separator">/</span> PINCH OR SCROLL TO ZOOM <span class="separator">/</span> DOUBLE-CLICK TO ENTER</div>
   <footer class="bottom-bar"><div class="era-title"><span class="eyebrow">TEMPORAL LENS</span><strong id="eraLabel">POST-SIEGE SURVEY</strong></div><div class="era-options" id="eraOptions"></div><div class="bottom-utility"><label>QUALITY <select id="quality"><option value="battery">BATTERY</option><option value="balanced">BALANCED</option><option value="cinematic">CINEMATIC</option></select></label><button id="motionBtn" title="Toggle ambient animation">MOTION ON</button><button id="exportBtn" class="primary-button">EXPORT &#8599;</button><button id="importBtn" class="button-outline">IMPORT</button><input id="fileInput" type="file" accept="application/json,.json" hidden/></div></footer>
