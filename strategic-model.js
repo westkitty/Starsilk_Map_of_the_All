@@ -169,3 +169,23 @@ export function regionReport(state,region) {
   const posture=strategicPosture(internal,frontier,members.length);
   return {count:members.length, internal, frontier, displayArea:polygonArea(region.points), memberIds:members.map(n=>n.id), referenceLandmarks, posture};
 }
+
+export function strategicAnalysis(state, region) {
+  const report = regionReport(state, region);
+  const n = report.count;
+  const area = report.displayArea;
+  const density = area > 0 ? n / area : 0;
+  const maxPossibleInternal = n > 1 ? (n * (n - 1)) / 2 : 0;
+  const cohesionIndex = maxPossibleInternal > 0 ? Math.min(1, report.internal / maxPossibleInternal) : (n === 1 ? 1 : 0);
+  const frontierExposure = n > 0 ? report.frontier / n : 0;
+  const totalTouching = report.internal + report.frontier;
+  const enclosedCorridorRatio = totalTouching > 0 ? report.internal / totalTouching : 0;
+  return {
+    ...report,
+    density,
+    cohesionIndex,
+    frontierExposure,
+    enclosedCorridorRatio
+  };
+}
+

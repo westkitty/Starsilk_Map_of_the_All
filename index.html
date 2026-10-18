@@ -101,6 +101,15 @@
   <section class="strategic-panel" id="strategyPanel" aria-label="Strategic Studio — draft 4X cartography" hidden>
     <header class="strategy-header"><div><span class="eyebrow">SURVEY / STRATEGIC CARTOGRAPHY</span><h2>THE STRATEGIC ATLAS</h2><p>Editable hypotheses, not jurisdictions or physical distances.</p><div class="strategy-banner-notice"><span class="strategy-badge">SURVEY 4X OVERLAY</span> <span class="strategy-disclaimer">PROVISIONAL HYPOTHESES · STRICTLY NON-CANONICAL</span></div></div><button id="strategyClose" type="button" aria-label="Close strategic studio">×</button></header>
     <div class="strategy-modebar" role="group" aria-label="Strategic instrument"><button type="button" id="strategyModeGroup" aria-pressed="true">GROUP</button><button type="button" id="strategyModeRegion" aria-pressed="false">REGIONS</button><button type="button" id="strategyModePan" aria-pressed="false">ORBIT</button></div>
+    <div id="strategyLegend" class="strategy-legend">
+      <div class="strategy-legend-title">STRATEGIC POSTURE TAXONOMY</div>
+      <div class="strategy-legend-grid">
+        <div class="legend-item"><span class="legend-chip chip-hub">CORE HUB</span><span class="legend-desc">Internal connectivity</span></div>
+        <div class="legend-item"><span class="legend-chip chip-frontier">FRONTIER</span><span class="legend-desc">External corridor</span></div>
+        <div class="legend-item"><span class="legend-chip chip-cluster">ISOLATED</span><span class="legend-desc">No external links</span></div>
+        <div class="legend-item"><span class="legend-chip chip-lock">REFERENCE</span><span class="legend-desc">Immutable anchor</span></div>
+      </div>
+    </div>
     <div id="strategyGroupTools" class="strategy-group-tools">
       <div class="strategy-inline"><strong><output id="strategyCount">0</output> SELECTED</strong><button type="button" id="strategySelectAll">ALL VISIBLE</button><button type="button" id="strategyClear">CLEAR</button></div>
       <p id="strategyGroupSummary">Click draft markers, Shift-click to add, or drag a selection rectangle.</p>
@@ -124,6 +133,7 @@
         <div class="strategy-inline"><strong>BOUNDARY VERTICES</strong><button type="button" id="strategyAddVertex">+ VERTEX</button></div>
         <div id="strategyVertexList" class="strategy-vertex-list"></div>
         <output id="strategyRegionMetrics">0 nodes</output>
+        <div id="strategyRegionAnalysis" class="strategy-analysis-grid"></div>
         <div class="strategy-enclosed-container"><span class="strategy-subhead">ENCLOSED OBJECTS</span><div id="strategyEnclosedList" class="strategy-enclosed-list"></div></div>
         <div class="strategy-inline"><button type="submit" class="strategy-primary">SAVE DRAFT</button><button type="button" id="strategyDeleteRegion" class="strategy-danger">DELETE</button></div>
       </form>

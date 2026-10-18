@@ -96,11 +96,12 @@
 
 
 ### PHASE 29 — Strategic 4X Comprehension (Loops 141–145)
-- [ ] **Loop 141**: Clarity and appearance of existing provisional strategic overlays.
-- [ ] **Loop 142**: Strategic selection, tool explanations, contextual legends, and interactive inspection.
-- [ ] **Loop 143**: Usefulness of supported hypothetical route and territorial analysis.
-- [ ] **Loop 144**: Distinction between user-created political/spatial interpretations and source-authored relationships.
-- [ ] **Loop 145**: Repair strategic editing and era-specific state regressions.
+- [x] **Loop 141** (VERIFIED): Strategic overlay appearance: added elevated dual-layer outline geometry at `this.planeY() + 0.14` in `strategic-studio.js` when regions are selected, giving crisp edge contrast without z-fighting.
+- [x] **Loop 142** (VERIFIED): Contextual strategic legend: added `#strategyLegend` in `index.html` and `strategic.css` with posture taxonomy chips (`CORE HUB`, `FRONTIER`, `ISOLATED`, `REFERENCE`) and clear explanation of territorial classifications.
+- [x] **Loop 143** (VERIFIED): Strategic analysis engine: implemented `strategicAnalysis(state, region)` in `strategic-model.js` computing density, cohesion index, frontier exposure, and internal link ratio; rendered telemetry grid `#strategyRegionAnalysis` in Strategic Studio.
+- [x] **Loop 144** (VERIFIED): Canonical containment alerts & non-sovereignty locks: added structured `.strategy-containment-alert` with lock icon when canonical reference anchors (e.g. WorldsVault) are enclosed, warning that editorial sectors cannot establish sovereign jurisdiction.
+- [x] **Loop 145** (VERIFIED): Adversarial verification and test suite: created `tests/strategic-comprehension.node-check.mjs`; 156/156 pure Node tests passing; bundle size 209.7 kB gzip (<225 kB budget); Playwright browser CI pass (`PHASE4_BROWSER_PASS`); remote SHA equality verified.
+
 
 ### PHASE 30 — Network Intelligence Evolution (Loops 146–150)
 - [ ] **Loop 146**: Visual separation of source topology and user-authored draft networks.

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {eligibleGroup,translatedGroup,regionFromGroup,validatePolygon,regionReport,pointInPolygon,polygonCentroid,polygonBounds,strategicPosture,convexHull,MAX_REGIONS,MAX_VERTICES} from './strategic-model.js';
+import {eligibleGroup,translatedGroup,regionFromGroup,validatePolygon,regionReport,strategicAnalysis,pointInPolygon,polygonCentroid,polygonBounds,strategicPosture,convexHull,MAX_REGIONS,MAX_VERTICES} from './strategic-model.js';
 
 /**
  * Phase 4: one bounded 3D editorial inspector. Main.js alone owns state/Undo;
@@ -173,7 +173,9 @@ export class StrategicStudio {
           badge.style.left=pos.x+'px';badge.style.top=pos.y+'px';
           const nSpan=document.createElement('span');nSpan.className='region-badge-name';nSpan.textContent=r.name;
           const aSpan=document.createElement('span');aSpan.className='region-badge-sub';aSpan.textContent=`PROVISIONAL · ${r.affiliation||'UNASSIGNED'}`;
-          badge.append(nSpan,aSpan);
+          const report=regionReport(this.getState(),r);
+          const pSpan=document.createElement('span');pSpan.className='region-badge-posture';pSpan.textContent=report.posture;
+          badge.append(nSpan,aSpan,pSpan);
           badge.addEventListener('click',e=>{e.stopPropagation();this.setMode('region');this.selectRegion(r.id);});
           this.badgeLayer.append(badge);
         }
@@ -226,6 +228,11 @@ export class StrategicStudio {
       const coords=r.points.map(([x,z])=>new THREE.Vector3(x,this.planeY()+.08,z));coords.push(coords[0].clone());
       const border=new THREE.Line(new THREE.BufferGeometry().setFromPoints(coords),new THREE.LineBasicMaterial({color:r.color,transparent:true,opacity:isSelected?.98:.75,depthWrite:false}));
       border.renderOrder=1;group.add(border);
+      if(isSelected){
+        const accentCoords=r.points.map(([x,z])=>new THREE.Vector3(x,this.planeY()+.14,z));accentCoords.push(accentCoords[0].clone());
+        const accentBorder=new THREE.Line(new THREE.BufferGeometry().setFromPoints(accentCoords),new THREE.LineBasicMaterial({color:'#ffffff',transparent:true,opacity:.55,depthWrite:false}));
+        accentBorder.renderOrder=2;group.add(accentBorder);
+      }
       for(const [vx,vz] of r.points){
         const pinPts=[new THREE.Vector3(vx,this.planeY(),vz),new THREE.Vector3(vx,floorY,vz)];
         const pinLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pinPts),new THREE.LineBasicMaterial({color:r.color,transparent:true,opacity:isSelected?.45:.22,depthWrite:false}));
@@ -259,29 +266,38 @@ export class StrategicStudio {
       const del=document.createElement('button');del.type='button';del.textContent='×';del.title='Remove this vertex';del.disabled=r.points.length<=3;
       del.addEventListener('click',()=>this.removeVertex(i));row.prepend(label);row.append(del);frag.append(row);
     });list.replaceChildren(frag);
-    const report=regionReport(this.getState(),r);
-    this.$('strategyRegionMetrics').textContent=`${report.count} nodes · ${report.internal} internal corridors · ${report.frontier} frontier links · ${report.displayArea.toFixed(1)} display²`;
+    const analysis=strategicAnalysis(this.getState(),r);
+    this.$('strategyRegionMetrics').textContent=`${analysis.count} nodes · ${analysis.internal} internal corridors · ${analysis.frontier} frontier links · ${analysis.displayArea.toFixed(1)} display²`;
     const postureEl=this.$('strategyRegionPosture');
-    if(postureEl)postureEl.textContent=`TOPOLOGICAL POSTURE: ${report.posture}`;
+    if(postureEl)postureEl.textContent=`TOPOLOGICAL POSTURE: ${analysis.posture}`;
+    const analysisEl=this.$('strategyRegionAnalysis');
+    if(analysisEl){
+      analysisEl.innerHTML=`
+        <div class="analysis-cell"><span class="cell-val">${(analysis.density*100).toFixed(1)}</span><span class="cell-lbl">DENSITY / 100 DU²</span></div>
+        <div class="analysis-cell"><span class="cell-val">${(analysis.cohesionIndex*100).toFixed(0)}%</span><span class="cell-lbl">COHESION</span></div>
+        <div class="analysis-cell"><span class="cell-val">${analysis.frontierExposure.toFixed(2)}</span><span class="cell-lbl">FRONTIER EXP.</span></div>
+        <div class="analysis-cell"><span class="cell-val">${(analysis.enclosedCorridorRatio*100).toFixed(0)}%</span><span class="cell-lbl">INTERNAL LINK</span></div>
+      `;
+    }
     const landmarksEl=this.$('strategyRegionLandmarks');
     if(landmarksEl){
-      if(report.referenceLandmarks?.length){
+      if(analysis.referenceLandmarks?.length){
         landmarksEl.hidden=false;
-        landmarksEl.textContent=`CANONICAL LANDMARK DETECTED: ${report.referenceLandmarks.join(', ')} · IMMUTABLE REFERENCE (CANNOT BE CLAIMED OR TRANSLATED)`;
+        landmarksEl.innerHTML=`<div class="strategy-containment-alert"><span class="containment-icon">🔒</span><div><strong>CANONICAL SOURCE ANCHOR ENCLOSED</strong><p>${analysis.referenceLandmarks.join(', ')} is an immutable reference anchor. Editorial sectors cannot establish sovereign jurisdiction or claim canonical territory.</p></div></div>`;
       }else{landmarksEl.hidden=true;}
     }
     const enclosedList=this.$('strategyEnclosedList');
     if(enclosedList){
       enclosedList.replaceChildren();
       const stateNodes=this.getState().nodes;
-      for(const id of report.memberIds){
+      for(const id of analysis.memberIds){
         const node=stateNodes.find(n=>n.id===id);if(!node)continue;
         const chip=document.createElement('button');chip.type='button';chip.className='strategy-chip';
         chip.textContent=node.name;chip.title=`Draft node [${node.name}]. Click to inspect in group mode.`;
         chip.addEventListener('click',()=>{this.setMode('group');this.applyGroup([id]);});
         enclosedList.append(chip);
       }
-      if(!report.memberIds.length){
+      if(!analysis.memberIds.length){
         const emptySpan=document.createElement('span');emptySpan.style.color='#7298a8';emptySpan.style.fontSize='9px';
         emptySpan.textContent='No draft nodes enclosed in perimeter.';enclosedList.append(emptySpan);
       }
