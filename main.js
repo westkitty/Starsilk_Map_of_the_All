@@ -226,9 +226,14 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
   gui.form.hidden=!n;
   if(!n){$('inspectorTitle').textContent=view.kind==='all'?'A UNIVERSE IN REVISION':'INSPECT THE UNKNOWN';$('inspectorKind').textContent=view.kind.toUpperCase()+' / OBSERVATORY';
     intro.textContent=view.kind==='all'?'Many galaxies, one continuum. Choose a luminous node to open its evidence and editable draft geometry.':'Select a luminous marker to inspect it; double-click to descend one cosmic scale.';
-    $('inspectorStatus').textContent='SOURCE / VISUALIZATION SEPARATED';$('objectSigil').style.borderColor='rgba(120,201,231,.4)';
+    $('inspectorStatus').textContent='SOURCE / VISUALIZATION SEPARATED';
+    $('inspectorStatus').setAttribute('aria-label','Source and visualization separated');
+    $('objectSigil').style.borderColor='rgba(120,201,231,.4)';
     $('objectSigil').innerHTML='<span>&#10023;</span>';return;}
-  $('inspectorTitle').textContent=n.name;$('inspectorKind').textContent=n.kind.toUpperCase()+' / '+(n.status==='reference'?'CANON CONCEPT':'EDITORIAL DRAFT');
+  const isRef=n.status==='reference';
+  $('inspectorStatus').textContent=isRef?'CANONICAL SOURCE TOPOLOGY · IMMUTABLE · UNAUTHORED COORDINATES':(n.kind==='galaxy'?'PROVISIONAL DRAFT GALAXY · EDITABLE COORDINATES':(n.kind==='system'?'PROVISIONAL DRAFT SYSTEM · EDITABLE COORDINATES':'PROVISIONAL DRAFT OBJECT · EDITABLE COORDINATES'));
+  $('inspectorStatus').setAttribute('aria-label',isRef?'Canonical source topology. Immutable read-only reference from Starsilk Dossier.':'Provisional draft object with editable cartographic coordinates.');
+  $('inspectorTitle').textContent=n.name;$('inspectorKind').textContent=n.kind.toUpperCase()+' / '+(isRef?'CANON CONCEPT':'EDITORIAL DRAFT');
   if(n.kind==='galaxy'){
     const morph=getGalaxyMorphology(n);
     if(morph){
@@ -454,9 +459,27 @@ function updateScaleGauge(){
     textEl.textContent=`STELLAR SYSTEM · ~5 AU SANDBOX (${sys?sys.name:'STAR'} · SSP COMPATIBLE)`;
   }
 }
-function updateUI(){updateBreadcrumb();updateLayers();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();
-  $('quality').value=state.quality;$('motionBtn').textContent=state.motion?'MOTION ON':'MOTION OFF';
+function updateUI(){
+  updateBreadcrumb();updateLayers();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
+  $('quality').value=state.quality;
+  $('motionBtn').textContent=state.motion?'MOTION ON':'MOTION OFF';
+  $('motionBtn').setAttribute('aria-pressed',state.motion?'true':'false');
+  if(state.motion===false)document.body.classList.add('reduced-motion');
+  else document.body.classList.remove('reduced-motion');
   studio?.sync();strategy?.sync();networkLab?.sync();temporal?.sync();
+}
+function cycleSelection(delta=1){
+  const nodes=currentNodes();
+  if(!nodes.length)return;
+  const currentIdx=nodes.findIndex(n=>n.id===state.selected);
+  let nextIdx=(currentIdx+delta)%nodes.length;
+  if(nextIdx<0)nextIdx+=nodes.length;
+  const nextNode=nodes[nextIdx];
+  if(nextNode){
+    select(nextNode.id);
+    if(engine)engine.focusOn(nextNode);
+    message(`Selected ${nextNode.name} (${nextIdx+1}/${nodes.length}).`);
+  }
 }
 function focusSearch(){gui.search.focus();if(innerWidth<=620)gui.left.classList.add('expanded');}
 function inspectCanonEntity(c){
@@ -868,8 +891,11 @@ function bind(){
       if(!ev.shiftKey&&k==='z'){ev.preventDefault();undo();return;}
       if((ev.shiftKey&&k==='z')||k==='y'){ev.preventDefault();redo();return;}
     }
-    if(ev.ctrlKey||ev.metaKey||ev.altKey)return; // Preserve browser, OS and assistive-tech shortcuts.
-    if(ev.key==='/'){ev.preventDefault();focusSearch();}
+    if(ev.ctrlKey||ev.metaKey||ev.altKey)return;
+    if(ev.key==='/'||ev.key==='?'){ev.preventDefault();if(ev.key==='?')$('helpDialog').showModal();else focusSearch();}
+    else if(ev.key==='['||ev.key.toLowerCase()==='j'){ev.preventDefault();cycleSelection(-1);}
+    else if(ev.key===']'||ev.key.toLowerCase()==='k'){ev.preventDefault();cycleSelection(1);}
+    else if(ev.key==='Enter'&&state.selected&&!ev.target?.closest?.('input,textarea,select,button')){ev.preventDefault();enterSelected();}
     else if(ev.key.toLowerCase()==='h'){toggleFocus();}
     else if(ev.key.toLowerCase()==='f'){focusSelected();}
     else if(ev.key==='Escape'){ev.preventDefault();up();gui.right.classList.remove('mobile-open');}
@@ -921,8 +947,16 @@ function init(){updateUI();bind();
     $('loading').style.opacity='0';setTimeout(()=>$('loading').remove(),900);
     setInterval(()=>{if(engine&&document.visibilityState==='visible')$('drawCalls').textContent=String(engine.info().drawCalls).padStart(2,'0');},1000);
     message('The All is ready. All starting coordinates remain provisional.');
-  }catch(e){$('loading').replaceChildren(el('h2','','3D RENDERER UNAVAILABLE'),el('p','','WebGL and the Three.js dependency are required. Your map data is still available for export.'),button('EXPORT MAP','primary-button',exportAtlas));
-    console.error('Atlas startup:',e);}
+  }catch(e){
+    $('loading').replaceChildren(
+      el('h2','','3D WEBGL ACCELERATION UNAVAILABLE'),
+      el('p','','WebGL hardware acceleration is required to render the 3D cosmological atlas. You can still explore canonical source records, analyze network topology, or download your saved map draft.'),
+      button('EXPORT ATLAS JSON ↗','primary-button',exportAtlas),
+      button('OPEN CANON REGISTRY ◆','button-outline',()=>{if(gui.left)gui.left.classList.add('expanded');}),
+      button('RETRY INITIALIZATION ↻','button-outline faint',()=>{location.reload();})
+    );
+    console.error('Atlas startup:',e);
+  }
 }
 init();
 drawerController=setupFullscreenAtlas();

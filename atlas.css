@@ -113,4 +113,9 @@
 .import-warning-notice{display:flex;gap:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.28);border-radius:4px;padding:10px 12px;font-size:11px;line-height:1.4;color:#fca5a5}
 .import-warn-icon{font-size:16px;flex-shrink:0}
 .import-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after{animation-duration:0.001ms!important;animation-iteration-count:1!important;transition-duration:0.001ms!important}
+@media(forced-colors:active){
+  .world-label,button,.quiet-btn,.search-box,.drawer,.top-bar,.bottom-bar,.import-dialog{forced-color-adjust:none;border:2px solid ButtonText!important}
+  .world-label.selected{outline:3px solid Highlight!important}
+}
 

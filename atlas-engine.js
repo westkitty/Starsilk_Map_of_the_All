@@ -44,7 +44,11 @@ export class AtlasEngine {
     this.scene.fog=new THREE.FogExp2(0x02070d, 0.0012);
     this.camera=new THREE.PerspectiveCamera(48,1,.1,5000);
     this.camera.position.set(0,215,280);
-    this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
+    try{
+      this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
+    }catch(err){
+      throw new Error('WebGL context creation failed: '+(err?.message||err));
+    }
     this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure=1.5;
     this.controls=new OrbitControls(this.camera,canvas);
@@ -226,7 +230,11 @@ export class AtlasEngine {
     if(this.dpr!==dpr){this.dpr=dpr;this.renderer.setPixelRatio(dpr);if(this.starfieldMaterial?.uniforms?.pixelRatio)this.starfieldMaterial.uniforms.pixelRatio.value=dpr;}
     this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();
   }
-  setState(state,view=this.view){this.state=state;this.view=view;this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();}
+  setState(state,view=this.view){
+    this.state=state;this.view=view;
+    this.reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches||(state&&state.motion===false);
+    this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();
+  }
   setView(view,smooth=true){
     const prevKey=this.view.kind==='all'?'all':`${this.view.kind}:${this.view.id}`;
     this.viewMemory.set(prevKey,{camera:this.camera.position.clone(),target:this.controls.target.clone()});
