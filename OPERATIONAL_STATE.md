@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 13
+revision: 14
 
 ## Current baseline
 
@@ -19,7 +19,8 @@ revision: 13
 
 - VERIFIED (2026-10-17 / Campaign Phase 01): Circular point shader starfield, label truncation fixed, drawer shortcuts [1]-[6], All-framing optimization, 125 draw calls, 81/81 tests pass. Commit SHA: `a2d442781f1871b3b6023401051c920417edea60`.
 - VERIFIED (2026-10-17 / Campaign Phase 02): 127 stable Dossier identities indexed, canon search across Principal, Peripheral, Drakken and Foundational groups, unplaced canonical inspector UI with Dossier links, repair alerts (AT-001, AT-010), source revision footer (`862bc476`), 86/86 Node tests pass, Playwright browser test pass (125 desktop / 125 tablet / 77 phone draw calls, 0 console errors), production build within budget. Commit SHA: `069835ad32090c4d55b9b4c53910653e69049fa8`.
-- VERIFIED (2026-10-17 / Campaign Phase 03): Smooth cinematic camera transitions with cubic ease-in-out interpolation (`easeInOutCubic`), spatial memory (`viewMemory`) restoring previous inspection angles, interactive WebGL selection reticle with rotating brackets/diamond ticks, raycast hover detection (`pointermove`), `.world-label.hovered` styling, contextual tier messages, 87/87 Node tests pass, Playwright browser test pass (125 desktop / 125 tablet / 77 phone draw calls, 0 console errors), production build within budget.
+- VERIFIED (2026-10-17 / Campaign Phase 03): Smooth cinematic camera transitions with cubic ease-in-out interpolation (`easeInOutCubic`), spatial memory (`viewMemory`) restoring previous inspection angles, interactive WebGL selection reticle with rotating brackets/diamond ticks, raycast hover detection (`pointermove`), `.world-label.hovered` styling, contextual tier messages, 87/87 Node tests pass, Playwright browser test pass (125 desktop / 125 tablet / 77 phone draw calls, 0 console errors), production build within budget. Commit SHA: `407c8395f234c3ea30b5b0f2b6204d6c41b3c92f`.
+- VERIFIED (2026-10-17 / Campaign Phase 04): Star corona rings, illustrative natural satellites (moons) with orbit lines on major planets, toroidal asteroid belt / debris field between inner and outer worlds, dynamic orbital camera tracking (`trackingNodeId`), explicit Keplerian sandbox metrics in inspector (`~AU`, `~days`), 87/87 Node tests pass, Playwright browser test pass (125 desktop / 125 tablet / 77 phone draw calls, 0 console errors), production build within budget.
 - NOT VERIFIED: Galaxy Tab S9/S Pen physical behavior, hardware frame rates and thermals, long-session reliability, production GitHub Pages publication, canonical map coordinates.
 
 See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.

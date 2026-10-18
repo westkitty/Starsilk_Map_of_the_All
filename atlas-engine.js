@@ -55,11 +55,13 @@ export class AtlasEngine {
     this.viewMemory=new Map();
     this.cameraTransition=null;
     this.hoveredId=null;
+    this.trackingNodeId=null;
     this.reticle=this.createSelectionReticle();
     this.scene.add(this.reticle);
     canvas.addEventListener('pointerdown',this._down=ev=>{
       if(!ev.isPrimary)return;
       this.pointerStart={id:ev.pointerId,x:ev.clientX,y:ev.clientY};
+      this.trackingNodeId=null;
     });
     canvas.addEventListener('pointerup',this._up=ev=>{
       const start=this.pointerStart;this.pointerStart=null;
@@ -452,18 +454,43 @@ export class AtlasEngine {
     const center=new THREE.Group();this.group.add(center);
     const sun=sphere(3.6,0xffdfae,0xffb45c);center.add(sun);
     this.addGlow(center,25,'#ffb866',.7);this.addGlow(center,12,'#fff0cc',.9);
+    this.addRing(center,4.3,'#ffe0b2',.35,0);
+    this.addRing(center,5.2,'#ffd199',.2,Math.PI/6);
     if(s.layers.grid)this.makeGrid(120,8);
-    for(const [idx,n] of childNodes(s,sys.id,'planet').entries()){
+    const planets=childNodes(s,sys.id,'planet');
+    if((s.layers.routes||s.layers.grid)&&planets.length>=3){
+      const beltRadius=25.5;
+      const beltCount=s.quality==='cinematic'?340:s.quality==='battery'?120:230;
+      const beltPts=[];const bRnd=rng(hash(sys.id+'-belt'));
+      for(let b=0;b<beltCount;b++){
+        const angle=bRnd()*Math.PI*2,dist=beltRadius+(bRnd()-.5)*5.2,y=(bRnd()-.5)*1.4;
+        beltPts.push(Math.cos(angle)*dist,y,Math.sin(angle)*dist);
+      }
+      const beltGeom=new THREE.BufferGeometry();
+      beltGeom.setAttribute('position',new THREE.Float32BufferAttribute(beltPts,3));
+      const beltMesh=new THREE.Points(beltGeom,new THREE.PointsMaterial({color:0x8ca2b3,size:.45,transparent:true,opacity:.52,depthWrite:false}));
+      this.group.add(beltMesh);
+      this.motionObjects.push({obj:beltMesh,speed:.000015});
+    }
+    for(const [idx,n] of planets.entries()){
       const r=Math.max(7,V(n.position).length());
       const orbit=[];for(let k=0;k<=120;k++){const angle=k/120*Math.PI*2;orbit.push(new THREE.Vector3(Math.cos(angle)*r,0,Math.sin(angle)*r));}
       if(s.layers.routes)this.group.add(lines(orbit,0x5e87b2,.24));
       const group=new THREE.Group();group.position.copy(V(n.position));this.group.add(group);
       const planet=sphere(1.2+n.size,n.color);group.add(planet);
       if(idx===1){const ring=new THREE.Mesh(new THREE.RingGeometry(2.45,3.55,50),new THREE.MeshBasicMaterial({color:0x87a8bd,side:THREE.DoubleSide,opacity:.4,transparent:true}));ring.rotation.x=-.25;group.add(ring);}
+      if(n.size>=1.0){
+        const moonRadius=(1.2+n.size)*1.75;
+        const moonGroup=new THREE.Group();group.add(moonGroup);
+        const moon=sphere(.32+n.size*.1,0xc8d6df,0x05080c);moon.position.set(moonRadius,0,0);
+        moonGroup.add(moon);
+        const moonOrbitPts=[];for(let m=0;m<=40;m++){const a=m/40*Math.PI*2;moonOrbitPts.push(new THREE.Vector3(Math.cos(a)*moonRadius,0,Math.sin(a)*moonRadius));}
+        moonGroup.add(lines(moonOrbitPts,0x67899e,.18));
+        this.motionObjects.push({obj:moonGroup,speed:.0009+idx*.0003});
+      }
       const target=new THREE.Mesh(new THREE.SphereGeometry(3,12,8),new THREE.MeshBasicMaterial({visible:false}));group.add(target);this.hitTarget(n,target);
       this.motionObjects.push({obj:group,orbit:r,phase:Math.atan2(n.position[2],n.position[0]),speed:.00015/(idx+1)});
     }
-    // Do not imply that every source-unknown stellar system canonically had a Blood Ring.
     if(s.layers.annotations)this.makeAnnotations(sys.id);
   }
   pick(ev,enter=false){const rect=this.canvas.getBoundingClientRect();this.pointer.set(((ev.clientX-rect.left)/rect.width)*2-1,1-((ev.clientY-rect.top)/rect.height)*2);
@@ -477,6 +504,7 @@ export class AtlasEngine {
     const dir=this.camera.position.clone().sub(this.controls.target).normalize();
     if(dir.lengthSq()<0.001)dir.set(0,.6,.8).normalize();
     const newCam=p.clone().add(dir.multiplyScalar(dist));
+    this.trackingNodeId=node.id;
     this.transitionCamera(newCam,p,600);
   }
   updateLabels(){
@@ -530,6 +558,16 @@ export class AtlasEngine {
         this.cameraTransition=null;
         onComplete?.();
       }
+    }
+    if(this.trackingNodeId&&!this.cameraTransition){
+      const trackItem=this.labelItems.find(item=>item.node.id===this.trackingNodeId);
+      if(trackItem?.obj){
+        const wp=this._scratchWorldPos||(this._scratchWorldPos=new THREE.Vector3());
+        trackItem.obj.getWorldPosition(wp);
+        const delta=wp.clone().sub(this.controls.target);
+        this.camera.position.add(delta);
+        this.controls.target.copy(wp);
+      }else{this.trackingNodeId=null;}
     }
     if(this.state?.selected){
       const selectedItem=this.labelItems.find(item=>item.node.id===this.state.selected);

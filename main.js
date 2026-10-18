@@ -176,6 +176,13 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
     $('inspectorStatus').textContent='SOURCE / VISUALIZATION SEPARATED';$('objectSigil').style.borderColor='rgba(120,201,231,.4)';return;}
   $('inspectorTitle').textContent=n.name;$('inspectorKind').textContent=n.kind.toUpperCase()+' / '+(n.status==='reference'?'CANON CONCEPT':'EDITORIAL DRAFT');
   intro.textContent=n.description||(n.status==='reference'?'Source identity; coordinate is illustrative.':'This location is provisional. You may change its position, label, and descriptive notes.');
+  if(n.kind==='planet'&&n.parentId){
+    const peers=childNodes(state,n.parentId,'planet');
+    const idx=peers.findIndex(p=>p.id===n.id);
+    const au=(0.5+Math.max(0,idx)*0.62).toFixed(2);
+    const period=Math.round(365.25*Math.pow(Number(au),1.5));
+    intro.textContent+='\n\n'+`HYPOTHETICAL ORBIT: ~${au} AU · ~${period} days (Keplerian sandbox period for System Planner export; not canon measurements).`;
+  }
   $('inspectorStatus').textContent=n.status==='reference'?'SOURCE IDENTITY / READ ONLY':'DRAFT COORDINATE / NOT CANON';
   $('objectSigil').style.borderColor=n.color;
   $('objName').value=n.name;$('objDescription').value=n.description;
