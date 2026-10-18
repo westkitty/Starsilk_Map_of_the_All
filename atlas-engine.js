@@ -623,32 +623,81 @@ export class AtlasEngine {
     }
   }
   makeWall(){
-    const pts=[];const coords=[[-215,-90],[-170,-94],[-138,-77],[-113,-75],[-85,-82],[-56,-70],[-25,-90],[16,-85],[55,-94],[82,-96],[112,-105],[155,-110],[225,-95]];
-    for(const [x,z] of coords){
-      const py = 3+Math.sin(x*.06)*4;
-      pts.push(new THREE.Vector3(x,py,z));
-      this.group.add(lines([new THREE.Vector3(x,py,z),new THREE.Vector3(x,-36,z)],0x1c3852,0.32,true));
+    const coords=[
+      [-25,-68],[-2,-72],[22,-76],[48,-82],[78,-88],[112,-94],[148,-100],[186,-105],[230,-108],[275,-112]
+    ];
+    const rimPts=[];
+    const rnd=rng(707);
+    for(let i=0;i<coords.length;i++){
+      const [x,z]=coords[i];
+      const py=4+Math.sin(i*1.1)*5+rnd()*2;
+      rimPts.push(new THREE.Vector3(x,py,z));
     }
-    this.group.add(lines(pts,0x8ba6b8,.65));
-    const shape=new THREE.Shape();shape.moveTo(-250,-220);shape.lineTo(250,-220);shape.lineTo(250,-95);
-    for(let i=coords.length-1;i>=0;i--)shape.lineTo(coords[i][0],coords[i][1]);shape.lineTo(-250,-90);shape.closePath();
-    const geom=new THREE.ShapeGeometry(shape);geom.rotateX(-Math.PI/2);
-    const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide,depthWrite:true}));mesh.position.y=-10;this.group.add(mesh);
-    const rnd=rng(606);const debris=[];const latticeNodes=[];
-    for(let i=0;i<120;i++){
-      const seg=rnd()*(coords.length-1);const k=Math.floor(seg);const a=coords[k],b=coords[Math.min(k+1,coords.length-1)],t=seg-k;
-      const x=a[0]+(b[0]-a[0])*t, z=a[1]+(b[1]-a[1])*t;
-      debris.push(x+(rnd()-.5)*10,(rnd()-.5)*12,z+(rnd()-.5)*9);
-      if(i%2===0)latticeNodes.push(x+(rnd()-.5)*4,(rnd()-.5)*8,z+(rnd()-.5)*4);
+    this.group.add(lines(rimPts,0x7397b3,0.72));
+
+    for(let i=0;i<coords.length;i++){
+      const p=rimPts[i];
+      this.group.add(lines([p,new THREE.Vector3(p.x,-32,p.z)],0x16344d,0.38,true));
+      const plumeTop=p.y+16+rnd()*14;
+      const plumeMat=new THREE.LineBasicMaterial({color:0x05131f,transparent:true,opacity:0.65});
+      const plumeGeom=new THREE.BufferGeometry().setFromPoints([p,new THREE.Vector3(p.x+(rnd()-.5)*3,plumeTop,p.z+(rnd()-.5)*3)]);
+      plumeGeom.computeBoundingSphere();
+      this.group.add(new THREE.Line(plumeGeom,plumeMat));
     }
-    const p=new THREE.BufferGeometry();p.setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
+
+    const shape=new THREE.Shape();
+    shape.moveTo(-35,-320);
+    shape.lineTo(320,-320);
+    shape.lineTo(320,-115);
+    for(let i=coords.length-1;i>=0;i--){
+      shape.lineTo(coords[i][0],coords[i][1]);
+    }
+    shape.lineTo(-35,-68);
+    shape.closePath();
+    const geom=new THREE.ShapeGeometry(shape);
+    geom.rotateX(-Math.PI/2);
+    geom.computeBoundingSphere();
+    const blackMat=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide,depthWrite:true});
+    const mesh=new THREE.Mesh(geom,blackMat);
+    mesh.position.y=-12;
+    this.group.add(mesh);
+
+    const curtainGeom=new THREE.PlaneGeometry(380,120);
+    curtainGeom.rotateY(-0.15);
+    curtainGeom.computeBoundingSphere();
+    const curtain=new THREE.Mesh(curtainGeom,blackMat);
+    curtain.position.set(130,15,-165);
+    this.group.add(curtain);
+
+    const debris=[];
+    const latticeNodes=[];
+    for(let i=0;i<220;i++){
+      const seg=rnd()*(coords.length-1);
+      const k=Math.floor(seg);
+      const a=coords[k],b=coords[Math.min(k+1,coords.length-1)],t=seg-k;
+      const x=a[0]+(b[0]-a[0])*t+(rnd()-.5)*12;
+      const py=rnd()*16-6;
+      const z=a[1]+(b[1]-a[1])*t+(rnd()-.5)*10;
+      debris.push(x,py,z);
+      if(i%2===0){
+        latticeNodes.push(x+(rnd()-.5)*4,py+(rnd()-.5)*6,z+(rnd()-.5)*4);
+      }
+    }
+    const p=new THREE.BufferGeometry();
+    p.setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
     p.computeBoundingSphere();
-    this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0x526573,size:.55,transparent:true,opacity:.7})));
-    const lp=new THREE.BufferGeometry();lp.setAttribute('position',new THREE.Float32BufferAttribute(latticeNodes,3));
+    this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0x475569,size:0.75,transparent:true,opacity:0.75})));
+
+    const lp=new THREE.BufferGeometry();
+    lp.setAttribute('position',new THREE.Float32BufferAttribute(latticeNodes,3));
     lp.computeBoundingSphere();
-    this.group.add(new THREE.Points(lp,new THREE.PointsMaterial({color:0x38bdf8,size:.65,transparent:true,opacity:.55})));
+    this.group.add(new THREE.Points(lp,new THREE.PointsMaterial({color:0x38bdf8,size:0.85,transparent:true,opacity:0.65})));
+
     const wallLabel={id:'wall-concept',name:'THE SIEGE WALL',status:'reference',label:{show:true,size:19,color:'#d1d6de',family:'display'}};
-    const o=new THREE.Object3D();o.position.set(35,10,-103);this.group.add(o);this.labelItems.push({node:wallLabel,obj:o,subtitle:'BLACK-HOLE LATTICE / ABSENCE'});
+    const o=new THREE.Object3D();
+    o.position.set(55,16,-92);
+    this.group.add(o);
+    this.labelItems.push({node:wallLabel,obj:o,subtitle:'BLACK-HOLE LATTICE / ABSENCE'});
   }
   makeRoutes(parentId=null){
     for(const r of this.state.routes){
