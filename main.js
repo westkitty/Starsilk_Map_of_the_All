@@ -910,6 +910,14 @@ function bind(){
     if(engine)engine.paused=document.hidden||!!networkLab?.opened||!!(strategy?.opened&&strategy.mode!=='pan')||['move','label'].includes(studio?.mode);
   });
   window.addEventListener('pagehide',flushPendingSave);
+  window.addEventListener('unhandledrejection',ev=>{
+    console.error('Unhandled async failure in Atlas:',ev.reason);
+    message('Operation failed: '+(ev.reason?.message||'Unexpected asynchronous error'),true);
+  });
+  window.addEventListener('error',ev=>{
+    if(ev.error?.message?.includes('ResizeObserver'))return;
+    console.error('Atlas runtime error:',ev.error||ev.message);
+  });
 }
 function init(){updateUI();bind();
   try{

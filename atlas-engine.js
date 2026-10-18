@@ -10,12 +10,18 @@ const PALETTE = {azure:0x49dfff, gold:0xffd5a2, void:0x01040b};
 const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
 function hash(t){let h=2166136261;for(const c of t){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
 function rng(seed){let s=seed>>>0;return()=>{s=(s+0x6d2b79f5)>>>0;let x=Math.imul(s^(s>>>15),1|s);x^=x+Math.imul(x^(x>>>7),61|x);return ((x^(x>>>14))>>>0)/4294967296;};}
+const _glowTextureCache=new Map();
 function makeGlow(color='#49dfff'){
+  const key=String(color).toLowerCase();
+  if(_glowTextureCache.has(key))return _glowTextureCache.get(key);
   const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;
   const ctx=canvas.getContext('2d');const grad=ctx.createRadialGradient(64,64,0,64,64,64);
   grad.addColorStop(0,'rgba(255,255,255,1)');grad.addColorStop(.1,color);grad.addColorStop(.24,color+'99');grad.addColorStop(.56,color+'22');grad.addColorStop(1,color+'00');
   ctx.fillStyle=grad;ctx.fillRect(0,0,128,128);
-  const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t;
+  const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;
+  t.userData={isShared:true};
+  _glowTextureCache.set(key,t);
+  return t;
 }
 function lines(points,color,opacity=.6,dashed=false){
   const g=new THREE.BufferGeometry().setFromPoints(points);
@@ -787,7 +793,7 @@ export class AtlasEngine {
     }
     for(const [id,element] of this.labelNodes){if(!live.has(id)){element.remove();this.labelNodes.delete(id);}}
   }
-  tick(now){if(this.disposed)return;
+  tick(now){if(this.disposed||document.hidden)return;
     const tStart=performance.now();
     const elapsed=frameDelta(now,this.last);if(Number.isFinite(now))this.last=now;
     this.elapsed+=elapsed;
@@ -878,6 +884,8 @@ export class AtlasEngine {
     this.cameraTransition=null;
     if(this._sharedPickGeom)this._sharedPickGeom.dispose();
     if(this._sharedPickMat)this._sharedPickMat.dispose();
+    for(const tex of _glowTextureCache.values()){tex.dispose?.();}
+    _glowTextureCache.clear();
     if(this.reticle)disposeTree(this.reticle);
     disposeTree(this.group);
     disposeTree(this.bg);
