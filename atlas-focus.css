@@ -85,8 +85,8 @@
   border-radius:50%;background:rgba(3,14,22,.58);color:#9adcfa;font-size:24px;box-shadow:0 3px 20px #0008}
 .atlas.atlas-minimal .side-tools #homeBtn:hover{background:rgba(9,52,70,.8)}
 .atlas.atlas-minimal .side-tools #topBtn,.atlas.atlas-minimal .side-tools #resetCameraBtn{display:none}
-.atlas.atlas-minimal .world-label{opacity:.7;text-shadow:0 2px 6px #000,0 0 5px #000;
-  letter-spacing:.05em;max-width:170px;padding:2px 5px}
+.atlas.atlas-minimal .world-label{opacity:.78;text-shadow:0 2px 6px #000,0 0 5px #000;
+  letter-spacing:.05em;max-width:min(380px,85vw);padding:2px 5px}
 .atlas.atlas-minimal .world-label:before{height:4px;width:4px;margin-bottom:4px}
 .atlas.atlas-minimal .world-label.selected{opacity:1;border-color:#72ecff}
 .atlas.atlas-minimal .notifications{top:67px;max-width:90vw}

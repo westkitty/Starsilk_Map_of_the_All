@@ -111,3 +111,12 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - Loop 5 RELEASE GATES: self-contained Three.js vendor chunk and compressed-asset delivery budget, preserved independent Planner link, enhanced real-browser regression tests. Build/runtime evidence must be recorded from actual executions.
 - The existing GitHub CLI credential is invalid (GitHub API returned HTTP 401 from the authorized MacBook SSH environment); creation and Pages publication remain BLOCKED until valid machine or provider authorization is available. The earlier GitHub 404 for the destination proves the remote had not been created at that check.
 - Source governance remains unchanged: numerical geometry/route lengths/territories are provisional, Dossier and WorldsVault are read-only, Blood Eclipse War lasted 170 years. The old Planner site is unchanged.
+
+## Phase 01: Cosmic Overview and First Impression (Loops 001–005) — 2026-10-17
+
+- **Loop 001 COSMIC DEPTH**: Replaced untextured `PointsMaterial` with smooth circular shader points (`ShaderMaterial` with `gl_PointCoord` radial falloff and clamped pixel-ratio scaling), eliminating near-camera square pixel artifacts while respecting the starless Siege Wall absence (`z < -110`).
+- **Loop 002 FULLSCREEN TYPOGRAPHY**: Fixed desktop label ellipsis truncation (`max-width: min(380px, 85vw)` in `atlas.css` and `atlas-focus.css`), preventing names like "THE SIEGE WALL", "MOTHER / AUREAL NEBULA", and "SOUTHERN TERRITORIES" from being clipped. Added numeric keyboard shortcut toggles (`1`–`6`) for the pull-down drawers with tooltips.
+- **Loop 003 CANONICAL CARTOGRAPHY BADGES**: Added explicit cartographic badges (`[SOURCE TOPOLOGY]`, `[BLACK-HOLE LATTICE / ABSENCE]`) to DOM labels so readers immediately understand provenance and topology vs. provisional drafts without opening the inspector.
+- **Loop 004 CAMERA BOUNDING & FRAMING**: Optimized initial All-scale camera position to `[0, 215, 280]` and target `[0, -4, -12]` so the entire northern Siege Wall boundary and southern territories render comfortably inside the viewport without edge clipping.
+- **Loop 005 QQQ VISUAL VERIFICATION**: Captured fresh Chromium screenshots across desktop, tablet, and mobile; verified 125 active GPU draw calls; 81/81 pure Node tests passing (258ms); zero uncaught page errors.
+

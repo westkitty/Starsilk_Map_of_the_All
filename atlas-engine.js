@@ -34,7 +34,7 @@ export class AtlasEngine {
     this.canvas=canvas;this.labelsRoot=labelsRoot;this.callbacks=callbacks;
     this.scene=new THREE.Scene();this.scene.background=new THREE.Color(PALETTE.void);
     this.camera=new THREE.PerspectiveCamera(48,1,.1,5000);
-    this.camera.position.set(0,195,265);
+    this.camera.position.set(0,215,280);
     this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
     this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure=1.5;
@@ -42,6 +42,7 @@ export class AtlasEngine {
     this.controls.enableDamping=true;this.controls.dampingFactor=.075;
     this.controls.minDistance=6;this.controls.maxDistance=950;this.controls.maxPolarAngle=Math.PI*.91;
     this.controls.screenSpacePanning=true;
+    this.controls.target.set(0,-4,-12);
     this.group=new THREE.Group();this.scene.add(this.group);
     this.bg=new THREE.Group();this.scene.add(this.bg);
     this.scene.add(new THREE.AmbientLight(0x8db9ec,1.2));
@@ -69,29 +70,73 @@ export class AtlasEngine {
     this.renderer.setAnimationLoop(t=>this.tick(t));
   }
   initBackground(){
-    const rnd=rng(1106),p=[],colors=[];
-    for(let i=0;i<2500;i++){
-      const x=(rnd()-.5)*1250,y=(rnd()-.5)*650,z=(rnd()-.5)*900;
+    const rnd=rng(1106),p=[],colors=[],sizes=[],alphas=[];
+    for(let i=0;i<2800;i++){
+      const x=(rnd()-.5)*1400,y=(rnd()-.5)*750,z=(rnd()-.5)*1000;
       if(z < -110)continue; // The area beyond the Siege Wall is deliberately starless.
       p.push(x,y,z);
-      const c=new THREE.Color().setHSL(.54+rnd()*.13,.15+rnd()*.3,.45+rnd()*.4);
+      const hue=.53+rnd()*.14;
+      const sat=.2+rnd()*.35;
+      const light=.5+rnd()*.4;
+      const c=new THREE.Color().setHSL(hue,sat,light);
       colors.push(c.r,c.g,c.b);
+      sizes.push(.8+Math.pow(rnd(),3)*2.2);
+      alphas.push(.45+rnd()*.45);
     }
-    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
-    const pts=new THREE.Points(g,new THREE.PointsMaterial({size:1.7,vertexColors:true,transparent:true,opacity:.7,depthWrite:false,sizeAttenuation:true}));
-    pts.name='deep-starfield';this.bg.add(pts);
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
+    g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+    g.setAttribute('aSize',new THREE.Float32BufferAttribute(sizes,1));
+    g.setAttribute('aAlpha',new THREE.Float32BufferAttribute(alphas,1));
+    const m=new THREE.ShaderMaterial({
+      uniforms:{pixelRatio:{value:this.dpr||1}},
+      vertexShader: String.raw`
+        attribute float aSize;
+        attribute float aAlpha;
+        attribute vec3 color;
+        uniform float pixelRatio;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main(){
+          vColor=color;vAlpha=aAlpha;
+          vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
+          gl_Position=projectionMatrix*mvPosition;
+          float distanceScale=320.0/max(40.0,-mvPosition.z);
+          gl_PointSize=clamp(aSize*distanceScale*pixelRatio,1.2,4.5*pixelRatio);
+        }`,
+      fragmentShader: String.raw`
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main(){
+          float r=length(gl_PointCoord-.5)*2.0;
+          if(r>1.0) discard;
+          float core=exp(-12.0*r*r);
+          float halo=pow(max(0.0,1.0-r),2.5);
+          float alpha=(core*.85+halo*.3)*vAlpha;
+          gl_FragColor=vec4(vColor,alpha);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+      transparent:true,blending:THREE.AdditiveBlending,
+      depthWrite:false
+    });
+    const pts=new THREE.Points(g,m);
+    pts.name='deep-starfield';
+    this.bg.add(pts);
+    this.starfieldMaterial=m;
   }
   resize(){const el=this.canvas.parentElement;const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);
     const dimensionsChanged=this.width!==w||this.height!==h;this.width=w;this.height=h;
     if(!dimensionsChanged&&this.dpr===Math.min(window.devicePixelRatio||1,this.state?.quality==='cinematic'?2:this.state?.quality==='battery'?1:1.5))return;
     const dpr=Math.min(window.devicePixelRatio||1,this.state?.quality==='cinematic'?2:this.state?.quality==='battery'?1:1.5);
-    if(this.dpr!==dpr){this.dpr=dpr;this.renderer.setPixelRatio(dpr);}
+    if(this.dpr!==dpr){this.dpr=dpr;this.renderer.setPixelRatio(dpr);if(this.starfieldMaterial?.uniforms?.pixelRatio)this.starfieldMaterial.uniforms.pixelRatio.value=dpr;}
     this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();
   }
   setState(state,view=this.view){this.state=state;this.view=view;this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();}
   setView(view){this.view=view;this.rebuild();
-    const camera=view.kind==='all'?[0,195,265]:view.kind==='galaxy'?[0,55,110]:[0,38,82];
-    this.controls.target.set(0,0,0);this.camera.position.set(...camera);this.controls.update();
+    const camera=view.kind==='all'?[0,215,280]:view.kind==='galaxy'?[0,55,110]:[0,38,82];
+    const target=view.kind==='all'?[0,-4,-12]:[0,0,0];
+    this.controls.target.set(...target);this.camera.position.set(...camera);this.controls.update();
     this.camera.updateMatrixWorld();this.updateLabels();
     this.callbacks.onViewChanged?.(view);
   }
@@ -282,7 +327,7 @@ export class AtlasEngine {
     }
     const p=new THREE.BufferGeometry();p.setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
     this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0xa9a9a9,size:.45,transparent:true,opacity:.6})));
-    const wallLabel={id:'wall-concept',name:'THE SIEGE WALL',label:{show:true,size:19,color:'#d1d6de',family:'display'}};
+    const wallLabel={id:'wall-concept',name:'THE SIEGE WALL',status:'reference',label:{show:true,size:19,color:'#d1d6de',family:'display'}};
     const o=new THREE.Object3D();o.position.set(35,10,-103);this.group.add(o);this.labelItems.push({node:wallLabel,obj:o,subtitle:'BLACK-HOLE LATTICE / ABSENCE'});
   }
   makeRoutes(parentId=null){
@@ -377,7 +422,7 @@ export class AtlasEngine {
     candidates.sort((a,b)=>a.d-b.d);const used=[],live=new Set();
     for(const {n,x,y,item} of candidates.slice(0,28)){
       const font=clamp((n.label?.size||12)*state.typographyScale,9,42);
-      const wd=Math.min(240,n.name.length*font*.65+12),ht=font+18;
+      const wd=Math.min(360,n.name.length*font*.68+16),ht=font+18;
       if(used.some(q=>Math.abs(x-q[0])<(wd+q[2])/2&&Math.abs(y-q[1])<(ht+q[3])/2))continue;
       used.push([x,y,wd,ht]);live.add(n.id);
       let btn=this.labelNodes.get(n.id);
@@ -387,12 +432,15 @@ export class AtlasEngine {
         btn.addEventListener('dblclick',()=>this.callbacks.onSelect?.(btn.dataset.atlasId,true));
         this.labelsRoot.append(btn);this.labelNodes.set(n.id,btn);
       }
-      btn.textContent=n.name;
+      btn.dataset.status=n.status||'draft';
+      btn.dataset.kind=n.kind||'';
+      const badgeText=n.status==='reference'?(item.subtitle||'SOURCE TOPOLOGY'):(item.subtitle||'');
+      btn.innerHTML=`<span class="label-name">${n.name}</span>${badgeText?`<span class="label-badge">${badgeText}</span>`:''}`;
       btn.classList.toggle('selected',state.selected===n.id);
       btn.style.left=x+'px';btn.style.top=y+'px';btn.style.fontSize=font+'px';
       btn.style.color=n.label?.color||'#dff5ff';
       btn.style.fontFamily=n.label?.family==='mono'?'var(--mono)':'var(--display)';
-      btn.title=item.subtitle||n.name;
+      btn.title=item.subtitle?`${n.name} — ${item.subtitle}`:(n.status==='reference'?`${n.name} (Canonical source topology; unauthored coordinates)`:n.name);
     }
     for(const [id,element] of this.labelNodes){if(!live.has(id)){element.remove();this.labelNodes.delete(id);}}
   }

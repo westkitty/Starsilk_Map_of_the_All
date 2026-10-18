@@ -18,10 +18,12 @@ export function setupFullscreenAtlas() {
   const rail=document.createElement('nav');
   rail.id='atlasPullTabs';rail.className='atlas-pull-tabs';rail.setAttribute('aria-label','Open Atlas controls');
   const buttons=new Map();let active=null;
-  for(const [key,label,panel] of DRAWERS){
+  for(let idx=0;idx<DRAWERS.length;idx++){
+    const [key,label,panel]=DRAWERS[idx];
     const b=document.createElement('button');b.type='button';b.className='atlas-pull-tab';
     b.dataset.drawer=key;b.setAttribute('aria-controls',panel);b.setAttribute('aria-expanded','false');
-    b.setAttribute('aria-label','Toggle '+label.toLowerCase()+' tools');
+    b.setAttribute('aria-label','Toggle '+label.toLowerCase()+' tools (key '+(idx+1)+')');
+    b.title=label+' [Key: '+(idx+1)+']';
     b.innerHTML=`<span>${label}</span><span class="atlas-tab-chevron" aria-hidden="true">\u2304</span>`;
     b.addEventListener('click',()=>activate(active===key?null:key));rail.append(b);buttons.set(key,b);
   }
@@ -71,6 +73,13 @@ export function setupFullscreenAtlas() {
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'&&active&&!e.target.closest('dialog')){
       e.preventDefault();e.stopImmediatePropagation();activate(null);
+      return;
+    }
+    if(e.target?.closest?.('input,textarea,select,[contenteditable]')||document.querySelector('dialog[open]'))return;
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
+    if(e.key>='1'&&e.key<='6'){
+      const idx=Number(e.key)-1;
+      if(DRAWERS[idx]){e.preventDefault();activate(active===DRAWERS[idx][0]?null:DRAWERS[idx][0]);}
     }
   },true);
   byId('spaceCanvas')?.addEventListener('pointerdown',()=>{
