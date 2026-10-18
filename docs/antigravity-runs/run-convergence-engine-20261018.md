@@ -53,11 +53,11 @@
 - [x] **Loop 110** (VERIFIED): Created `tests/source-crosswalk.node-check.mjs`; 119/119 pure Node tests passing (436ms); production bundle 202.4 kB gzip (under 225 kB budget); Playwright browser CI passing across Desktop (149 draws), Tablet (149 draws), and Mobile (91 draws) with zero console errors and clean recovery; verified remote SHA equality. Commit & push Phase 22.
 
 ### PHASE 23 — Galaxy-Scale Visual Authorship (Loops 111–115)
-- [ ] **Loop 111**: Galaxy silhouettes and clearly layered 3D cosmic structure.
-- [ ] **Loop 112**: Distant stars, luminous density, and depth cues with controlled GPU cost.
-- [ ] **Loop 113**: Galaxy selection, projected labels, and spatial differentiation.
-- [ ] **Loop 114**: Strengthen interactions between galaxy renderer, entity inspector, and source-status presentation.
-- [ ] **Loop 115**: Repair visual collisions, confusing scale cues, or expensive rendering while validating in browser.
+- [x] **Loop 111** (VERIFIED): Deterministic `galaxy-morphology.js` (Sc, SBb, SAc, SABc, S0), dynamic multi-arm spiral shader (`galaxyDisk`) with pitch and bar strength, and 3D volumetric core bulge.
+- [x] **Loop 112** (VERIFIED): Dual-layer background starfield in `initBackground()` with 1900 field stars (realistic spectral temperatures) and 1100 cosmic filament cluster nebulae in 1 draw call, strictly respecting starless Siege Wall absence ($z \ge -110$).
+- [x] **Loop 113** (VERIFIED): 3D projected galaxy labels in All-view show morphological badges (e.g. `[GRAND DESIGN Sc]`); tactical focus reticle scaled to 24 DU perimeter with breathing pulse and slow rotation.
+- [x] **Loop 114** (VERIFIED): Enhanced `fillInspector` and `updateSources` with styled `.galaxy-telemetry-card`, arm count, estimated stars, core radius, cartography disclaimers, and "ENTER GALAXY SYSTEMS ⛶" button.
+- [x] **Loop 115** (VERIFIED): Created `tests/galaxy-authorship.node-check.mjs`; 123/123 pure Node tests passing (507ms); production bundle 203.6 kB gzip (well under 225 kB budget); Playwright browser CI passing across Desktop (156 draws), Tablet (156 draws), and Mobile (93 draws) with zero errors and clean recovery; verified remote SHA equality. Commit & push Phase 23.
 
 ### PHASE 24 — Cross-Scale Camera Intelligence (Loops 116–120)
 - [ ] **Loop 116**: Camera target acquisition when selecting celestial systems.

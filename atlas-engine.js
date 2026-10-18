@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { childNodes, nodeById } from './atlas-data.js';
+import { getGalaxyMorphology } from './galaxy-morphology.js';
 
 const V = (p) => new THREE.Vector3(p[0],p[1],p[2]);
 const PALETTE = {azure:0x49dfff, gold:0xffd5a2, void:0x01040b};
@@ -115,17 +116,29 @@ export class AtlasEngine {
   }
   initBackground(){
     const rnd=rng(1106),p=[],colors=[],sizes=[],alphas=[];
-    for(let i=0;i<2800;i++){
-      const x=(rnd()-.5)*1400,y=(rnd()-.5)*750,z=(rnd()-.5)*1000;
+    for(let i=0;i<1900;i++){
+      const x=(rnd()-.5)*1450,y=(rnd()-.5)*780,z=(rnd()-.5)*1050;
       if(z < -110)continue; // The area beyond the Siege Wall is deliberately starless.
       p.push(x,y,z);
-      const hue=.53+rnd()*.14;
-      const sat=.2+rnd()*.35;
-      const light=.5+rnd()*.4;
-      const c=new THREE.Color().setHSL(hue,sat,light);
+      const t=rnd();
+      const c = t > 0.85 ? new THREE.Color('#ffd29d') : t < 0.25 ? new THREE.Color('#93e6ff') : new THREE.Color('#ffffff');
       colors.push(c.r,c.g,c.b);
-      sizes.push(.8+Math.pow(rnd(),3)*2.2);
-      alphas.push(.45+rnd()*.45);
+      sizes.push(.75+Math.pow(rnd(),3)*2.4);
+      alphas.push(.4+rnd()*.55);
+    }
+    for(let i=0;i<1100;i++){
+      const fAngle=rnd()*Math.PI*2;
+      const fRadius=340+rnd()*460;
+      const fTilt=(rnd()-.5)*260;
+      const x=Math.cos(fAngle)*fRadius+(rnd()-.5)*130;
+      const y=fTilt+(rnd()-.5)*70;
+      const z=Math.sin(fAngle)*fRadius+(rnd()-.5)*130;
+      if(z < -110)continue; // Siege Wall black-hole containment lattice: strictly starless
+      p.push(x,y,z);
+      const c=new THREE.Color('#7ca0c4').lerp(new THREE.Color('#b3c3db'),rnd());
+      colors.push(c.r,c.g,c.b);
+      sizes.push(1.6+rnd()*1.8);
+      alphas.push(.18+rnd()*.22);
     }
     const g=new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
@@ -264,11 +277,17 @@ export class AtlasEngine {
     ringMesh.position.set(x,gridY+.05,z);
     parent.add(ringMesh);
   }
-  galaxyDisk(parent,seed,rad,color){
+  galaxyDisk(parent,seed,rad,color,morphology=null){
+    const arms = morphology ? morphology.arms : 4.0;
+    const pitch = morphology ? morphology.pitch : 14.0;
+    const bar = morphology ? morphology.barStrength : 0.0;
     const mat=new THREE.ShaderMaterial({
       uniforms:{
         tint:{value:new THREE.Color(color)},
         phase:{value:(hash(seed)%628)/100},
+        arms:{value:arms},
+        pitch:{value:pitch},
+        bar:{value:bar},
       },
       vertexShader: String.raw`
         varying vec2 vUv;
@@ -279,6 +298,9 @@ export class AtlasEngine {
       fragmentShader: String.raw`
         uniform vec3 tint;
         uniform float phase;
+        uniform float arms;
+        uniform float pitch;
+        uniform float bar;
         varying vec2 vUv;
         float noise(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
         void main(){
@@ -286,7 +308,12 @@ export class AtlasEngine {
           float radius=length(q);
           if(radius>1.0) discard;
           float angle=atan(q.y,q.x);
-          float spiral=pow(max(.0,cos(4.0*angle-14.0*radius+phase)*.5+.5),5.0);
+          float spiral=pow(max(.0,cos(arms*angle-pitch*radius+phase)*.5+.5),4.5);
+          if(bar > 0.0){
+            float barDist = abs(q.y) + max(0.0, abs(q.x) - 0.45);
+            float barGlow = exp(-barDist * barDist * 32.0) * bar;
+            spiral = mix(spiral, 1.0, clamp(barGlow, 0.0, 1.0));
+          }
           float radial=1.0-smoothstep(.32,1.0,radius);
           float cloud=noise(floor(q*130.0))+noise(floor(q*48.0))*.45;
           float dust=radial*(.17+.78*spiral)*(.52+.42*cloud);
@@ -312,12 +339,13 @@ export class AtlasEngine {
     mesh2.position.y=.35;
     parent.add(mesh2);
   }
-  starCloud(parent,seed,count,rad,flatten=.22,spiral=true){
+  starCloud(parent,seed,count,rad,flatten=.22,spiral=true,arms=4){
     if(!this.state.layers.stars)return;
     const rnd=rng(hash(seed)),p=[],col=[],sizes=[],intensities=[];
+    const armCount = Math.max(1, arms);
     for(let i=0;i<count;i++){
       const r=Math.pow(rnd(),.8)*rad;
-      const arm=(i%4)*Math.PI/2;
+      const arm=(i%armCount)*(Math.PI*2/armCount);
       const a=spiral?arm+(r/rad)*Math.PI*2.25+(rnd()-.5)*.95:rnd()*Math.PI*2;
       const jitter=Math.max(.22,rad*.045);
       const x=Math.cos(a)*r+(rnd()-.5)*jitter;
@@ -388,12 +416,23 @@ export class AtlasEngine {
         this.group.add(group);
         if(s.layers.grid)this.makeDropStem(this.group,n.position,-19,0x2f6485,n.size,n.status==='reference');
         const level=s.quality==='cinematic'?2000:s.quality==='battery'?420:1150;
-        this.galaxyDisk(group,n.id,n.size*22,n.color);
-        this.starCloud(group,n.id,Math.floor(level*n.size),n.size*20,.18,true);
+        const morph=getGalaxyMorphology(n);
+        this.galaxyDisk(group,n.id,n.size*22,n.color,morph);
+        this.starCloud(group,n.id,Math.floor(level*n.size),n.size*20,.18,true,morph?morph.arms:4);
+
+        const bulgeGeom=new THREE.SphereGeometry(2.4*n.size,16,12);
+        bulgeGeom.scale(1.0,0.42,1.0);
+        const bulgeMat=new THREE.MeshBasicMaterial({color:0xffedd5,transparent:true,opacity:0.32,blending:THREE.AdditiveBlending,depthWrite:false});
+        group.add(new THREE.Mesh(bulgeGeom,bulgeMat));
+
         this.addGlow(group,37*n.size,n.color,.44);
         this.addGlow(group,7.5*n.size,'#fff0c9',.7);
         this.addRing(group,12*n.size,n.color,.20,.24);
         const pick=new THREE.Mesh(new THREE.SphereGeometry(13*n.size,12,10),new THREE.MeshBasicMaterial({visible:false}));group.add(pick);this.hitTarget(n,pick);
+        if(morph){
+          const targetItem=this.labelItems[this.labelItems.length-1];
+          if(targetItem)targetItem.subtitle=morph.badge;
+        }
       }
     }
     if(s.layers.routes||s.layers.starsilk)this.makeRoutes();
@@ -497,8 +536,9 @@ export class AtlasEngine {
   }}
   buildGalaxy(){const s=this.state,g=nodeById(s,this.view.id);if(!g)return;
     this.controls.minDistance=12;this.controls.maxDistance=350;
-    this.galaxyDisk(this.group,g.id+'-interior',68,g.color);
-    this.starCloud(this.group,g.id+'-interior',s.quality==='cinematic'?8500:s.quality==='battery'?1300:4100,70,.23,true);
+    const morph=getGalaxyMorphology(g);
+    this.galaxyDisk(this.group,g.id+'-interior',68,g.color,morph);
+    this.starCloud(this.group,g.id+'-interior',s.quality==='cinematic'?8500:s.quality==='battery'?1300:4100,70,.23,true,morph?morph.arms:4);
     this.addGlow(this.group,37,'#fbe6cc',.38);
     this.addGlow(this.group,12,g.color,.7);
     if(s.layers.grid)this.makeGrid(190,12);
@@ -656,7 +696,8 @@ export class AtlasEngine {
         selectedItem.obj.getWorldPosition(wp);
         this.reticle.position.copy(wp);
         const baseSize=(selectedItem.node.size||1);
-        const scale=baseSize*(this.view.kind==='all'?2.2:this.view.kind==='galaxy'?2.4:1.6);
+        const isGal=selectedItem.node.kind==='galaxy';
+        const scale=baseSize*(this.view.kind==='all'?(isGal?24:3):this.view.kind==='galaxy'?2.4:1.6);
         const pulse=1+Math.sin(this.elapsed*0.003)*0.06;
         this.reticle.scale.set(scale*pulse,scale*pulse,scale*pulse);
         this.reticle.rotation.y+=elapsed*0.0006;

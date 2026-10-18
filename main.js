@@ -11,6 +11,7 @@ import { initSourceGraph } from './source-graph-ui.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename } from './planner-handoff.js';
 import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
 import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations } from './canon-registry.js';
+import { getGalaxyMorphology } from './galaxy-morphology.js';
 
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
@@ -175,7 +176,12 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
     intro.textContent=view.kind==='all'?'Many galaxies, one continuum. Choose a luminous node to open its evidence and editable draft geometry.':'Select a luminous marker to inspect it; double-click to descend one cosmic scale.';
     $('inspectorStatus').textContent='SOURCE / VISUALIZATION SEPARATED';$('objectSigil').style.borderColor='rgba(120,201,231,.4)';return;}
   $('inspectorTitle').textContent=n.name;$('inspectorKind').textContent=n.kind.toUpperCase()+' / '+(n.status==='reference'?'CANON CONCEPT':'EDITORIAL DRAFT');
-  intro.textContent=n.description||(n.status==='reference'?'Source identity; coordinate is illustrative.':'This location is provisional. You may change its position, label, and descriptive notes.');
+  if(n.kind==='galaxy'){
+    const morph=getGalaxyMorphology(n);
+    if(morph){
+      intro.textContent+='\n\n'+`MORPHOLOGY: ${morph.name} [${morph.code}] · ${morph.arms} spiral arms · Est. ~${morph.estimatedStarsBillions}B stars · Core radius: ${morph.coreDiameterDU} DU. (${morph.classificationNotice})`;
+    }
+  }
   if(n.kind==='planet'&&n.parentId){
     const peers=childNodes(state,n.parentId,'planet');
     const idx=peers.findIndex(p=>p.id===n.id);
@@ -208,6 +214,23 @@ function updateSources(){
       else $('sourceGraphOpen')?.click();
     });
     frag.append(graphBtn);
+  }
+  if(n?.kind==='galaxy'){
+    const morph=getGalaxyMorphology(n);
+    if(morph){
+      const card=el('div','galaxy-telemetry-card');
+      card.append(
+        el('div','telemetry-title',`GALACTIC ARCHITECTURE · ${morph.name.toUpperCase()} [${morph.code}]`),
+        el('div','telemetry-grid',`ARMS: ${morph.arms} · CORE RADIUS: ${morph.coreDiameterDU} DU · EST. STARS: ~${morph.estimatedStarsBillions}B`),
+        el('div','telemetry-disclaimer',`CARTOGRAPHY: ${morph.classificationNotice}`)
+      );
+      const enterBtn=el('button','galaxy-enter-btn','ENTER GALAXY SYSTEMS ⛶');
+      enterBtn.type='button';
+      enterBtn.title='Descend to planetary systems within this galaxy';
+      enterBtn.addEventListener('click',()=>enter('galaxy',n.id));
+      card.append(enterBtn);
+      frag.append(card);
+    }
   }
   const entries=[];
   if(n?.sourceUrl){
