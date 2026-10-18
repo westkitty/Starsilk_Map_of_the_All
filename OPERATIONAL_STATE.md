@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 15
+revision: 16
 
 ## Current baseline
 
@@ -325,3 +325,13 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - Build remains under the strict 225,000-byte gzip ceiling at 222,379 bytes. 2,621 bytes of headroom remain; next phases should prioritize bundle savings.
 - Preserves starsilk.map-of-the-all.draft.v1, JSON v1 compatibility and separate war / locking / post snapshots. No Dossier writes, physical device verification or new main deployment claimed.
 - Phase 12 PENDING: multi-selection deletion and advanced cross-editor recovery with browser regression tests.
+
+## Campaign Three — Phase 12 Verified Checkpoint (2026-10-18)
+
+- Feature branch feature/omni-uplift-100; implementation SHA 885d38c1d8e3c93d05a346ceb8fd94d466b4c44b remotely confirmed.
+- Bounded batch draft deletion now supports 1–32 distinct typed roots, deduplicated descendant/corridor/region cascades, and all-or-nothing source-protection checks. Domain API accepts node, corridor, and region roots; Strategic Studio offers multi-node selection deletion from the existing Group tool.
+- Selection via Shift-click, marquee, or ALL VISIBLE can be removed in one undoable mutation. Confirmation previews impacts. Delete/Backspace are guarded by active tool mode and block accidental deletion from typing fields or open dialogs; read-only source records remain immutable.
+- Verification: 233/233 Node tests, six Chromium browser suites PASS (focus, spatial, strategic, network, temporal, deletion) and a fresh final-build deletion rerun PASS. Browser evidence covers group cancellation, Undo/Redo, reload persistence, mobile Select All deletion, source protection, keyboard guards and era independence.
+- Production bundle 223,024 bytes gzip under 225,000-byte cap; headroom 1,976 bytes. Future uplift should reduce bundle costs before significant additions.
+- No stored-draft v1 format changes, canon writes, Parent Planner edits, main merge, or new GitHub Pages deployment. Physical Galaxy Tab S9 Ultra/S Pen behavior remains unverified.
+- Phase 13 NEXT: strengthen delete recovery through interruption, storage failure, export/import and complex era transitions. Phase 14 procedural suppression is pending.

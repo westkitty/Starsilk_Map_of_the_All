@@ -40,7 +40,7 @@
 | **Phase 09** | Loops 41–45 | Luminous Azure Network Triangulation | VERIFIED | `6e71b48` |
 | **Phase 10** | Loops 46–50 | Network Readability & De-cluttering | VERIFIED | `6e71b48` |
 | **Phase 11** | Loops 51–55 | Real Delete Engine — Core Architecture | VERIFIED | c869b483 |
-| **Phase 12** | Loops 56–60 | Dependency Cascade, Multi-Delete & Undo/Redo | Planned | — |
+| **Phase 12** | Loops 56–60 | Dependency Cascade, Multi-Delete & Undo/Redo | VERIFIED | 885d38c |
 | **Phase 13** | Loops 61–65 | True Delete Persistence & Reload Verification | Planned | — |
 | **Phase 14** | Loops 66–70 | Visual Subtraction & Procedural Suppression | Planned | — |
 | **Phase 15** | Loops 71–75 | 4X Strategic Sector Overlays (Reference 04 Match) | Planned | — |
@@ -70,3 +70,22 @@
 **Not claimed:** Production merge, GitHub Pages deployment for Phase 11, physical tablet validation, completion of future multi-selection and procedural-suppression phases.
 
 **Next:** Phase 12 — multi-delete, cross-object dependency handling, and end-to-end Undo/Redo for compound selection.
+
+## Phase 12 — Atomic Group Deletion (Loops 56–60), 2026-10-18
+
+- **56 — Multi-target planning:** deletion-engine.js implements planDeletionBatch()/deleteObjects() for 1–32 typed draft roots, deduplicates overlapping parent/child cascade consequences, and checks all roots and read-only dependents before any write.
+- **57 — Existing strategic editor integration:** Strategic Studio GROUP supports DELETE SELECTED DRAFTS for Shift-click, marquee and ALL VISIBLE selections. A confirmation previews total affected nodes, routes and regions. The UI clears stale selections after one successful edit.
+- **58 — Context-owned shortcuts:** In Strategic GROUP, Delete/Backspace operates on group selection instead of stale inspector state. Region polygon drawing retains vertex deletion; dialogs, text/select/contenteditable inputs and active gestures cannot trigger accidental destructive action.
+- **59 — Domain and Undo correctness:** Nine additional Node tests verify overlap/deduplication, mixed node/route/region targets, protected source objects and descendants, rejection atomicity, 32-item bounds, dry runs, complete draft-only pruning, and independent era snapshots. One existing main.js change() transaction captures Undo/Redo for the whole group.
+- **60 — Browser acceptance and docs:** Extended the existing Playwright deletion suite with desktop grouped cancellation, dependent counts, group keyboard Delete, Undo/Redo, reload persistence, modal/focused-control guards, historical-era survival, mobile Select All deletion and canonical-identity survival. Updated the inspector help and README usage.
+
+**Observed evidence:**
+- npm run check: 233/233 Node tests pass; production build succeeds.
+- npm run test:browser: all six existing/current Chromium suites completed successfully (focus, spatial, strategic, network, temporal and deletion). A fresh final-build rerun of deletion alone also returned exit code 0 with all acceptance stages PASS.
+- Production gzip: 223,024 / 225,000 bytes; 1,976 bytes remaining. No GPU/FPS improvement was claimed.
+- git diff --check and staged diff review PASS.
+- Implementation commit 885d38c1d8e3c93d05a346ceb8fd94d466b4c44b was pushed to origin/feature/omni-uplift-100; matching remote head observed.
+- No canon writes, source-reference deletion, JSON schema change, production merge or deployment.
+- Physical Galaxy Tab S9 Ultra / S Pen still untested.
+
+**Next:** Phase 13 (Loops 61–65) — deletion persistence and recovery under reload, import/export, storage failures, era switching and interruption; avoid duplicating already proven cases. Phase 14 procedural element suppression still pending.
