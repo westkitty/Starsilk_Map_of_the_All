@@ -44,10 +44,22 @@
 .network-step-chip{display:inline-flex;align-items:center;gap:4px;background:#0a2a3b;border:1px solid #3e6d81;color:#d8f4ff;padding:4px 8px;font-size:9.5px;border-radius:3px;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
 .network-step-chip:hover{background:#164e69;border-color:#74eaff;color:#fff}
 .network-step-num{color:#76d6f2;font-size:8px;font-weight:700}
-.network-bottlenecks-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.network-provenance-banner{display:flex;align-items:center;gap:6px;margin-top:4px}
+.network-prov-pill{background:#082537;border:1px solid #376f87;color:#bfe9fa;font-size:8px;padding:2px 5px;border-radius:2px;letter-spacing:.08em;font-weight:600}
+.network-prov-sub{font-size:8px;color:#7ca5b7;letter-spacing:.05em}
+.topology-badge{font-size:7.5px;padding:1px 4px;border-radius:2px;letter-spacing:.05em;font-weight:600;white-space:nowrap}
+.badge-draft-starsilk{background:#073347;color:#5fe6ff;border:1px solid #207797}
+.badge-draft-hookshot{background:#1d2933;color:#cadbe5;border:1px solid #4a6375}
+.network-bottleneck-chip{display:flex;align-items:center;justify-content:space-between;width:100%;text-align:left;background:#092130;border:1px solid #2e556b;color:#d0edf8;padding:5px 7px;font-size:9px;border-radius:3px;cursor:pointer;margin-bottom:3px;transition:background .12s,border-color .12s}
+.network-bottleneck-chip:hover{background:#15465d;border-color:#65deff;color:#fff}
+.bottleneck-count-tag{font-size:7.5px;color:#ffbe6b;background:#311f0a;padding:1px 4px;border-radius:2px;margin-left:auto}
+.network-step-dist{font-size:8px;color:#85c8dd;margin-left:4px;font-family:var(--mono)}
+.network-cut-bridges-btn{grid-column:span 2;min-height:36px;font-size:9px;background:#17222c;border:1px solid #435b6a;color:#c1dbe8}
+.network-cut-bridges-btn:hover{background:#233544;border-color:#7196ac;color:#fff}
+@keyframes network-line-pulse { 0%,100%{stroke-opacity:.85;filter:drop-shadow(0 0 6px #00caff)} 50%{stroke-opacity:1;filter:drop-shadow(0 0 14px #26dfff)} }
 .network-path-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;overflow:visible}
 .network-path-overlay[hidden]{display:none!important}
-.network-highlight-line{fill:none;stroke:#5de8ff;stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 7px #00caff)}
+.network-highlight-line{fill:none;stroke:#5de8ff;stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 7px #00caff);animation:network-line-pulse 2.2s infinite ease-in-out}
 .network-highlight-line.starsilk{stroke:#26dfff;stroke-width:3.5;filter:drop-shadow(0 0 10px #26dfff)}
 .network-highlight-line.hookshot{stroke:#b6c8d6;stroke-width:2.5;stroke-dasharray:6 4;filter:drop-shadow(0 0 5px #7b9aaa)}
 .network-highlight-node{fill:#fff0ca;stroke:#0be5ff;stroke-width:2;filter:drop-shadow(0 0 7px #00caff)}

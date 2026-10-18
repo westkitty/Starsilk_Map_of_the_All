@@ -69,7 +69,14 @@
     <div class="instrument-grid"><div><b id="countGalaxy">07</b><small>GALAXIES</small></div><div><b id="countSystems">35</b><small>SYSTEMS</small></div><div><b id="drawCalls">--</b><small>DRAW CALLS</small></div></div>
   </aside>
   <section class="network-panel" id="networkPanel" aria-label="Hookshot network intelligence for provisional draft corridors" hidden>
-    <header class="network-head"><div><small>STARSILK / SURVEY INSTRUMENT 05</small><h2>NETWORK INTELLIGENCE</h2></div><button id="networkClose" type="button" aria-label="Close network lab">&times;</button></header>
+    <header class="network-head">
+      <div>
+        <small>STARSILK / SURVEY INSTRUMENT 05</small>
+        <h2>NETWORK INTELLIGENCE</h2>
+        <div class="network-provenance-banner"><span class="network-prov-pill">DRAFT LANES ONLY</span> <span class="network-prov-sub">CANON TOPOLOGY SEPARATED</span></div>
+      </div>
+      <button id="networkClose" type="button" aria-label="Close network lab">&times;</button>
+    </header>
     <p class="network-notice">Analyze proposed corridors. A hop is ONE draft connection, never a known distance, duration, political permission, or canonical Starsilk rule.</p>
     <output id="networkTier">ALL / GALAXIES</output>
     <label>ACTIVE CONNECTION TYPES<select id="networkKind"><option value="all">ALL DRAFT CORRIDORS</option><option value="hookshot">HOOKSHOT DRAFTS ONLY</option><option value="starsilk">STARSILK DRAFTS ONLY</option></select></label>
@@ -81,7 +88,11 @@
     </div>
     <h3>TRACE AN EDITORIAL PATH</h3>
     <div class="network-endpoints"><label>ORIGIN<select id="networkFrom"></select></label><label>DESTINATION<select id="networkTo"></select></label></div>
-    <div class="network-actions"><button id="networkTrace" type="button" class="network-primary">TRACE FEWEST HOPS</button><button id="networkReset" type="button">CLEAR OUTAGES</button></div>
+    <div class="network-actions">
+      <button id="networkTrace" type="button" class="network-primary">TRACE FEWEST HOPS</button>
+      <button id="networkReset" type="button">CLEAR OUTAGES</button>
+      <button id="networkCutBridges" type="button" class="network-cut-bridges-btn" title="Simulate cutting all bridge corridors">CUT ALL BRIDGES</button>
+    </div>
     <output id="networkPath" class="network-outcome" aria-live="polite">Choose two draft objects to analyze connectivity.</output>
     <div id="networkBypass" class="network-bypass-box" hidden></div>
     <div class="network-steps-container"><span class="network-subhead">ROUTE HOPS (CLICK TO FOCUS IN 3D):</span><div id="networkStepsList" class="network-steps-list"></div></div>

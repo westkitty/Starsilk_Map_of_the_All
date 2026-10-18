@@ -4,6 +4,7 @@ import {seedAtlas} from '../atlas-data.js';
 import {
   draftNetwork,
   networkArticulationPoints,
+  articulationPointImpact,
   alternativePath,
   networkReport,
   minimumHopPath,
@@ -101,3 +102,35 @@ test('networkReport integrates articulation points and counts into intelligence 
   assert.ok(rep.bridgeCount >= 0);
   assert.ok(rep.componentCount === 1);
 });
+
+test('articulationPointImpact: computes component fragmentation when a chokepoint hub is severed', () => {
+  const g = makeGraph(['a', 'b', 'c', 'd'], [
+    ['r1', 'a', 'b'],
+    ['r2', 'b', 'c'],
+    ['r3', 'b', 'd']
+  ]);
+  // b is the central hub connecting leaves a, c, d
+  const impact = articulationPointImpact(g, 'b');
+  assert.equal(impact.nodeId, 'b');
+  assert.equal(impact.resultingComponents, 3, 'Severing b leaves 3 isolated components: [a], [c], [d]');
+  assert.deepEqual(impact.componentSizes, [1, 1, 1]);
+});
+
+test('network intelligence: DOM and CSS integration for provenance, bottleneck chips, and pulse overlay', async () => {
+  const { readFileSync } = await import('node:fs');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.ok(html.includes('id="networkCutBridges"'), 'index.html contains #networkCutBridges button');
+  assert.ok(html.includes('network-provenance-banner'), 'index.html contains provenance banner');
+
+  const css = readFileSync(new URL('../network.css', import.meta.url), 'utf8');
+  assert.ok(css.includes('.network-bottleneck-chip'), 'network.css contains .network-bottleneck-chip');
+  assert.ok(css.includes('.bottleneck-count-tag'), 'network.css contains .bottleneck-count-tag');
+  assert.ok(css.includes('.network-step-dist'), 'network.css contains .network-step-dist');
+  assert.ok(css.includes('network-line-pulse'), 'network.css contains network-line-pulse animation');
+
+  const js = readFileSync(new URL('../network-lab.js', import.meta.url), 'utf8');
+  assert.ok(js.includes('focusRoute'), 'network-lab.js implements focusRoute()');
+  assert.ok(js.includes('networkCutBridges'), 'network-lab.js wires networkCutBridges listener');
+  assert.ok(js.includes('articulationPointImpact'), 'network-lab.js calculates articulation point severance impact');
+});
+

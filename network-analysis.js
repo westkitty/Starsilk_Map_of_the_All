@@ -151,3 +151,17 @@ export function closureImpact(state,view,kind='all',closed=[]) {
     newlyIsolated:after.isolated.filter(id=>!before.isolated.includes(id))};
 }
 
+/** Assesses component fragmentation resulting from severing a specific chokepoint hub. */
+export function articulationPointImpact(graph, nodeId) {
+  const remainingNodes = graph.nodes.filter(n => n.id !== nodeId);
+  const remainingEdges = graph.edges.filter(e => e.from !== nodeId && e.to !== nodeId);
+  const subGraph = { ...graph, nodes: remainingNodes, edges: remainingEdges };
+  const components = networkComponents(subGraph);
+  return {
+    nodeId,
+    resultingComponents: components.length,
+    componentSizes: components.map(c => c.length).sort((a, b) => b - a)
+  };
+}
+
+

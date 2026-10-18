@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {draftNetwork,minimumHopPath,networkReport,closureImpact,networkArticulationPoints,alternativePath,NETWORK_KINDS} from './network-analysis.js';
+import {draftNetwork,minimumHopPath,networkReport,closureImpact,networkArticulationPoints,articulationPointImpact,alternativePath,NETWORK_KINDS} from './network-analysis.js';
 import {validateCorridor} from './studio-math.js';
 
 const svgNS='http://www.w3.org/2000/svg';
@@ -27,6 +27,14 @@ export class NetworkLab {
     this.$('networkTo').addEventListener('change',e=>{this.to=e.target.value;this.refresh();},{signal});
     this.$('networkTrace').addEventListener('click',()=>this.refresh(true),{signal});
     this.$('networkReset').addEventListener('click',()=>{this.closed.clear();this.sync();this.message('Temporary route closures cleared.');},{signal});
+    this.$('networkCutBridges')?.addEventListener('click',()=>{
+      const graph=draftNetwork(this.getState(),this.getView(),{kind:this.kind});
+      const report=networkReport(graph);
+      if(!report.bridgeIds.length){this.message('No bridge corridors found to simulate cutting.');return;}
+      for(const id of report.bridgeIds)this.closed.add(id);
+      this.sync();
+      this.message(`Simulating ${report.bridgeIds.length} bridge corridor(s) severed. Temporary analysis only.`);
+    },{signal});
     this.$('networkCommit').addEventListener('click',()=>this.commitLink(),{signal});
     this.$('networkNewKind').addEventListener('change',()=>this.refresh(),{signal});
     this._resize=()=>this.projectOverlay();window.addEventListener('resize',this._resize,{signal});
@@ -74,7 +82,8 @@ export class NetworkLab {
         this.refresh();
       },{signal:this.listeners.signal});
       const caption=make('span','',`${names.get(edge.from)} / ${names.get(edge.to)}`);
-      const type=make('small','',edge.kind==='starsilk'?'AZURE':'HOOKSHOT');
+      const isStarsilk=edge.kind==='starsilk';
+      const type=make('span','topology-badge '+(isStarsilk?'badge-draft-starsilk':'badge-draft-hookshot'),isStarsilk?'AZURE':'HOOKSHOT');
       row.append(checkbox,caption,type);frag.append(row);
     }
     if(!graph.edges.length)frag.append(make('p','network-empty','No drafted corridors at this scale for the chosen filter.'));
@@ -91,6 +100,23 @@ export class NetworkLab {
     this.engine.transitionCamera(camPos,targetPos,650);
     this.message(`Focused on draft node: ${item.node.name}`);
   }
+  focusRoute(routeId){
+    if(!this.engine)return;
+    const r=this.getState().routes.find(x=>x.id===routeId);
+    if(!r)return;
+    const itemA=this.engine.labelItems.find(x=>x.node.id===r.from);
+    const itemB=this.engine.labelItems.find(x=>x.node.id===r.to);
+    if(!itemA||!itemB)return;
+    const posA=new THREE.Vector3(),posB=new THREE.Vector3();
+    itemA.obj.getWorldPosition(posA);itemB.obj.getWorldPosition(posB);
+    const mid=posA.clone().add(posB).multiplyScalar(0.5);
+    const dist=posA.distanceTo(posB);
+    const camDist=Math.max(dist*1.4,45);
+    const dir=this.engine.camera.position.clone().sub(this.engine.controls.target).normalize();
+    const camPos=mid.clone().add(dir.multiplyScalar(camDist));
+    this.engine.transitionCamera(camPos,mid,650);
+    this.message(`Focused on corridor: ${itemA.node.name} to ${itemB.node.name}`);
+  }
   refresh(announce=false){
     if(!this.engine)return;
     const state=this.getState(),view=this.getView(),graph=draftNetwork(state,view,{kind:this.kind,closed:[...this.closed]});
@@ -105,16 +131,28 @@ export class NetworkLab {
       : 'All saved draft corridors active. Outage switches are temporary.';
     const bridges=new Map(draftNetwork(state,view,{kind:this.kind}).edges.map(e=>[e.id,e]));
     const frag=document.createDocumentFragment();for(const id of report.bridgeIds.slice(0,24)){
-      const edge=bridges.get(id);if(edge)frag.append(make('li','',`${names.get(edge.from)} / ${names.get(edge.to)}`));
+      const edge=bridges.get(id);if(!edge)continue;
+      const btn=make('button','network-bottleneck-chip');btn.type='button';
+      const label=make('span','',`${names.get(edge.from)} ↔ ${names.get(edge.to)}`);
+      const tag=make('span','bottleneck-count-tag','CUT EDGE');
+      btn.append(label,tag);
+      btn.title=`Cut Edge (Bridge): Severing this corridor partitions the cluster. Click to focus in 3D.`;
+      btn.addEventListener('click',()=>this.focusRoute(id));
+      frag.append(btn);
     }
     if(!report.bridgeIds.length)frag.append(make('li','','No single-corridor cut edges in the active graph.'));
     this.$('networkBridgeList').replaceChildren(frag);
     const artFrag=document.createDocumentFragment();
     for(const id of (report.articulationPoints||[]).slice(0,24)){
       const nodeName=names.get(id)||id;
-      const li=make('li','',nodeName);
-      li.title=`Chokepoint Hub: Severing ${nodeName} partitions the network into disconnected components.`;
-      artFrag.append(li);
+      const impact=articulationPointImpact(graph,id);
+      const btn=make('button','network-bottleneck-chip');btn.type='button';
+      const label=make('span','',nodeName);
+      const tag=make('span','bottleneck-count-tag',`SEVERS INTO ${impact.resultingComponents} CLUSTERS`);
+      btn.append(label,tag);
+      btn.title=`Chokepoint Hub: Severing ${nodeName} splits the network into ${impact.resultingComponents} disconnected components. Click to focus in 3D.`;
+      btn.addEventListener('click',()=>this.focusNode(id));
+      artFrag.append(btn);
     }
     if(!report.articulationPoints?.length)artFrag.append(make('li','','No chokepoint hubs in the active graph.'));
     this.$('networkArticulationList')?.replaceChildren(artFrag);
@@ -139,6 +177,16 @@ export class NetworkLab {
           const numSpan=make('span','network-step-num',`[${idx+1}]`);
           const nameSpan=make('span','',names.get(nodeId)||nodeId);
           btn.append(numSpan,nameSpan);
+          if(idx<this.currentPath.nodes.length-1){
+            const nextId=this.currentPath.nodes[idx+1];
+            const nodeA=state.nodes.find(n=>n.id===nodeId);
+            const nodeB=state.nodes.find(n=>n.id===nextId);
+            if(nodeA&&nodeB){
+              const dist=Math.hypot(nodeB.position[0]-nodeA.position[0],nodeB.position[1]-nodeA.position[1],nodeB.position[2]-nodeA.position[2]);
+              const distSpan=make('span','network-step-dist',`~${dist.toFixed(1)} DU`);
+              btn.append(distSpan);
+            }
+          }
           btn.title=`Click to focus on ${names.get(nodeId)||nodeId} in 3D`;
           btn.addEventListener('click',()=>this.focusNode(nodeId));
           stepsList.append(btn);

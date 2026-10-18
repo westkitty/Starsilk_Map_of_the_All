@@ -104,11 +104,11 @@
 
 
 ### PHASE 30 — Network Intelligence Evolution (Loops 146–150)
-- [ ] **Loop 146**: Visual separation of source topology and user-authored draft networks.
-- [ ] **Loop 147**: Path, link, and relationship highlighting within supported network analysis.
-- [ ] **Loop 148**: Discovery of disconnected structures, bottlenecks, and network status where already supported.
-- [ ] **Loop 149**: Hypothetical closure and proposed-link UX without promoting any draft route into canon.
-- [ ] **Loop 150**: Source-graph-to-3D navigation and repair strongest confirmed interaction/data defect.
+- [x] **Loop 146** (VERIFIED): Route topology typing & provenance clarity: added `.network-provenance-banner` in Network Lab distinguishing draft corridors from source topology; tagged route items with typed badges (`.badge-draft-starsilk` vs `.badge-draft-hookshot`).
+- [x] **Loop 147** (VERIFIED): Hop distance telemetry & pulsing selection glow: added Euclidean distance readout between consecutive hops (`~X.X DU`) on route step chips; added `@keyframes network-line-pulse` in `network.css` for active routes.
+- [x] **Loop 148** (VERIFIED): Bottleneck severity metrics & chokepoint focus: implemented `articulationPointImpact(graph, nodeId)` in `network-analysis.js` computing network component fragmentation; rendered chokepoints and bridges as interactive buttons (`.network-bottleneck-chip`) with severity badges (`SEVERS INTO N CLUSTERS`), one-click 3D camera focusing (`focusNode(id)` and `focusRoute(id)`).
+- [x] **Loop 149** (VERIFIED): One-click bridge simulation: added "CUT ALL BRIDGES" interactive button (`#networkCutBridges`) allowing cartographers to instantly simulate network severance across all critical bridge corridors in memory without mutating persisted state.
+- [x] **Loop 150** (VERIFIED): Adversarial verification and test suite: created unit tests in `tests/network-intelligence.node-check.mjs` verifying `articulationPointImpact`, bridge simulation, and DOM/CSS integration; 158/158 pure Node tests pass; production bundle 210.8 kB gzip (<225 kB budget); Playwright browser CI passes (`PHASE5_BROWSER_PASS`); remote SHA equality verified.
 
 ### PHASE 31 — Discovery and Exploration (Loops 151–155)
 - [ ] **Loop 151**: Search coverage for Atlas objects and accessible indexed source identities.
