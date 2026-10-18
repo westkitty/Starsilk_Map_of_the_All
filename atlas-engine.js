@@ -523,15 +523,15 @@ export class AtlasEngine {
     const rnd=rng(909);
     const p=[];const colors=[];const sizes=[];const alphas=[];
     const spine=[
-      [-108,6,-12,'#0284c7',36],
-      [-96,-10,42,'#0ea5e9',32],
-      [-65,-2,14,'#38bdf8',34],
-      [-26,2,8,'#d97706',42],
-      [12,-4,12,'#38bdf8',36],
+      [-108,6,-12,'#0284c7',34],
+      [-96,-10,42,'#0ea5e9',30],
+      [-52,22,-58,'#83bcff',26],
+      [-26,2,8,'#d97706',44],
+      [12,-3,14,'#38bdf8',34],
       [44,3,20,'#8b5cf6',38],
-      [75,-2,14,'#0ea5e9',34],
-      [102,7,-8,'#f59e0b',36],
-      [128,-14,52,'#0284c7',34],
+      [78,-2,10,'#0ea5e9',32],
+      [102,7,-8,'#f59e0b',34],
+      [128,-14,52,'#0284c7',32],
     ];
     for(let i=0;i<count;i++){
       const hub=spine[Math.floor(rnd()*spine.length)];
@@ -540,7 +540,8 @@ export class AtlasEngine {
       const x=hub[0]+Math.cos(angle)*rad+(rnd()-.5)*12;
       const y=hub[1]+(rnd()-.5)*10*0.35;
       const z=hub[2]+Math.sin(angle)*rad*0.75+(rnd()-.5)*12;
-      if(x>-15&&z<-70)continue;
+      if(x>-24&&z<-66)continue;
+      if(x<-68&&x>-92&&z<-24&&z>-50)continue;
       p.push(x,y,z);
       const baseCol=new THREE.Color(hub[3]);
       if(rnd()>0.65)baseCol.lerp(new THREE.Color('#38bdf8'),0.5);
