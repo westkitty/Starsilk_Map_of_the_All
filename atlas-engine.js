@@ -61,15 +61,32 @@ export class AtlasEngine {
     this.trackingNodeId=null;
     this.reticle=this.createSelectionReticle();
     this.scene.add(this.reticle);
+    this.lastTapTime=0;
+    this.lastTapPos={x:0,y:0};
+    this.lastPointerType='mouse';
     canvas.addEventListener('pointerdown',this._down=ev=>{
       if(!ev.isPrimary)return;
-      this.pointerStart={id:ev.pointerId,x:ev.clientX,y:ev.clientY};
+      this.lastPointerType=ev.pointerType||'mouse';
+      this.pointerStart={id:ev.pointerId,x:ev.clientX,y:ev.clientY,type:ev.pointerType||'mouse'};
       this.trackingNodeId=null;
     });
     canvas.addEventListener('pointerup',this._up=ev=>{
       const start=this.pointerStart;this.pointerStart=null;
-      if(!start||!ev.isPrimary||start.id!==ev.pointerId||Math.hypot(ev.clientX-start.x,ev.clientY-start.y)>8)return;
-      this.pick(ev);
+      if(!start||!ev.isPrimary||start.id!==ev.pointerId)return;
+      const threshold=start.type==='pen'?6:(start.type==='touch'?16:8);
+      const dist=Math.hypot(ev.clientX-start.x,ev.clientY-start.y);
+      if(dist>threshold)return;
+      const now=performance.now();
+      const timeSinceLast=now-this.lastTapTime;
+      const distFromLast=Math.hypot(ev.clientX-this.lastTapPos.x,ev.clientY-this.lastTapPos.y);
+      if((start.type==='touch'||start.type==='pen')&&timeSinceLast>50&&timeSinceLast<360&&distFromLast<28){
+        this.lastTapTime=0;
+        this.pick(ev,true);
+        return;
+      }
+      this.lastTapTime=now;
+      this.lastTapPos={x:ev.clientX,y:ev.clientY};
+      this.pick(ev,false);
     });
     canvas.addEventListener('pointermove',this._move=ev=>{
       if(this.pointerStart)return;
@@ -85,7 +102,7 @@ export class AtlasEngine {
       this.canvas.style.cursor='';
       this.setHovered(null);
     });
-    canvas.addEventListener('pointercancel',this._cancel=()=>{this.pointerStart=null;});
+    canvas.addEventListener('pointercancel',this._cancel=()=>{this.pointerStart=null;this.lastTapTime=0;});
     canvas.addEventListener('lostpointercapture',this._cancel);
     canvas.addEventListener('dblclick',this._double=(ev)=>{this.pick(ev,true);});
     this.frame=0;this.last=performance.now();this.elapsed=0;this.paused=false;this.disposed=false;

@@ -92,3 +92,15 @@
 .source-graph-launch-btn:hover{background:#1a9ab5;box-shadow:0 0 16px rgba(100,230,255,.45)}
 @media(max-width:850px){.header-actions #sourceGraphOpen{display:inline-flex;font-size:10px;padding:9px}.header-actions #presentBtn{display:none}.source-bottom-grid{grid-template-columns:1fr}}
 @media(max-width:620px){.header-actions #sourceGraphOpen{font-size:0;padding:9px 8px;min-height:36px}.header-actions #sourceGraphOpen::before{content:'GRAPH';font-size:10px;letter-spacing:.06em}.source-graph-dialog{padding:12px;width:96vw;max-height:92dvh}.source-graph-header{gap:8px}.source-graph-header h2{font-size:20px}.source-graph-header button{font-size:10px;padding:7px;max-width:90px}.orbital-handoff{padding:10px 8px}}
+@media(hover:none) and (pointer:coarse){
+  button,.quiet-btn,.text-btn,.search-filter-chip{min-height:44px}
+  .atlas-pull-tab{min-height:44px!important;padding:10px 12px!important}
+  .search-result{min-height:44px;padding:10px 12px}
+  .layer-option{min-height:38px;padding:8px 4px}
+  .layer-option input{width:18px;height:18px}
+  .world-label{padding:6px 10px}
+  .strategy-vertex{width:48px;height:48px}
+  .studio-handle{width:54px;height:54px}
+  .atlas-pull-tab:active,button:active,.node-btn:active,.search-result:active,.source-relation:active{transform:scale(.98);filter:brightness(1.15)}
+}
+

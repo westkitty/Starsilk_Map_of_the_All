@@ -415,9 +415,10 @@ export class StrategicStudio {
   endGroupDrag(e){const d=this.gesture;if(d?.type!=='group'||d.pointer!==e.pointerId)return;
     const delta=d.delta,moved=d.moved;this.cancelGesture();if(moved)this.commitGroupDelta(delta);
   }
-  vertexDown(e,index){if(!this.opened||this.mode!=='region'||!e.isPrimary||e.button!==0)return;
+  vertexDown(e,index){if(!this.opened||this.mode!=='region'||!e.isPrimary)return;
     const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
-    if(e.altKey){
+    const isErase=e.altKey||(e.pointerType==='pen'&&(e.button===2||e.buttons===2));
+    if(isErase){
       e.preventDefault();e.stopPropagation();
       if(r.points.length<=3){
         this.onMessage('A polygon region requires at least 3 vertices.',true);
@@ -427,7 +428,8 @@ export class StrategicStudio {
       this.onMessage(`Removed vertex ${index+1}. Undo available.`);
       return;
     }
-    e.preventDefault();e.stopPropagation();this.dragVertices={pointer:e.pointerId,id:r.id,index,candidate:r.points.map(p=>[...p]),start:[e.clientX,e.clientY]};
+    if(e.button!==0)return;
+    e.preventDefault();e.stopPropagation();this.dragVertices={pointer:e.pointerId,pointerType:e.pointerType||'mouse',id:r.id,index,candidate:r.points.map(p=>[...p]),start:[e.clientX,e.clientY]};
     e.currentTarget.setPointerCapture(e.pointerId);if(this.engine)this.engine.controls.enabled=false;
   }
   vertexMove(e){const d=this.dragVertices;if(!d||d.pointer!==e.pointerId)return;e.preventDefault();

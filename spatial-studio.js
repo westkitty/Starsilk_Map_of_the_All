@@ -141,7 +141,7 @@ export class SpatialStudio {
     const hit=this.rayPoint(e,n.position[1]);if(!hit){this.message('Tilt the map for horizontal movement, or choose Y axis.',true);return;}
     e.preventDefault();e.stopPropagation();
     const startScreen=this.screenOf(n.id);
-    this.drag={pointer:e.pointerId,id:n.id,origin:[...n.position],start:hit,startScreen,client:[e.clientX,e.clientY],candidate:[...n.position],moved:false,controlsEnabled:this.engine.controls.enabled};
+    this.drag={pointer:e.pointerId,pointerType:e.pointerType||'mouse',id:n.id,origin:[...n.position],start:hit,startScreen,client:[e.clientX,e.clientY],candidate:[...n.position],moved:false,controlsEnabled:this.engine.controls.enabled};
     this.engine.controls.enabled=false;
     this.handle.setPointerCapture(e.pointerId);this.handle.classList.add('dragging');this.ghost.hidden=false;
     this.updateMoveReadout(this.drag.candidate);
@@ -192,12 +192,20 @@ export class SpatialStudio {
       if(n)this.message(`Moved ${n.name} to [${d.candidate[0].toFixed(1)}, ${d.candidate[1].toFixed(1)}, ${d.candidate[2].toFixed(1)}]. Undo available.`);
     }
   }
-  onLabelDown(e){if(this.mode!=='label'||!e.isPrimary||e.button!==0)return;
+  onLabelDown(e){if(this.mode!=='label'||!e.isPrimary)return;
     const button=e.target.closest?.('.world-label');if(!button)return;
     const id=button.dataset.atlasId,n=this.getState().nodes.find(x=>x.id===id);
     if(!validMoveTarget(n,this.getView()))return;
+    if(e.button===2||e.buttons===2){
+      e.stopPropagation();e.preventDefault();
+      this.onLabelMoveCommit(id,[0,0]);
+      button.style.removeProperty('transform');
+      this.message(`Reset label offset for ${n.name}. Undo available.`);
+      return;
+    }
+    if(e.button!==0)return;
     e.stopPropagation();e.preventDefault();button.setPointerCapture(e.pointerId);
-    this.labelDrag={pointer:e.pointerId,id,button,start:[e.clientX,e.clientY],offset:[...(n.label.offset||[0,0])],candidate:[...(n.label.offset||[0,0])],moved:false};
+    this.labelDrag={pointer:e.pointerId,pointerType:e.pointerType||'mouse',id,button,start:[e.clientX,e.clientY],offset:[...(n.label.offset||[0,0])],candidate:[...(n.label.offset||[0,0])],moved:false};
     button.classList.add('studio-label-dragging');
   }
   onLabelPointerMove(e){const d=this.labelDrag;if(!d||d.pointer!==e.pointerId)return;
