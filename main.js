@@ -130,7 +130,11 @@ function flushPendingSave(){
 }
 function persist(immediate=false,requireLocal=false){
   if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
-  if(externalDraftConflict){preserveConflictedSession();return false;}
+  if(externalDraftConflict){
+    clearTimeout(saveTimer);saveTimer=null;
+    preserveConflictedSession();
+    return false;
+  }
   clearTimeout(saveTimer);saveTimer=null;
   if(immediate)return writeDraftNow(requireLocal);
   saveTimer=setTimeout(()=>{saveTimer=null;writeDraftNow();},250);
