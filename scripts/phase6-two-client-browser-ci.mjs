@@ -157,6 +157,31 @@ try{
   const suppressionPresent=parsed.timeline?.snapshots?.post?.suppressedVisuals?.includes('network:all')===true;
   assert.ok(!markerPresent||!suppressionPresent,'legacy writer unexpectedly preserved all synthetic new-client values');
   const newerRead=readDraft(overwritten);
+  // Real legacy-client JSON-v1 output must import into the new editor, even when
+  // its missing modern optional fields correctly signal that downgrade loss happened.
+  const legacyRestore=await browser.newContext({viewport:{width:1280,height:800},
+    serviceWorkers:'block',acceptDownloads:true,reducedMotion:'reduce'});
+  const importer=await legacyRestore.newPage();
+  await importer.goto(base+'/Starsilk_Map_of_the_All/',{waitUntil:'domcontentloaded',timeout:35000});
+  await importer.locator('[data-drawer="nav"]').click();
+  await importer.locator('#fileInput').setInputFiles({
+    name:'actual-legacy-client-v1.json',mimeType:'application/json',buffer:Buffer.from(overwritten)
+  });
+  await importer.locator('#importConfirmDialog').waitFor({state:'visible',timeout:15000});
+  assert.equal((await importer.locator('#importSummaryEras').textContent()).trim(),'3');
+  await importer.locator('#importConfirmBtn').click();
+  await importer.waitForFunction(key=>{
+    try{return JSON.parse(localStorage.getItem(key))?.timeline?.snapshots?.post!=null;}
+    catch{return false;}
+  },STORAGE_KEY,{timeout:12000});
+  const imported=JSON.parse(await importer.evaluate(key=>localStorage.getItem(key),STORAGE_KEY));
+  assert.deepEqual(validateAtlas(imported),[]);
+  assert.deepEqual(imported.nodes.map(n=>n.id),parsed.nodes.map(n=>n.id),
+    'Imported real legacy-client node identities must survive normalization');
+  await importer.reload({waitUntil:'domcontentloaded'});
+  assert.equal(JSON.parse(await importer.evaluate(key=>localStorage.getItem(key),STORAGE_KEY)).nodes.length,parsed.nodes.length);
+  await legacyRestore.close();
+  console.log('PHASE6_LEGACY_V1_IMPORT_PASS genuine_legacy_writer_output=true synthetic_profile_only=true');
   // The modern tab must retain its open draft without writing over the legacy mutation.
   await current.waitForFunction(()=>document.querySelector('#savedStatus')?.textContent?.includes('EXTERNAL WRITE'),null,{timeout:12000});
   const survivor=await current.evaluate(({key})=>({
