@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 26
+revision: 27
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -417,3 +417,10 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Release fence candidate:** `release-cutover-gate.js`, `scripts/phase6-release-gate.mjs`, and `docs/consolidation/RELEASE_READINESS.json` add a **deliberately default-deny** check ahead of future Pages build. Owner backup/restore, legacy writer retirement, cross-version import, independent Planner tests, exact-head standalone recovery, rollback and canon/era audit are all explicitly blocked with no receipt. Release additionally requires out-of-band exact `GITHUB_SHA` matching `ATLAS_RELEASE_APPROVED_SHA`. Gate cannot be bypassed by ordinary branch tests, and future `main` Pages workflow will refuse release when unapproved **only after this change is merged**.
 - **Evidence and limitations:** local isolated pure gate prototype **3/3 tests PASS** and expected blocked CLI exit 1 in sandbox; full combined new Node tests and GitHub exact-head browser/recovery results **PENDING**. DEX//REACH `bigmac` connector currently unavailable; do not claim Big Mac, physical S Pen or Planner native regression testing for this candidate. Actual owner's backups, legacy read-only cutover and full two-client same-origin browser replay remain **BLOCKED**. No v1 schema/key rewrite, personal profile access, Planner mutation, Dossier write or publication.
 - **Next gate:** [Phase 6 release safety ledger](docs/consolidation/PHASE_06_RELEASE_SAFETY.md), staged draft PR, full hosted Node/browser tests, then independently backed-up one-writer and rollback evidence before any separately authorized main/Pages release.
+
+## 2026-10-21 — Phase 6 actual two-client same-origin replay candidate (revision 27)
+
+- **Upstream identity:** dedicated Atlas [PR #12](https://github.com/westkitty/Starsilk_Map_of_the_All/pull/12) `134fbf5424e70742e5bc2df086bc4f0c06ceea9b` independently hosted-green ([run 39556024014](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39556024014)): Node22 **280/280**, all **14** Chromium suites, disposable three-era recovery, gzip **223529/225000**. The default-deny release gate remains **blocked**; production main not updated.
+- **Further Phase6 bounded work:** new `feature/phase06-two-client-browser-replay` script serves two **real compiled distributions** (standalone PR candidate, and root Planner `dc3c742743838757aaafed9e637d95a5aa814596`) under an ephemeral identical localhost origin and preserves Pages-like prefixes. Playwright creates only new disposable contexts and a synthetic modern v1 named-galaxy plus era suppression fixture, then instructs the **actual legacy ALL/NONE editor** in a second tab to save into shared localStorage. Witness records loss/no-loss booleans, not user's raw JSON; real user profiles/sites, Planner source and Dossier untouched.
+- **Independent Planner check:** a new parallel read-only PR CI job checks out immutable Planner into a separate working directory and runs **native `npm ci && npm run check`** (239 tests/typecheck/build/budget expected from current historical Pages run #39082756057), then runs the actual dual-client browser replay. This is distinct from a pure old-writer model test and cannot silently be counted as PASS before current hosted CI finishes.
+- **Local proof available:** candidate browser JS syntax checked with Node22 in an isolated container. DEX//REACH Big Mac connection unavailable, so **no local real dual-build/browser claim**. Current PR exact-head hosted two-job test, real two-client behavior and independent Planner rerun pending. Release remains blocked until legacy one-writer retirement, actual owner backup/restore, rollback and separately authorized main/Pages cutover. Evidence: `docs/consolidation/PHASE_06_TWO_CLIENT_REPLAY.md`.

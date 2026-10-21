@@ -1,0 +1,96 @@
+/** Real built legacy Planner and candidate standalone Atlas, one disposable origin.
+ * Inputs: <atlas-dist> <planner-dist>. No production URLs, user profiles or writes.
+ */
+import {createServer} from 'node:http';
+import {readFile,stat} from 'node:fs/promises';
+import {resolve,sep,extname,join} from 'node:path';
+import {existsSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright-core';
+import {seedAtlas,STORAGE_KEY,validateAtlas} from '../atlas-data.js';
+import {setSuppressed} from '../visual-suppression.js';
+import {ensureTimeline,syncEra} from '../temporal-model.js';
+import {readDraft} from '../draft-recovery.js';
+
+const atlasRoot=resolve(process.argv[2]||'dist');
+const plannerRoot=resolve(process.argv[3]||'planner/dist');
+const binary=['/usr/bin/google-chrome-stable','/usr/bin/google-chrome','/usr/bin/chromium',
+  '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'].find(existsSync);
+if(!binary)throw Error('Headless Chromium unavailable');
+for(const [name,root] of [['standalone',atlasRoot],['Planner',plannerRoot]]){
+  if(!existsSync(join(root,'index.html')))throw Error(name+' built HTML missing at '+root);
+}
+if(!existsSync(join(plannerRoot,'map-of-the-all','index.html')))
+  throw Error('Pinned Planner distribution has no embedded Atlas entrypoint');
+const MIME={'.html':'text/html;charset=utf-8','.js':'text/javascript;charset=utf-8',
+  '.css':'text/css;charset=utf-8','.json':'application/json;charset=utf-8',
+  '.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.ico':'image/x-icon',
+  '.woff':'font/woff','.woff2':'font/woff2'};
+const prefixes=[['/Starsilk_Map_of_the_All/',atlasRoot],['/Star_System_Planner/',plannerRoot]];
+const server=createServer(async(req,res)=>{
+  try{
+    const uri=new URL(req.url,'http://127.0.0.1');
+    const match=prefixes.find(([prefix])=>uri.pathname.startsWith(prefix));
+    if(!match){res.writeHead(404);res.end('Unknown app route');return;}
+    const sub=decodeURIComponent(uri.pathname.slice(match[0].length));
+    const path=resolve(match[1],sub||'index.html');
+    if(!path.startsWith(match[1]+sep)){res.writeHead(403);res.end();return;}
+    const target=(await stat(path)).isDirectory()?join(path,'index.html'):path;
+    const bytes=await readFile(target);
+    res.writeHead(200,{'content-type':MIME[extname(target)]||'application/octet-stream',
+      'cache-control':'no-store','x-content-type-options':'nosniff'});
+    res.end(bytes);
+  }catch(e){res.writeHead(404);res.end('Fixture not found');}
+});
+let browser;
+const watchdog=setTimeout(()=>{console.error('PHASE6_TWO_CLIENT_TIMEOUT');process.exit(124);},210000);
+watchdog.unref();
+try{
+  await new Promise((done,fail)=>{server.once('error',fail);server.listen(0,'127.0.0.1',done);});
+  const base='http://127.0.0.1:'+server.address().port;
+  const fixture=seedAtlas();ensureTimeline(fixture);
+  fixture.nodes.find(n=>n.id==='ember-span').name='QA CROSS-WRITER SURVIVAL MARKER';
+  setSuppressed(fixture,'network:all',true);syncEra(fixture);
+  assert.deepEqual(validateAtlas(fixture),[]);
+  const original=JSON.stringify(fixture);
+  browser=await chromium.launch({headless:true,executablePath:binary,
+    args:['--no-sandbox','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader']});
+  const context=await browser.newContext({viewport:{width:1536,height:864},
+    reducedMotion:'reduce',serviceWorkers:'block'});
+  await context.addInitScript(({key,raw})=>{
+    if(!localStorage.getItem(key))localStorage.setItem(key,raw);
+  },{key:STORAGE_KEY,raw:original});
+  const current=await context.newPage();
+  const errors=[];current.on('pageerror',e=>errors.push('dedicated:'+e.message));
+  await current.goto(base+'/Starsilk_Map_of_the_All/',{waitUntil:'domcontentloaded',timeout:35000});
+  await current.locator('.world-label').first().waitFor({timeout:35000});
+  assert.equal(await current.evaluate(key=>localStorage.getItem(key),STORAGE_KEY),original);
+  const before=readDraft(original);
+  assert.equal(before.rejectedRaw,null);
+  console.log('PHASE6_TWO_CLIENT_STAGE dedicated-original-valid');
+
+  const legacy=await context.newPage();legacy.on('pageerror',e=>errors.push('legacy:'+e.message));
+  await legacy.goto(base+'/Star_System_Planner/map-of-the-all/',{waitUntil:'domcontentloaded',timeout:35000});
+  await legacy.locator('.world-label').first().waitFor({timeout:35000});
+  await legacy.locator('[data-drawer="nav"]').click();
+  await legacy.locator('#allLayersBtn').click();
+  await legacy.waitForFunction(({key,old})=>localStorage.getItem(key)!==old,
+    {key:STORAGE_KEY,old:original},{timeout:12000});
+  const overwritten=await legacy.evaluate(key=>localStorage.getItem(key),STORAGE_KEY);
+  const parsed=JSON.parse(overwritten);
+  assert.equal(parsed.version,1,'old writer must be using the same v1 key');
+  const markerPresent=parsed.nodes.some(n=>n.id==='ember-span'&&n.name==='QA CROSS-WRITER SURVIVAL MARKER');
+  const suppressionPresent=parsed.timeline?.snapshots?.post?.suppressedVisuals?.includes('network:all')===true;
+  assert.ok(!markerPresent||!suppressionPresent,'legacy writer unexpectedly preserved all synthetic new-client values');
+  const newerRead=readDraft(overwritten);
+  console.log('PHASE6_TWO_CLIENT_WRITER_COLLISION '+JSON.stringify({
+    sharedOrigin:true,storageKey:STORAGE_KEY,legacyWrote:true,
+    lostNamedDraft:!markerPresent,lostEraSuppression:!suppressionPresent,
+    currentReaderRejected:newerRead.rejectedRaw!==null,
+    source:'pinned compiled Planner, built candidate Atlas',realUserData:false}));
+  assert.equal(errors.length,0,'Both built clients must run without JS runtime errors: '+errors.join(' / '));
+  await context.close();
+  console.log('PHASE6_TWO_CLIENT_BROWSER_PASS disposable_profiles_only=true pinned_legacy=true');
+}catch(e){console.error('PHASE6_TWO_CLIENT_BROWSER_FAIL',e.stack||e);process.exitCode=1;}
+finally{await browser?.close();await new Promise(done=>server.close(done));clearTimeout(watchdog);}
+process.exit(process.exitCode||0);

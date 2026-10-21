@@ -2,7 +2,7 @@ name: Atlas Pull Request Verification
 
 on:
   pull_request:
-    branches: [main, consolidation/phase-02-omni-recovery-20261020, feature/phase03-stellar-navigation, feature/phase04-zero-loss-ux, feature/phase05-network-batching, feature/phase05-frame-observability, feature/phase15-provisional-survey-cells, feature/phase16-region-render-economy, feature/phase17-safe-cartography-labels, feature/phase06-release-cutover-safety]
+    branches: [main, consolidation/phase-02-omni-recovery-20261020, feature/phase03-stellar-navigation, feature/phase04-zero-loss-ux, feature/phase05-network-batching, feature/phase05-frame-observability, feature/phase15-provisional-survey-cells, feature/phase16-region-render-economy, feature/phase17-safe-cartography-labels, feature/phase06-release-cutover-safety, feature/phase06-two-client-browser-replay]
 
 # Read-only validation; never publishes or modifies GitHub Pages.
 permissions:
@@ -59,6 +59,7 @@ jobs:
           node --check scripts/phase17-labels-browser-ci.mjs
           node --check release-cutover-gate.js
           node --check scripts/phase6-release-gate.mjs
+          node --check scripts/phase6-two-client-browser-ci.mjs
 
       - name: Run existing Chromium acceptance suites
         run: npm run test:browser
@@ -80,3 +81,42 @@ jobs:
           path: atlas-qa-evidence/*.png
           if-no-files-found: ignore
           retention-days: 7
+  legacy-same-origin:
+    name: Pinned Planner and dedicated Atlas shared-origin replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout dedicated Atlas PR
+        uses: actions/checkout@v4
+        with:
+          path: atlas
+          persist-credentials: false
+
+      - name: Checkout original Planner by immutable commit (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: westkitty/Star_System_Planner
+          ref: dc3c742743838757aaafed9e637d95a5aa814596
+          path: planner
+          persist-credentials: false
+
+      - name: Install Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install and build candidate Atlas
+        working-directory: atlas
+        run: |
+          npm ci
+          npm run build
+
+      - name: Verify independent Planner without modifying its repository
+        working-directory: planner
+        run: |
+          npm ci
+          npm run check
+
+      - name: Replay pinned two-client writer collision in disposable browser context
+        run: node atlas/scripts/phase6-two-client-browser-ci.mjs atlas/dist planner/dist
+
