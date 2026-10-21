@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 31
+revision: 32
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -455,3 +455,10 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Legacy-written JSON import verified:** `PHASE6_LEGACY_V1_IMPORT_PASS` imported genuine compiled older-client output through the modern UI in a fresh disposable browser context, including three-era confirmation and reload. This does not imply that missing modern fields from the original collision can be recovered.
 - **Proposed read-only legacy entry verified only in disposable Planner checkout:** `PHASE6_LEGACY_RETIREMENT_PREVIEW_PASS` confirmed original-key bytes untouched, exact raw export, malformed raw round-trip, empty-profile no-op, standalone restore preserving three eras and suppression, independent Planner root app mounted, no retired editor controls or runtime exceptions. This is not actual Planner deployment and does not neutralize stale tabs or cached service workers.
 - **Release remains BLOCKED**: owner-operated personal draft backup **and independent restoration**, separate actual Planner legacy-route retirement approval, stale-tab/PWA transition proof, rollback rehearsal and exact-release-SHA approval are missing. `RELEASE_READINESS.json` keeps all seven gates blocked; neither production main branch nor Pages nor read-only Dossier was modified.
+
+## 2026-10-21 — Phase 6 release attestation self-reference repair (revision 32, NOT RELEASED)
+
+- Found that requiring `docs/consolidation/RELEASE_READINESS.json` to contain the **exact SHA of the release commit containing that JSON** is cryptographically self-referential and cannot be satisfied by a normal commit. This made even an otherwise evidence-complete Pages release impossible.
+- The new gate continues to require all seven independent verified receipts and out-of-band owner approval `ATLAS_RELEASE_APPROVED_SHA=GITHUB_SHA`, but now separately requires **`ATLAS_BROWSER_VERIFIED_SHA=GITHUB_SHA`**, which the owner must set only after reviewing browser recovery on the final merge SHA. The in-manifest browser evidence `commit` must remain a real immutable implementation SHA; it cannot purport to be the self-containing final merge commit.
+- Unit tests now cover missing/wrong browser attestation, wrong owner approval, valid historical evidence SHA, malformed evidence SHA and the committed **blocked** manifest. The deployment workflow explicitly passes both GitHub variables to the gate. This is a **logic correction, not release readiness or proof of real owner storage**.
+- Pending: exact-HEAD CI on the new commit; no owner-profile backup/restore, no verified published Planner retirement, no stale-tab/PWA extinguishment, no rollback, no Pages publication. All seven `RELEASE_READINESS.json` fields stay blocked.
