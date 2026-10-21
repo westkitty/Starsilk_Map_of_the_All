@@ -37,3 +37,35 @@ export function assessReleaseCutover(manifest,{headSha,approvedSha,recoveryVerif
   }
   return {ready:issues.length===0,issues};
 }
+
+/** A one-cutover alternative: user explicitly discarded only old browser drafts.
+ * Kept separate from ordinary seven-proof readiness so missing receipts remain honest.
+ * The Pages workflow independently proves the Planner's retired portal is already live.
+ */
+export function assessDisposableDraftRelease(manifest,{headSha,repository,ref,event,
+  now=Date.now(),entryBlob,runtimeBlob}={}){
+  const issues=[];
+  const d=manifest?.disposableDraftCutover;
+  if(manifest?.schemaVersion!==1||manifest?.productionTarget!=='westkitty/Starsilk_Map_of_the_All'||
+    manifest?.storageKey!=='starsilk.map-of-the-all.draft.v1'||manifest?.draftVersion!==1)
+    issues.push('Atlas identity, shared draft key or v1 schema mismatch');
+  if(d?.mode!=='temporary-disposable-draft-release'||typeof d.authorization!=='string'||
+    !d.authorization.includes('Ignore the previous data in the atlas')||
+    d.releaseWindowEndUTC!=='2026-10-23T00:00:00Z')
+    issues.push('Missing explicit, short-lived owner authorization to discard old drafts');
+  if(!Number.isFinite(now)||now>=Date.parse('2026-10-23T00:00:00Z'))
+    issues.push('Owner cutover window expired');
+  if(repository!=='westkitty/Starsilk_Map_of_the_All'||ref!=='refs/heads/main'||
+    event!=='push'||!sha(headSha))issues.push('Only an actual main-branch push may release');
+  if(entryBlob!=='850139d4e68dab96ff9adcfef334433a2d666bf3'||
+    runtimeBlob!=='0306b379cc78f3e1aa104736dfd46daa94047609'||
+    d?.expectedAtlasEntryBlob!==entryBlob||d?.expectedAtlasRuntimeBlob!==runtimeBlob)
+    issues.push('Reviewed Atlas entry/runtime blobs changed');
+  if(d?.requiredPublishedPlannerRoute!==
+    'https://westkitty.github.io/Star_System_Planner/map-of-the-all/')
+    issues.push('Legacy retirement prerequisite not declared');
+  // This is a waiver, NOT a claim that owner's backup, cached tabs or rollback were proven.
+  if(!RELEASE_PROOF_KEYS.every(key=>manifest?.proofs?.[key]?.status==='blocked'&&
+    manifest.proofs[key].receipt===null))issues.push('Historical proof states were altered');
+  return {ready:issues.length===0,issues};
+}
