@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 32
+revision: 33
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -462,3 +462,12 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - The new gate continues to require all seven independent verified receipts and out-of-band owner approval `ATLAS_RELEASE_APPROVED_SHA=GITHUB_SHA`, but now separately requires **`ATLAS_BROWSER_VERIFIED_SHA=GITHUB_SHA`**, which the owner must set only after reviewing browser recovery on the final merge SHA. The in-manifest browser evidence `commit` must remain a real immutable implementation SHA; it cannot purport to be the self-containing final merge commit.
 - Unit tests now cover missing/wrong browser attestation, wrong owner approval, valid historical evidence SHA, malformed evidence SHA and the committed **blocked** manifest. The deployment workflow explicitly passes both GitHub variables to the gate. This is a **logic correction, not release readiness or proof of real owner storage**.
 - Pending: exact-HEAD CI on the new commit; no owner-profile backup/restore, no verified published Planner retirement, no stale-tab/PWA extinguishment, no rollback, no Pages publication. All seven `RELEASE_READINESS.json` fields stay blocked.
+
+## 2026-10-21 — Owner waived recovery of disposable PRE-release browser drafts (revision 33, release candidate)
+
+- The owner explicitly confirmed that all prior editable Atlas browser drafts were throwaway and not important, and requested main merges/Pages deployment. For this **one** controlled cutover, proof of recovery of the old disposable browser draft is no longer a release prerequisite. **No tool clears browser storage**, nor does this waiver cover canonical lore, independent Planner saves, newly created Atlas work, or deletion of project files.
+- `release-cutover-gate.js` retains the original seven-proof default-deny path, while adding a separate `assessDisposableDraftRelease` that requires a 2026-10-21 user waiver, production repository/main push identity, an expiring 2026-10-23 UTC window, exact reviewed `index.html` and `main.js` Git blobs, and all historical proof statuses still explicitly **blocked**. It cannot be used by PRs, later releases, changed runtime sources or mismatched GitHub identity.
+- `.github/workflows/deploy.yml` now verifies the independent Planner's **public** legacy URL actually serves the non-writing retirement portal, that its export button is present and WebGL legacy editor is absent, and the root Planner still mounts. This prerequisite must run before the standalone Atlas release gate, normal 280+ Node tests, 14 real browser suites, artifact upload or Pages deployment.
+- The legacy writer in an already-open or offline-cached browser tab cannot be forcibly stopped by static Pages changes. Its last unimportant old-draft edits may be lost; owners should close/reload old tabs/PWAs after deployment. Future Atlas client writes retain conflict detection/session fallback. Old storage key and JSON v1 schema remain unchanged.
+- Source/canon topology and three independent eras remain protected; no invented coordinates, borders, routes, historical positions or Blood Eclipse War chronology changes are introduced.
+- **Evidence state:** old draft recovery explicitly **WAIVED** (not tested/verified); release code committed to an isolated branch; final exact-head CI and Pages publication **pending**. Do not claim Pages deployed before Actions receipts and public URLs confirm.
