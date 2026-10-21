@@ -2,11 +2,21 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 14
+revision: 15
+
+## Current authority supersession — 2026-10-20 (Phase 01)
+
+- **Effective source:** The user's consolidation decision and [open governing plan PR #2](https://github.com/westkitty/Starsilk_Map_of_the_All/pull/2). Dedicated `westkitty/Starsilk_Map_of_the_All` **alone** owns new Atlas work; `westkitty/Star_System_Planner` owns only its separate orbital physics simulator and legacy comparison material.
+- **Observed current release:** standalone `main` `ba95b1e9e3ff0aafe480e90b07573cad670e76f9`; dedicated Pages URL responded HTTP 200 and Pages run 39105968854 succeeded at that SHA. Both root Planner and legacy embedded Atlas URLs returned HTTP 200. Older "not published" and stale local feature-branch claims below are dated historical evidence, **not current release status**.
+- **Unmerged refs:** plan PR #2 `c4e1ea3`; OMNI `a322a244` (16 commits ahead, 1 main-only commit behind). This Phase 1 branch begins at standalone main; no merge/deploy or production routing changes.
+- **Baseline:** isolated DEX//REACH Big Mac clean clone; `npm ci` and `npm run check` passed, **216/216 Node tests** and Vite build; bundle **218268/225000 gzip bytes**. One high Vite audit advisory remains. All 5/5 Chromium suites emitted explicit PASS markers in `npm run test:browser` (exit 0), and isolated synthetic draft recovery passed; complete observations and existing mobile defects in `docs/consolidation/PHASE_01_BASELINE.md` and `docs/consolidation/DRAFT_RECOVERY_RUNBOOK.md`.
+- **User-data boundary:** No real browser profiles, draft keys, schema, saved data, Planner/Dossier files, old Atlas routes or Pages configuration were changed. Disposable synthetic JSON recovery tests only. Exact localStorage key `starsilk.map-of-the-all.draft.v1`, schema v1, three eras and source-status demotion remain locked.
+- **Operational limitation:** External ChatGPT Project directives still naming the embedded Atlas must be corrected by the owner outside this repository. Physical S Pen, concurrent-tabs storage safety and all optional fields require later phase proof. **No Phase 2 work has begun.**
+
 
 ## Current baseline
 
-- Current primary repository: `westkitty/Starsilk_Map_of_the_All` on branch `feature/omni-uplift-100`.
+- Current primary repository: `westkitty/Starsilk_Map_of_the_All` **main** (verified `ba95b1e9`); `feature/omni-uplift-100` remains an **unmerged divergent branch**, not the current production baseline.
 - The Atlas is at this repository root. The earlier embedded Planner map and the mature orbital simulator remain protected and unchanged.
 - Local canvas/page code and versioned JSON schema v1 exist.
 - 7 starting galaxies, 35 starting systems, 105 starting planets, 2 labeled source-identity landmarks, 10 proposed corridors. Every numeric coordinate is generated/editorial.

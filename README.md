@@ -1,9 +1,13 @@
 # Starsilk Map of the All
 
+> **CURRENT OWNER AND PUBLICATION — 2026-10-20:** `westkitty/Starsilk_Map_of_the_All` is the **sole Atlas development repository** and its [standalone Atlas is live](https://westkitty.github.io/Starsilk_Map_of_the_All/). The separate [Star System Planner](https://westkitty.github.io/Star_System_Planner/) owns the orbital simulator. The older `/Star_System_Planner/map-of-the-all/` Atlas is a shared-storage legacy compatibility client, **not** a development destination. Its retirement has **not** been authorized.
+>
+> **Consolidation governance:** [Master Plan — open PR #2, read-only source](https://github.com/westkitty/Starsilk_Map_of_the_All/blob/docs/atlas-consolidation-master-plan-20261020/CONSOLIDATION_MASTER_PLAN.md) · [Phase 1 baseline](docs/consolidation/PHASE_01_BASELINE.md) · [Draft recovery runbook](docs/consolidation/DRAFT_RECOVERY_RUNBOOK.md). PR #2 remains unmerged; do not merge its OMNI feature branch, migrate browser drafts, redirect Pages, or deploy as part of Phase 1. Older "not published" statements below are **historical**, not current instructions. External ChatGPT Project instructions still naming the embedded Atlas require a separate owner update.
+
 **The Map of the All** is a standalone Three.js, 4X-inspired, source-aware, editable survey of the Starsilk universe.
 
-- **GitHub target (not published yet):** https://github.com/westkitty/Starsilk_Map_of_the_All
-- **Expected Pages URL (not yet live):** https://westkitty.github.io/Starsilk_Map_of_the_All/
+- **Canonical Atlas GitHub repository:** https://github.com/westkitty/Starsilk_Map_of_the_All
+- **Live standalone Atlas:** https://westkitty.github.io/Starsilk_Map_of_the_All/
 - **Orbital laboratory:** https://westkitty.github.io/Star_System_Planner/
 - **Lore authority (read-only):** https://github.com/westkitty/Starsilk_Character_Dossier
 
@@ -31,7 +35,7 @@ npm run test:browser  # Chrome/Chromium with working WebGL
 
 ## Project separation
 
-The Git history was extracted from `westkitty/Star_System_Planner/map-of-the-all/` with `git subtree split`, preserving the development lineage without importing the Planner's React app or physics runtime. The historical embedded Atlas URL remains available as a **compatibility snapshot**, but **future Atlas changes belong in this repository**.
+The Git history was extracted from `westkitty/Star_System_Planner/map-of-the-all/` with `git subtree split`, preserving the development lineage without importing the Planner's React app or physics runtime. The historical embedded Atlas URL remains published as a **writable legacy compatibility client** on the same browser origin, not an isolated backup or read-only snapshot. **All future Atlas development belongs exclusively in this repository**; do not redirect or retire the legacy path without a separately authorized data-safety release.
 
 From the Atlas, select a draft stellar system and choose **EXPORT SYSTEM .SSP**, then **OPEN PLANNER**. This navigates to the separate orbital simulator; you manually import the generated `.ssp.json` file. The bridge creates hypothetical physics with source status unknown. Neither app changes the other's repository or upgrades drafts to official canon.
 
@@ -54,7 +58,7 @@ Historical phase notes below still describe some work performed when the Atlas w
 
 This is an independent Vite app, not a refactor of the mature per-system simulator. Avoid copying the existing planner's physics engine into the cosmological rendering scale. The integration seam is the named child system: future deep dives may use a stable export/bridge into the mature `Star_System_Planner` system simulator instead of re-implementing n-body mechanics.
 
-`map-of-the-all/atlas-data.js` owns draft state + validation; `atlas-engine.js` owns Three.js WebGL scene, controls, level-of-detail, picking and animation; `main.js` owns semantic DOM + editing + persistence; `atlas.css` owns presentation. All objects are in display coordinates, not light years/AU or actual physical measurements. No root Dossier writes and no canon approval paths exist.
+`atlas-data.js` owns draft state + validation; `atlas-engine.js` owns Three.js WebGL scene, controls, level-of-detail, picking and animation; `main.js` owns semantic DOM + editing + persistence; `atlas.css` owns presentation. All objects are in display coordinates, not light years/AU or actual physical measurements. No root Dossier writes and no canon approval paths exist.
 
 ## Source hierarchy
 
