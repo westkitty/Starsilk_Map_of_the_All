@@ -35,6 +35,7 @@ jobs:
           node --check system-zoom.js
           node --check scripts/stellar-zoom-browser-ci.mjs
           node --check scripts/phase4-discovery-browser-ci.mjs
+          node --check network-geometry.js
       - name: Verify standalone production routing
         run: |
           set -euo pipefail

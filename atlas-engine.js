@@ -6,6 +6,7 @@ import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
 import { BRIDGES, isSuppressed } from './visual-suppression.js';
+import { dashedLineBatch } from './network-geometry.js';
 
 const V = (p) => new THREE.Vector3(p[0],p[1],p[2]);
 const ORNAMENTS={
@@ -829,6 +830,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const s=this.state;
     const galaxies=childNodes(s,null,'galaxy');
     const galWorldMap=new Map();
+    const radialSegments=[],perimeterSegments=[],bridgeSegments=[];
 
     for(const g of galaxies){
       const gPos=V(g.position);
@@ -842,8 +844,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         if(this.hidden('network:system:'+sys.id))continue;
 
         // Loop 43: Radial secondary corridor from galaxy core to child system
-        const radLine=lines([gPos,worldPos],0x38bdf8,0.25,true);
-        this.group.add(radLine);
+        radialSegments.push(gPos,worldPos);
 
         // Loop 44: Hookshot node beads and major-system concentric navigation rings
         const isMajor=i===0||i===2;
@@ -868,12 +869,17 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       for(let i=0;i<sysPositions.length;i++){
         const next=(i+1)%sysPositions.length;
         if(this.hidden('network:system:'+sysPositions[i].sys.id)||this.hidden('network:system:'+sysPositions[next].sys.id))continue;
-        const perimLine=lines([sysPositions[i].worldPos,sysPositions[next].worldPos],0x0284c7,0.18,true);
-        this.group.add(perimLine);
+        perimeterSegments.push(sysPositions[i].worldPos,sysPositions[next].worldPos);
       }
 
       galWorldMap.set(g.id,sysPositions);
     }
+
+    // Static topology is now three batched submissions, not one mesh per edge.
+    const radialBatch=dashedLineBatch(radialSegments,0x38bdf8,0.25);
+    const perimeterBatch=dashedLineBatch(perimeterSegments,0x0284c7,0.18);
+    if(radialBatch)this.group.add(radialBatch);
+    if(perimeterBatch)this.group.add(perimeterBatch);
 
     // Inter-galaxy secondary exploratory bridging links
     if(this.hidden('network:bridges'))return;
@@ -886,8 +892,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
 
       const pA=listA[idxA].worldPos;
       const pB=listB[idxB].worldPos;
-      const interLine=lines([pA,pB],0x0ea5e9,0.22,true);
-      this.group.add(interLine);
+      bridgeSegments.push(pA,pB);
 
       if(!this.hidden('network:beads')){
         const mid=pA.clone().add(pB).multiplyScalar(0.5);
@@ -896,6 +901,8 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         this.group.add(midBead);
       }
     }
+    const bridgeBatch=dashedLineBatch(bridgeSegments,0x0ea5e9,0.22);
+    if(bridgeBatch)this.group.add(bridgeBatch);
   }
   makeStarsilkFlow(){
     const ep=this.state.epoch;
