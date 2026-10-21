@@ -34,7 +34,7 @@ export const EPOCHS = [
 export const LAYERS = [
   ['galaxies','Galactic structures'], ['stars','Stellar detail'],
   ['routes','Hookshot routes'], ['starsilk','Starsilk currents'],
-  ['territories','Regional overlays'], ['wall','Siege Wall absence'],
+  ['territories','Provisional sectors'], ['wall','Siege Wall absence'],
   ['rings','Blood Ring remnants'], ['worldsvault','WorldsVault references'],
   ['annotations','Annotations'], ['labels','Typography'], ['grid','Coordinate guides'],
 ];

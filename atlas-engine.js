@@ -8,6 +8,7 @@ import { getStarClassification, getPlanetClassification } from './stellar-teleme
 import { BRIDGES, isSuppressed } from './visual-suppression.js';
 import { dashedLineBatch } from './network-geometry.js';
 import { FrameTimingWindow } from './frame-timing.js';
+import { provisionalSurveyCells } from './survey-sectors.js';
 
 const V = (p) => new THREE.Vector3(p[0],p[1],p[2]);
 const ORNAMENTS={
@@ -709,14 +710,41 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     }
   }
   makeTerritories(){
-    for(const n of childNodes(this.state,null,'galaxy')){
-      const c=new THREE.Color(n.color);
-      const group=new THREE.Group();group.position.copy(V(n.position));this.group.add(group);
+    const sites=childNodes(this.state,null,'galaxy');
+    const cells=provisionalSurveyCells(sites);
+    const layer=new THREE.Group();layer.name='provisional-survey-cells';
+    layer.userData={source:'illustrative-proximity',cellCount:cells?.length||0};
+    this.group.add(layer);
+    if(cells){
+      const byId=new Map(sites.map(n=>[n.id,n]));
+      for(const cell of cells){
+        const color=byId.get(cell.id).color,shape=new THREE.Shape();
+        shape.moveTo(cell.points[0][0],-cell.points[0][1]);
+        for(const [x,z] of cell.points.slice(1))shape.lineTo(x,-z);
+        shape.closePath();
+        const geometry=new THREE.ShapeGeometry(shape);geometry.rotateX(-Math.PI/2);
+        const fill=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({
+          color,side:THREE.DoubleSide,transparent:true,opacity:.065,depthWrite:false
+        }));
+        fill.position.y=-15;fill.userData={source:'illustrative-proximity',siteId:cell.id};
+        layer.add(fill);
+        const edge=cell.points.map(([x,z])=>new THREE.Vector3(x,-14.7,z));
+        edge.push(edge[0].clone());
+        const border=lines(edge,color,.32,true);border.material.depthWrite=false;
+        border.userData={source:'illustrative-proximity',siteId:cell.id};
+        layer.add(border);
+      }
+      return;
+    }
+    // Ambiguous/oversized galaxy collections retain the former bounded halos,
+    // never a partial or invented subset of proximity cells.
+    for(const n of sites){
+      const group=new THREE.Group();group.position.copy(V(n.position));layer.add(group);
       const g=new THREE.CircleGeometry(19*n.size,64);
-      const material=new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide,transparent:true,opacity:.065,depthWrite:false});
+      const material=new THREE.MeshBasicMaterial({color:n.color,side:THREE.DoubleSide,transparent:true,opacity:.065,depthWrite:false});
       const sheet=new THREE.Mesh(g,material);sheet.rotation.x=-Math.PI/2;sheet.position.y=-15;group.add(sheet);
       const pts=[];for(let i=0;i<=96;i++){const a=i/96*Math.PI*2;const r=(19+2*Math.sin(a*5+hash(n.id)%5))*n.size;pts.push(new THREE.Vector3(Math.cos(a)*r,-14.5,Math.sin(a)*r));}
-      group.add(lines(pts,c,.3,true));
+      group.add(lines(pts,n.color,.3,true));
     }
   }
   makeWall(){

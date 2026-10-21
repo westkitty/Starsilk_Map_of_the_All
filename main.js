@@ -1162,6 +1162,8 @@ if(new URLSearchParams(location.search).get('atlasDiagnostics')==='1'){
       epoch:state?.epoch||null,
       quality:state?.quality||null,
       viewKind:view.kind,
+      provisionalCells:engine?.group.getObjectByName('provisional-survey-cells')?.userData.cellCount??0,
+      authoredSectors:engine?.group.getObjectByName('editorial-draft-regions')?.children.filter(o=>o.isMesh&&o.geometry?.type==='ShapeGeometry').length??0,
       viewport:[innerWidth,innerHeight]
     })
   });

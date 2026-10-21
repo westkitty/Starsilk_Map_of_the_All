@@ -38,6 +38,8 @@ jobs:
           node --check network-geometry.js
           node --check frame-timing.js
           node --check scripts/phase5-cadence-browser-ci.mjs
+          node --check survey-sectors.js
+          node --check scripts/phase15-survey-browser-ci.mjs
       - name: Verify standalone production routing
         run: |
           set -euo pipefail
@@ -66,6 +68,8 @@ jobs:
         run: node scripts/phase4-discovery-browser-ci.mjs
       - name: Verify Renderer Cadence and Resource Lifecycle
         run: node scripts/phase5-cadence-browser-ci.mjs
+      - name: Verify Provisional Survey Cells and Draft Sectors
+        run: node scripts/phase15-survey-browser-ci.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
