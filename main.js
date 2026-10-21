@@ -25,6 +25,7 @@ const gui={
   source:$('sourceLinks'), layers:$('layerControls'), nodes:$('nodeList'), breadcrumb:$('breadcrumb'),
   form:$('objectForm'), search:$('search'), results:$('searchResults'), filterBar:$('searchFilterBar')
 };
+let lastKnownLocalDraftRaw=null;let externalDraftConflict=false;
 let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let redoStack=[];let pendingImportData=null;let rejectedDraftRaw=null;let sessionRecovered=false;let sourceGraphInstance=null;let drawerController=null;let searchFilter='all';let searchSelectedIdx=-1;
 function message(text,error=false){const toast=el('div','toast'+(error?' error':''),text);$('notifications').append(toast);setTimeout(()=>toast.remove(),3500);}
 function updateUndoRedoButtons(){
@@ -34,7 +35,7 @@ function updateUndoRedoButtons(){
 }
 function bootstrapState(){
   let localRaw=null,sessionRaw=null,sessionPreferred=false;
-  try{localRaw=localStorage.getItem(STORAGE_KEY);}
+  try{localRaw=localStorage.getItem(STORAGE_KEY);lastKnownLocalDraftRaw=localRaw;}
   catch(e){console.warn('LocalStorage inaccessible:',e);}
   try{
     sessionRaw=sessionStorage.getItem(STORAGE_KEY);
@@ -54,8 +55,39 @@ function bootstrapState(){
 }
 state=bootstrapState();
 ensureTimeline(state);
+function preserveConflictedSession(){
+  externalDraftConflict=true;
+  try{
+    sessionStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    sessionStorage.setItem(SESSION_FALLBACK_KEY,'1');
+    sessionRecovered=true;
+    $('savedStatus').textContent='EXTERNAL WRITE / SESSION BACKUP';
+    message('Another Atlas tab changed your saved draft. This tab is preserved in session storage. Export both versions before continuing.',true);
+  }catch(error){
+    $('savedStatus').textContent='EXTERNAL WRITE / EXPORT REQUIRED';
+    message('Another Atlas tab changed your saved draft. Export this open draft now; session backup failed.',true);
+  }
+}
+// A cached legacy editor can silently replace valid v1 JSON on the shared origin.
+// Keep the open modern state recoverable without overwriting either copy.
+window.addEventListener('storage',event=>{
+  if(event.key!==STORAGE_KEY || event.newValue===lastKnownLocalDraftRaw)return;
+  if(!externalDraftConflict)preserveConflictedSession();
+});
 function writeDraftNow(requireLocal=false){
   if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
+  if(externalDraftConflict){
+    $('savedStatus').textContent='EXTERNAL WRITE / EXPORT REQUIRED';
+    return false;
+  }
+  // Compare the exact prior bytes before every write, including debounced writes.
+  // Valid JSON v1 alone cannot distinguish legacy loss of optional era fields.
+  try{
+    if(localStorage.getItem(STORAGE_KEY)!==lastKnownLocalDraftRaw){
+      preserveConflictedSession();
+      return false;
+    }
+  }catch(error){console.warn('Cannot check concurrent draft writes:',error);}
   const previous=Date.parse(state.updatedAt);
   // A local write after a session fallback must sort strictly newer,
   // even when two saves occur within one millisecond.
@@ -63,6 +95,7 @@ function writeDraftNow(requireLocal=false){
   const serialized=JSON.stringify(state);
   try{
     localStorage.setItem(STORAGE_KEY,serialized);
+    lastKnownLocalDraftRaw=serialized;
     try{
       sessionStorage.removeItem(SESSION_FALLBACK_KEY);
       sessionStorage.removeItem(STORAGE_KEY);
