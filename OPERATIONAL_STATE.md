@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 28
+revision: 30
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -439,3 +439,10 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - `scripts/phase6-two-client-browser-ci.mjs` now checks the *genuine built modern tab* after the pinned legacy editor overwrites its shared key: unchanged conflicting shared bytes, modern galaxy-name/era-suppression survivor in session storage, and fallback marker. The original collision witness is intentionally retained.
 - **Evidence status:** exact-head hosted CI/browser proof must be read before claiming PASS; no owner-profile backup/restore, no legacy writer retirement, no main merge or Pages publication. `docs/consolidation/RELEASE_READINESS.json` stays BLOCKED. Planner and canonical Dossier remain unchanged.
 - **Required follow-on:** analyze and resolve any failure on the exact PR SHA; then separately authorize a genuine one-writer retirement of the legacy embedded Atlas and prove owner-operated backup/restoration plus rollback prior to cutover.
+
+## 2026-10-21 — Phase 6 legacy-entry retirement dry-run preview (revision 30, NOT PUBLISHED)
+
+- The dedicated repository alone now contains `docs/consolidation/LEGACY_RETIREMENT_PREVIEW.html`: a fully read-only replacement HTML **candidate** for the embedded legacy Atlas entry. It downloads byte-identical saved raw JSON on explicit click without parsing, changing, moving, or clearing browser storage; links to standalone Atlas and separate root Planner; warns that already-open and offline-cached old tabs may still write.
+- The GitHub PR workflow adds a **two-stage, disposable** test: (1) original pinned Planner+modern Atlas collision witness, then (2) copy candidate read-only HTML into the *temporary CI checkout* of Planner, rebuild, and run `phase6-two-client-browser-ci.mjs --retired` asserting no new legacy editor controls, zero change to the primary key, exact-byte backup download, safe standalone link, and runtime health. No persistent Planner repository mutation occurs.
+- New evidence source: `docs/consolidation/PHASE_06_LEGACY_RETIREMENT_PREVIEW.md`. The result is **UNVERIFIED until exact-head GitHub Actions completion**. Even a PASS cannot neutralize previously loaded old tabs, recover real owner's data, or authorize release.
+- The independent Planner root orbital simulator and read-only Starsilk Dossier remain untouched in Git. The dedicated Atlas `RELEASE_READINESS.json` stays **BLOCKED** with all seven required proof receipts missing. Production merge, Pages deployment, destructive migrations, key changes, and any source mutation of the independent Planner are still prohibited until applicable approval and recovery proof.
