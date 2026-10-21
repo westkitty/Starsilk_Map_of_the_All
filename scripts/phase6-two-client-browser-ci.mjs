@@ -14,6 +14,7 @@ import {readDraft} from '../draft-recovery.js';
 
 const atlasRoot=resolve(process.argv[2]||'dist');
 const plannerRoot=resolve(process.argv[3]||'planner/dist');
+const retiredPreview=process.argv.includes('--retired');
 const binary=['/usr/bin/google-chrome-stable','/usr/bin/google-chrome','/usr/bin/chromium',
   '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'].find(existsSync);
 if(!binary)throw Error('Headless Chromium unavailable');
@@ -56,7 +57,7 @@ try{
   browser=await chromium.launch({headless:true,executablePath:binary,
     args:['--no-sandbox','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader']});
   const context=await browser.newContext({viewport:{width:1536,height:864},
-    reducedMotion:'reduce',serviceWorkers:'block'});
+    reducedMotion:'reduce',serviceWorkers:'block',acceptDownloads:true});
   await context.addInitScript(({key,raw})=>{
     if(!localStorage.getItem(key))localStorage.setItem(key,raw);
   },{key:STORAGE_KEY,raw:original});
@@ -71,6 +72,27 @@ try{
 
   const legacy=await context.newPage();legacy.on('pageerror',e=>errors.push('legacy:'+e.message));
   await legacy.goto(base+'/Star_System_Planner/map-of-the-all/',{waitUntil:'domcontentloaded',timeout:35000});
+  if(retiredPreview){
+    await legacy.locator('#exportRawDraft').waitFor({timeout:35000});
+    assert.equal(await legacy.evaluate(key=>localStorage.getItem(key),STORAGE_KEY),original,
+      'Read-only migration entry must not modify the shared draft');
+    assert.equal(await legacy.locator('#allLayersBtn').count(),0,
+      'Retired entry must not load the legacy editor controls');
+    const downloadPromise=legacy.waitForEvent('download',{timeout:12000});
+    await legacy.locator('#exportRawDraft').click();
+    const download=await downloadPromise;
+    const exported=(await readFile(await download.path())).toString('utf8');
+    assert.equal(exported,original,'Retirement entry must export byte-identical browser JSON');
+    assert.equal(await legacy.evaluate(key=>localStorage.getItem(key),STORAGE_KEY),original,
+      'Download must not change the saved key');
+    assert.equal(await current.evaluate(key=>localStorage.getItem(key),STORAGE_KEY),original,
+      'Opening retirement page must leave the modern client draft unchanged');
+    assert.equal(await legacy.locator('a[href="https://westkitty.github.io/Starsilk_Map_of_the_All/"]').count(),1,
+      'Retirement entry must link to authoritative standalone Atlas');
+    assert.equal(errors.length,0,'Read-only retirement page and modern Atlas must have no runtime exceptions');
+    console.log('PHASE6_LEGACY_RETIREMENT_PREVIEW_PASS no_legacy_controls=true bytes_preserved=true exact_raw_download=true disposable_profiles_only=true');
+    await context.close();
+  }else{
   await legacy.locator('.world-label').first().waitFor({timeout:35000});
   await legacy.locator('[data-drawer="nav"]').click();
   await legacy.locator('#allLayersBtn').click();
@@ -106,6 +128,7 @@ try{
   assert.equal(errors.length,0,'Both built clients must run without JS runtime errors: '+errors.join(' / '));
   await context.close();
   console.log('PHASE6_TWO_CLIENT_BROWSER_PASS disposable_profiles_only=true pinned_legacy=true');
+  }
 }catch(e){console.error('PHASE6_TWO_CLIENT_BROWSER_FAIL',e.stack||e);process.exitCode=1;}
 finally{await browser?.close();await new Promise(done=>server.close(done));clearTimeout(watchdog);}
 process.exit(process.exitCode||0);
