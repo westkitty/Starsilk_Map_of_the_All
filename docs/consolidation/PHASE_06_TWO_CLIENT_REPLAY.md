@@ -30,12 +30,22 @@ The static server only reads its temporary compiled app files. Both tabs and the
 |---|---|
 | Parent release-safety PR #12 | **Hosted PASS** at exact `134fbf54`, run [#39556024014](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39556024014): 280/280 Node, 14 Chromium suites, disposable v1 recovery, 223529/225000 gzip |
 | Original Planner `main` immutable source | `dc3c742743838757aaafed9e637d95a5aa814596`, deployment [#39082756057](https://github.com/westkitty/Star_System_Planner/actions/runs/39082756057): TypeScript, 239/239 tests, bundled Planner and embedded Atlas browser acceptance **PASS** (historical run on same current SHA) |
-| New combined local-origin browser witness | Script syntax checked in an isolated Node 22 container, but actual two-client runtime **PENDING** exact PR-head hosted job |
-| Fresh independent Planner native verification | **PENDING** in the new dedicated `legacy-same-origin` hosted job |
+| New combined local-origin browser witness | Actions [run #39557325046](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39557325046), parallel read-only two-distribution replay | **PASS**: actual legacy UI wrote same key; synthetic galaxy name **LOST**, Post-era `network:all` **LOST**, new standalone `readDraft` **ACCEPTED** the overwritten v1 (no recovery warning), both client JS error checks passed, disposable profile only |
+| Fresh independent Planner native verification | Same run #39557325046, independent immutable Planner checkout `dc3c7427` | **PASS**: TypeScript, 239/239 tests, Vite production build and bundle/PWA gate |
 | Actual owner JSON backup/restorability | **NOT VERIFIED**; cannot inspect or overwrite a user's real saved draft |
 | Legacy editor decommissioned or made read-only | **NO** — known cutover blocker |
 | Production Atlas published | **NO**; only stacked draft branches, production main untouched |
 | Physical Galaxy Tab S9 Ultra / S Pen | **NOT VERIFIED** |
+
+## Observed synthetic data-loss mechanism
+
+The exact hosted `PHASE6_TWO_CLIENT_WRITER_COLLISION` receipt reported:
+
+```json
+{"sharedOrigin":true,"storageKey":"starsilk.map-of-the-all.draft.v1","legacyWrote":true,"lostNamedDraft":true,"lostEraSuppression":true,"currentReaderRejected":false,"source":"pinned compiled Planner, built candidate Atlas","realUserData":false}
+```
+
+This is more serious than the earlier pure legacy `captureEra` mismatch. The old client can **fallback to its seed state and overwrite a newer synthetic draft with a JSON v1 file that passes the new reader**; no schema rejection or original-byte recovery prompt is necessarily triggered. An existing standalone tab's in-memory state is not an independent durable user backup. A real owner's independent export and legacy one-writer shutdown are mandatory. Do not reframe the test's PASS marker as compatibility success.
 
 ## Release verdict and next proof
 
