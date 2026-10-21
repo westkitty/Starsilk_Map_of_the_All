@@ -90,7 +90,35 @@ try{
     assert.equal(await legacy.locator('a[href="https://westkitty.github.io/Starsilk_Map_of_the_All/"]').count(),1,
       'Retirement entry must link to authoritative standalone Atlas');
     assert.equal(errors.length,0,'Read-only retirement page and modern Atlas must have no runtime exceptions');
-    console.log('PHASE6_LEGACY_RETIREMENT_PREVIEW_PASS no_legacy_controls=true bytes_preserved=true exact_raw_download=true disposable_profiles_only=true');
+    // No-draft profiles must not offer a misleading export or create a key.
+    const emptyContext=await browser.newContext({serviceWorkers:'block',acceptDownloads:true});
+    const emptyPage=await emptyContext.newPage();
+    await emptyPage.goto(base+'/Star_System_Planner/map-of-the-all/',{waitUntil:'domcontentloaded',timeout:35000});
+    assert.equal(await emptyPage.locator('#exportRawDraft').isDisabled(),true);
+    assert.equal(await emptyPage.evaluate(key=>localStorage.getItem(key),STORAGE_KEY),null);
+    await emptyContext.close();
+
+    // Invalid raw JSON must still be downloadable byte-for-byte without normalization.
+    const malformed='{__PHASE6_INVALID_JSON__\u00f8';
+    const malformedContext=await browser.newContext({serviceWorkers:'block',acceptDownloads:true});
+    await malformedContext.addInitScript(({key,raw})=>localStorage.setItem(key,raw),
+      {key:STORAGE_KEY,raw:malformed});
+    const malformedPage=await malformedContext.newPage();
+    await malformedPage.goto(base+'/Star_System_Planner/map-of-the-all/',{waitUntil:'domcontentloaded',timeout:35000});
+    const malformedDownload=malformedPage.waitForEvent('download',{timeout:12000});
+    await malformedPage.locator('#exportRawDraft').click();
+    const badFile=await malformedDownload;
+    assert.equal((await readFile(await badFile.path())).toString('utf8'),malformed);
+    assert.equal(await malformedPage.evaluate(key=>localStorage.getItem(key),STORAGE_KEY),malformed);
+    await malformedContext.close();
+
+    // The independent orbital Planner's root app must still mount after the preview build.
+    const root=await context.newPage();root.on('pageerror',e=>errors.push('planner:'+e.message));
+    await root.goto(base+'/Star_System_Planner/',{waitUntil:'domcontentloaded',timeout:35000});
+    await root.waitForFunction(()=>document.getElementById('root')?.childElementCount>0,null,{timeout:35000});
+    assert.equal(errors.length,0,'Root Planner and both Atlas surfaces must not throw browser errors: '+errors.join(' / '));
+    await root.close();
+    console.log('PHASE6_LEGACY_RETIREMENT_PREVIEW_PASS no_legacy_controls=true bytes_preserved=true exact_raw_download=true malformed_raw_roundtrip=true empty_profile_unchanged=true planner_root_mounted=true disposable_profiles_only=true');
     await context.close();
   }else{
   await legacy.locator('.world-label').first().waitFor({timeout:35000});
