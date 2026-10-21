@@ -48,11 +48,11 @@ test('out-of-band owner approval and standalone recovery must match exact releas
   f.proofs.standalone_browser_recovery.commit='invalid';
   assert.equal(assessReleaseCutover(f,{headSha:A,approvedSha:A,recoveryVerifiedSha:A}).ready,false);
 });
-test('committed default manifest and Pages CLI categorically deny release',()=>{
+test('historical proof gate and non-main CLI still deny release under owner waiver',()=>{
   const manifest=JSON.parse(readFileSync(new URL('../docs/consolidation/RELEASE_READINESS.json',import.meta.url),'utf8'));
   assert.equal(assessReleaseCutover(manifest,{headSha:A,approvedSha:A,recoveryVerifiedSha:A}).ready,false);
   const run=spawnSync(process.execPath,[new URL('../scripts/phase6-release-gate.mjs',import.meta.url).pathname],{
-    env:{...process.env,GITHUB_SHA:A,ATLAS_RELEASE_APPROVED_SHA:A,ATLAS_BROWSER_VERIFIED_SHA:A},encoding:'utf8'
+    env:{...process.env,GITHUB_SHA:A,GITHUB_REF:'refs/heads/fixture-not-main',GITHUB_EVENT_NAME:'pull_request',GITHUB_REPOSITORY:'westkitty/Starsilk_Map_of_the_All',ATLAS_RELEASE_APPROVED_SHA:A,ATLAS_BROWSER_VERIFIED_SHA:A},encoding:'utf8'
   });
   assert.equal(run.status,1);
   assert.match(run.stderr,/ATLAS_RELEASE_GATE_BLOCKED/);
