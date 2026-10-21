@@ -7,6 +7,7 @@ import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
 import { BRIDGES, isSuppressed } from './visual-suppression.js';
 import { dashedLineBatch } from './network-geometry.js';
+import { FrameTimingWindow } from './frame-timing.js';
 
 const V = (p) => new THREE.Vector3(p[0],p[1],p[2]);
 const ORNAMENTS={
@@ -208,6 +209,9 @@ export class AtlasEngine {
     this.frame=0;this.last=performance.now();this.elapsed=0;this.paused=false;this.disposed=false;
     this.reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.frameStats={lastMs:16.6,avgMs:16.6,maxMs:16.6};
+    this.frameCadence=new FrameTimingWindow();
+    this._onFrameVisibility=()=>{if(document.hidden)this.frameCadence.suspend();};
+    document.addEventListener('visibilitychange',this._onFrameVisibility);
     this._sharedPickMat=new THREE.MeshBasicMaterial({visible:false});
     this._sharedPickMat.userData={isShared:true};
     this._sharedPickGeom=new THREE.SphereGeometry(1,10,8);
@@ -1330,15 +1334,31 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     this.frameStats.avgMs=this.frameStats.avgMs*0.95+tDuration*0.05;
     if(tDuration>this.frameStats.maxMs)this.frameStats.maxMs=tDuration;
     else this.frameStats.maxMs=Math.max(tDuration,this.frameStats.maxMs*0.999);
+    this.frameCadence.record(now,tDuration);
   }
   info(){
-    const fps=this.frameStats.avgMs>0?Math.round(1000/Math.max(1,this.frameStats.avgMs)):60;
+    // FPS uses timestamp deltas from the actual renderer loop. The existing
+    // callback timings below describe JS/WebGL submission work, NOT display FPS.
+    const cadence=this.frameCadence.snapshot();
     return {
       drawCalls:this.renderer.info.render.calls,
       triangles:this.renderer.info.render.triangles,
       geometries:this.renderer.info.memory.geometries,
       textures:this.renderer.info.memory.textures,
-      fps,
+      fps:cadence.fps,
+      medianFps:cadence.medianFps,
+      renderedFrames:this.frame,
+      sampleCount:cadence.sampleCount,
+      frameP50Ms:cadence.frameP50Ms,
+      frameP95Ms:cadence.frameP95Ms,
+      frameP99Ms:cadence.frameP99Ms,
+      callbackP95Ms:cadence.callbackP95Ms,
+      slowFramePct:cadence.slowFramePct,
+      resumeCount:cadence.pauseCount,
+      callbackLastMs:Number(this.frameStats.lastMs.toFixed(2)),
+      callbackAvgMs:Number(this.frameStats.avgMs.toFixed(2)),
+      callbackMaxMs:Number(this.frameStats.maxMs.toFixed(2)),
+      // Backwards-compatible historical names: these measure callback wall time.
       lastFrameMs:Number(this.frameStats.lastMs.toFixed(2)),
       avgFrameMs:Number(this.frameStats.avgMs.toFixed(2)),
       maxFrameMs:Number(this.frameStats.maxMs.toFixed(2))
@@ -1347,6 +1367,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
   dispose(){
     this.disposed=true;
     this.renderer.setAnimationLoop(null);
+    document.removeEventListener('visibilitychange',this._onFrameVisibility);
     this.resizeObserver.disconnect();
     this.canvas.removeEventListener('wheel',this._wheelZoom);
     this.labelsRoot.removeEventListener('wheel',this._labelWheel);

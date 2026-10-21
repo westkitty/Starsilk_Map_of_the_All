@@ -18,6 +18,7 @@ async function test(){await ready();browser=await chromium.launch({executablePat
    const page=await ctx.newPage();page.on('pageerror',e=>errors.push(name+': '+e.message));
    const res=await page.goto(ROOT,{waitUntil:'domcontentloaded',timeout:30000});assert.equal(res.status(),200);
    await page.locator('.world-label').first().waitFor({timeout:30000});
+   assert.equal(await page.evaluate(()=>typeof window.__atlasDiagnostics),'undefined','diagnostic API must be opt-in');
    await page.waitForFunction(()=>Number(document.querySelector('#drawCalls')?.textContent)>0,{timeout:25000});
    assert.equal(await page.locator('#atlas').getAttribute('data-active-drawer'),'none');
    for(const id of ['leftPanel','rightPanel','studioPanel','strategyPanel','networkPanel','temporalPanel'])assert.equal(await page.locator('#'+id).isVisible(),false,id+' default collapsed');

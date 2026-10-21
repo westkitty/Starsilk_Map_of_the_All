@@ -36,6 +36,8 @@ jobs:
           node --check scripts/stellar-zoom-browser-ci.mjs
           node --check scripts/phase4-discovery-browser-ci.mjs
           node --check network-geometry.js
+          node --check frame-timing.js
+          node --check scripts/phase5-cadence-browser-ci.mjs
       - name: Verify standalone production routing
         run: |
           set -euo pipefail
@@ -62,6 +64,8 @@ jobs:
         run: node scripts/stellar-zoom-browser-ci.mjs
       - name: Verify Search and Mobile Discovery
         run: node scripts/phase4-discovery-browser-ci.mjs
+      - name: Verify Renderer Cadence and Resource Lifecycle
+        run: node scripts/phase5-cadence-browser-ci.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

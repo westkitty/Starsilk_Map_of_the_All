@@ -1152,6 +1152,20 @@ function init(){updateUI();bind();
     console.error('Atlas startup:',e);
   }
 }
+// Opt-in, read-only metrics for disposable-profile performance QA.
+// Never exports drafts or alters renderer, state, persistence or DOM layout.
+if(new URLSearchParams(location.search).get('atlasDiagnostics')==='1'){
+  Object.defineProperty(window,'__atlasDiagnostics',{
+    configurable:true,
+    value:()=>({
+      ...(engine?.info()||{}),
+      epoch:state?.epoch||null,
+      quality:state?.quality||null,
+      viewKind:view.kind,
+      viewport:[innerWidth,innerHeight]
+    })
+  });
+}
 init();
 drawerController=setupFullscreenAtlas();
 setupRecoveryUI();
