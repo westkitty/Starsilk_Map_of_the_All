@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 18
+revision: 19
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -351,3 +351,11 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Disposition:** Phase 2 branch **implemented, tested at Node/model level, integration/release PENDING**. No Phase 2 merge/deploy; Phase 3–6 not started by this PR. Exact details: `docs/consolidation/PHASE_02_RECONCILIATION.md`.
 
 - **Hosted Phase 2 gate closed (run #39529008922 on `a6dc21f`):** Ubuntu Node 22 tests/build and immutable gzip budget, all 8 real Chromium acceptance suites and isolated three-era draft recovery **PASS**. The shared-origin older Atlas writer hazard remains the **release gate**, so no PR merge or real-user migration is implied.
+
+## 2026-10-20 — Consolidation Phase 3 stellar navigation candidate (revision 19)
+
+- **Current branch** `feature/phase03-stellar-navigation` on exact Phase 2 draft head `7244d58e32f6582e8c78e92035189c5f92a3f1bc`; Atlas production `main` and the independent Planner/Dossier are unchanged. Phase 2 shared-origin writer risk and recovery requirements still gate release.
+- **Implementation** uses existing one Three.js renderer and OrbitControls. A deliberate inward wheel gesture / two-touch pointer intent chooses an eligible nearby visible system in galaxy tier (threshold 17 editorial camera units, not a physical distance); guarded while editors/dialogs are active. World-label wheel events forward to canvas with deterministic cleanup, and a contextual HUD exposes Enter, Overview, Galaxy return and draft planet count. Star, planets, moons, rings, atmosphere, asteroid and comet scenery already exist in the dedicated renderer; no second orbital simulation or canon coordinates were introduced.
+- **Verified so far**: `npm ci` (inherited from isolated Phase 3 worktree), `npm run check` **260/260 Node tests and build PASS**; Big Mac Node 26 gzip **224,298 / 225,000 bytes**. A dedicated desktop/headless touch Chromium test passed enter/return, deliberate wheel, editing guard, label-to-canvas bridge and 412px touch HUD in disposable profiles. Its initial hardcoded SURVEY 01 expectation was corrected using `seedAtlas()`; initial missed wheel events were traced to label event interception, not false navigation state; the mobile inspector needs explicit dismissal before tapping behind it. New planet-path assertion and nine-suite chain are pending fresh final evidence.
+- **Still unverified**: hosted Ubuntu Node 22 bundle size (prior 1.4KB compressor delta may breach 225k); full nine-suite chained browser results and Phase 1 recovery on the changed branch; **real two-finger pinch** and Galaxy Tab S9 Ultra/S Pen thermals. Do not represent headless touch HUD taps as physical pinch proof. Do not merge Phase 3 to main before its stacked parent is safely released.
+- **Current artifact**: `docs/consolidation/PHASE_03_STELLAR_NAVIGATION.md` governs the Phase 3 source and test ledger. No JSON v1 migration, no new localStorage key, no Pages route change, no Planner/Dossier write or real browser draft access.

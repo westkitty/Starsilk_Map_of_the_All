@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {findSystemZoomTarget} from './system-zoom.js';
 import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -120,6 +121,7 @@ export class AtlasEngine {
     this.renderer.toneMappingExposure=1.5;
     this.controls=new OrbitControls(this.camera,canvas);
     this.controls.enableDamping=true;this.controls.dampingFactor=.075;
+    this.controls.zoomToCursor=false; // Dolly toward the focused system, not a drifting screen pixel.
     this.controls.minDistance=6;this.controls.maxDistance=950;this.controls.maxPolarAngle=Math.PI*.91;
     this.controls.screenSpacePanning=true;
     this.controls.target.set(6,-2,-6);
@@ -134,6 +136,26 @@ export class AtlasEngine {
     this.pointerStart=null;
     this.viewMemory=new Map();
     this.cameraTransition=null;
+    this._lastDollyDistance=null;this._dollyIntentUntil=0;this._activeTouchIds=new Set();
+    this._wheelZoom=ev=>{if(ev.deltaY<0)this._dollyIntentUntil=performance.now()+650;};
+    this._touchZoomStart=ev=>{if(ev.pointerType==='touch')this._activeTouchIds.add(ev.pointerId);};
+    this._touchZoomEnd=ev=>{this._activeTouchIds.delete(ev.pointerId);};
+    canvas.addEventListener('wheel',this._wheelZoom,{passive:true});
+    // Labels are interactive siblings of the canvas. Forward a wheel gesture
+    // from a hovered label to OrbitControls without changing selection/dragging.
+    this._labelWheel=ev=>{
+      if(!ev.target.closest?.('.world-label'))return;
+      const forwarded=new WheelEvent('wheel',{
+        bubbles:true,cancelable:true,deltaX:ev.deltaX,deltaY:ev.deltaY,
+        deltaZ:ev.deltaZ,deltaMode:ev.deltaMode,clientX:ev.clientX,clientY:ev.clientY,
+        ctrlKey:ev.ctrlKey,shiftKey:ev.shiftKey,altKey:ev.altKey,metaKey:ev.metaKey
+      });
+      if(this.canvas.dispatchEvent(forwarded)||forwarded.defaultPrevented)ev.preventDefault();
+    };
+    this.labelsRoot.addEventListener('wheel',this._labelWheel,{passive:false});
+    canvas.addEventListener('pointerdown',this._touchZoomStart);
+    canvas.addEventListener('pointerup',this._touchZoomEnd);
+    canvas.addEventListener('pointercancel',this._touchZoomEnd);
     this.hoveredId=null;
     this.trackingNodeId=null;
     this.reticle=this.createSelectionReticle();
@@ -297,7 +319,7 @@ gl_FragColor=vec4(vColor,alpha);
   setView(view,smooth=true){
     const prevKey=this.view.kind==='all'?'all':`${this.view.kind}:${this.view.id}`;
     this.viewMemory.set(prevKey,{camera:this.camera.position.clone(),target:this.controls.target.clone()});
-    this.view=view;this.rebuild();
+    this.view=view;this._dollyIntentUntil=0;this.rebuild();
     const nextKey=view.kind==='all'?'all':`${view.kind}:${view.id}`;
     let targetCamera,targetControls;
     if(this.viewMemory.has(nextKey)){
@@ -316,6 +338,7 @@ gl_FragColor=vec4(vColor,alpha);
       this.controls.target.copy(targetControls);this.camera.position.copy(targetCamera);this.controls.update();
       this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
     }
+    this._lastDollyDistance=this.controls.getDistance();
   }
   transitionCamera(targetCam,targetTarget,durationMs=650,onComplete=null){
     if(this.reducedMotion){
@@ -1276,7 +1299,24 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       for(const p of this.routeParticles){if(p.failed)continue;try{const t=wrapCurvePhase(p.phase+this.elapsed/1000*p.speed);const v=p.curve.getPointAt(t);if(v&&Number.isFinite(v.x)&&Number.isFinite(v.y)&&Number.isFinite(v.z))p.obj.position.copy(v);else p.failed=true;}catch(error){p.failed=true;console.warn('Atlas route particle disabled:',error);}}
       for(const s of this.animatedShaders){if(s.uniforms?.uTime)s.uniforms.uTime.value=this.elapsed*0.001;}
     }
-    this.controls.update();this.renderer.render(this.scene,this.camera);
+    this.controls.update();
+    const dolly=this.controls.getDistance();
+    const deliberate=(now<this._dollyIntentUntil||this._activeTouchIds.size>=2);
+    const inward=this._lastDollyDistance!==null&&dolly<this._lastDollyDistance-.025;
+    this._lastDollyDistance=dolly;
+    if(inward&&deliberate&&!this.cameraTransition&&this.view.kind==='galaxy'){
+      const projected=this._zoomProjected||(this._zoomProjected=new THREE.Vector3());
+      const world=this._zoomWorld||(this._zoomWorld=new THREE.Vector3());
+      const candidates=this.labelItems.filter(i=>i.node.kind==='system').map(i=>{
+        i.obj.getWorldPosition(world);projected.copy(world).project(this.camera);
+        return {id:i.node.id,kind:i.node.kind,distance:world.distanceTo(this.camera.position),screenX:projected.x,screenY:projected.y,visible:projected.z>=-1&&projected.z<=1};
+      });
+      const id=findSystemZoomTarget({viewKind:this.view.kind,zooming:true,
+        blocked:this.callbacks.canDollyEnter?!this.callbacks.canDollyEnter():false,
+        candidates,selectedId:this.state?.selected});
+      if(id){this._dollyIntentUntil=0;this.callbacks.onDollyEnter?.(id);}
+    }
+    this.renderer.render(this.scene,this.camera);
     if(++this.frame%3===0)this.updateLabels();
     const tDuration=performance.now()-tStart;
     this.frameStats.lastMs=tDuration;
@@ -1301,6 +1341,12 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     this.disposed=true;
     this.renderer.setAnimationLoop(null);
     this.resizeObserver.disconnect();
+    this.canvas.removeEventListener('wheel',this._wheelZoom);
+    this.labelsRoot.removeEventListener('wheel',this._labelWheel);
+    this.canvas.removeEventListener('pointerdown',this._touchZoomStart);
+    this.canvas.removeEventListener('pointerup',this._touchZoomEnd);
+    this.canvas.removeEventListener('pointercancel',this._touchZoomEnd);
+    this._activeTouchIds.clear();
     this.canvas.removeEventListener('pointerdown',this._down);
     this.canvas.removeEventListener('pointerup',this._up);
     this.canvas.removeEventListener('pointermove',this._move);

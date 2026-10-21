@@ -2,7 +2,7 @@ name: Atlas Pull Request Verification
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, consolidation/phase-02-omni-recovery-20261020]
 
 # Read-only validation; never publishes or modifies GitHub Pages.
 permissions:
@@ -41,6 +41,10 @@ jobs:
           done
           if [ -f scripts/phase1-draft-recovery-browser-ci.mjs ]; then
             node --check scripts/phase1-draft-recovery-browser-ci.mjs
+          if [ -f scripts/stellar-zoom-browser-ci.mjs ]; then
+            node --check scripts/stellar-zoom-browser-ci.mjs
+            node --check system-zoom.js
+          fi
           fi
 
       - name: Run existing Chromium acceptance suites

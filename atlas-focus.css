@@ -164,3 +164,14 @@
 .atlas.atlas-minimal .atlas-recovery-tools button{min-height:44px;padding:9px 11px;text-align:left;
   color:#fff2d3;border:1px solid rgba(246,188,105,.68);background:rgba(61,41,25,.84)}
 .atlas.atlas-minimal .atlas-recovery-tools button:focus-visible{outline:2px solid #fff2d3;outline-offset:2px}
+
+/* Phase 3: one contextual stellar portal, never a second workspace or renderer. */
+.stellar-mini-hud{position:absolute;z-index:9;bottom:78px;left:50%;transform:translateX(-50%);width:min(360px,calc(100vw - 32px));padding:12px 14px;background:rgba(3,13,24,.92);border:1px solid rgba(110,203,237,.48);border-radius:8px;box-shadow:0 12px 36px #000a;display:grid;gap:6px;text-align:center;pointer-events:auto}
+.stellar-mini-hud small{font:600 9px/1.3 var(--mono);letter-spacing:.1em;color:#86bad0}
+.stellar-mini-hud strong{font:500 18px/1.3 var(--display);color:#e4f6ff}
+.stellar-mini-hud span{font:10px/1.4 var(--mono);color:#a2bbcb}
+.stellar-hud-actions{display:flex;gap:8px}
+.stellar-mini-hud button{flex:1;min-height:44px;padding:10px;border:1px solid #4d9db7;background:#082b42;color:#d9f6ff;font:600 10px var(--mono);letter-spacing:.07em}
+.stellar-mini-hud button:hover{border-color:#b5ebff;background:#134c67}
+.atlas.focus-view .stellar-mini-hud{opacity:0;pointer-events:none}
+@media(max-width:620px){.stellar-mini-hud{bottom:74px;padding:10px;max-width:calc(100vw - 92px)}.stellar-mini-hud strong{font-size:15px}}

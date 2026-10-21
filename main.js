@@ -561,8 +561,23 @@ function updateScaleGauge(){
     textEl.textContent=`STELLAR SYSTEM · ~5 AU SANDBOX (${sys?sys.name:'STAR'} · SSP COMPATIBLE)`;
   }
 }
+function updateStellarNavigation(){
+  const system=view.kind==='system'?nodeById(state,view.id):null;
+  const selected=nodeById(state,state.selected);
+  const drill=view.kind==='galaxy'&&selected?.kind==='system'&&selected.parentId===view.id;
+  $('stellarDive').hidden=!drill;
+  if(drill)$('stellarDiveName').textContent=selected.name;
+  $('stellarHud').hidden=!system;
+  if(system){
+    $('stellarHudName').textContent=system.name;
+    $('stellarHudInfo').textContent=childNodes(state,system.id,'planet').length+' DRAFT PLANETS · EDITORIAL ORBITS';
+  }
+}
+function canDollyEnter(){return !pendingRoute&&(!studio||studio.mode==='orbit')&&
+  !strategy?.opened&&!networkLab?.opened&&!temporal?.opened&&
+  !document.querySelector('dialog[open]');}
 function updateUI(){
-  updateBreadcrumb();updateLayers();updateVisualCleanup();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
+  updateStellarNavigation();updateBreadcrumb();updateLayers();updateVisualCleanup();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
   $('quality').value=state.quality;
   $('motionBtn').textContent=state.motion?'MOTION ON':'MOTION OFF';
   $('motionBtn').setAttribute('aria-pressed',state.motion?'true':'false');
@@ -976,6 +991,9 @@ function redo(){if(!redoStack.length){message('No changes to redo.');return;}
 function resetCamera(){engine?.setView(view);}
 function toggleFocus(){gui.atlas.classList.toggle('focus-view');if(!gui.atlas.classList.contains('focus-view'))gui.right.classList.remove('mobile-open');}
 function bind(){
+  $('stellarDiveButton').addEventListener('click',enterSelected);
+  $('stellarBackButton').addEventListener('click',up);
+  $('stellarOverviewButton').addEventListener('click',resetCamera);
   $('visualTarget').addEventListener('change',updateVisualCleanup);
   $('visualSuppressBtn').addEventListener('click',()=>{
     const id=$('visualTarget').value,hidden=isSuppressed(state,id);
@@ -1090,7 +1108,11 @@ function init(){updateUI();bind();
       }
     });
   }catch(e){$('sourceGraphOpen').disabled=true;message('Source topology unavailable: '+e.message,true);}
-  try{engine=new AtlasEngine(gui.canvas,gui.labels,{onSelect:select,onViewChanged:updateUI});engine.setState(state,view);
+  try{engine=new AtlasEngine(gui.canvas,gui.labels,{onSelect:select,onViewChanged:updateUI,
+    canDollyEnter,onDollyEnter:id=>{
+      const n=nodeById(state,id);
+      if(view.kind==='galaxy'&&n?.kind==='system'&&n.parentId===view.id)enter('system',id);
+    }});engine.setState(state,view);
     studio=new SpatialStudio({canvas:gui.canvas,labelsRoot:gui.labels,atlas:gui.atlas,panel:$('studioPanel'),
       getState:()=>state,getView:()=>view,onMove:moveDraftNode,onLabelCommit:moveDraftLabel,
       onRouteCancel:()=>{pendingRoute=null;},
