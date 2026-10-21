@@ -3,7 +3,7 @@
 **Execution date:** 2026-10-20, America/Detroit
 **Implementation:** `feature/phase03-stellar-navigation` stacked on `consolidation/phase-02-omni-recovery-20261020` at `7244d58e32f6582e8c78e92035189c5f92a3f1bc`
 **Governing plan:** [CONSOLIDATION_MASTER_PLAN.md](../../CONSOLIDATION_MASTER_PLAN.md), Phase 3
-**State:** Functional slice implemented in a dedicated worktree. Not merged to main or deployed; hosted CI and final full browser matrix must verify the current head.
+**State:** [Draft PR #5](https://github.com/westkitty/Starsilk_Map_of_the_All/pull/5) implements the navigation slice; no Phase 3 main merge or deployment. First hosted Node 22 bundle check failed, and a pinned build-only Terser remedy is undergoing verification.
 
 ## 1. User-facing behavior
 
@@ -30,7 +30,8 @@ The existing `.ssp.json` export remains a hypothetical, user-controlled **manual
 | `index.html`, `atlas-focus.css` | Accessible compact non-canon stellar UI with responsive controls |
 | `tests/system-zoom.node-check.mjs` | Four deterministic selection, threshold, guard and visibility checks |
 | `scripts/stellar-zoom-browser-ci.mjs` | Real desktop wheel and emulated-touch HUD journey, label-wheel event bridge, edit guard and planet inspection |
-| `package.json`, `.github/workflows/atlas-pr-verify.yml`, `.github/workflows/deploy.yml` | Add the ninth Chromium acceptance suite and permit read-only CI on the stacked Phase 2 branch |
+| `package.json`, `package-lock.json`, `vite.config.js` | Add ninth browser suite plus pinned Terser 5.51.2 for smaller minified JS; preserve vendor chunk and the existing 225,000-byte gzip limit |
+| `.github/workflows/atlas-pr-verify.yml`, `.github/workflows/deploy.yml` | Enable hosted read-only CI on stacked Phase 2 branch, and add ninth pre-release Chromium acceptance |
 
 **No new saved-data fields, URL route, source permissions, API endpoint, material dependency or Three.js renderer.** Canon identity index, WorldsVault relationships, independent era snapshots, source demotion, Undo/Redo, route and region editing all remain governed by existing modules.
 
@@ -42,9 +43,13 @@ The existing `.ssp.json` export remains a hypothetical, user-controlled **manual
 | First automatic wheel attempt | Wheel event reached interactive `.label-name`, not canvas; therefore OrbitControls ignored it | Repaired by scoped label-wheel forwarding |
 | Standalone stellar desktop/phone acceptance | Enter → system → overview → back; real inward wheel; label bridge; edit guard; 412px emulated touch HUD | PASS on earlier test iteration; planet-specific extension needs latest rerun |
 | `npm run check` | **260/260 Node tests**, Vite build, zero failure | PASS on Big Mac Node 26 |
-| Bundle budget | **224,298 / 225,000 gzip bytes**, vendor chunk preserved | LOCAL PASS; **hosted Node 22 unknown**, previous phase showed compressor variation |
-| Existing eight browser suites | Run through unchanged `npm run test:browser`, followed by new ninth suite and three-era recovery | In progress; record final exact result before release claim |
+| Initial Big Mac Node 26 build | **224,298 / 225,000 bytes gzip**, vendor chunk preserved | LOCAL PASS, insufficient cross-platform headroom |
+| First GitHub Ubuntu Node 22 [#39536588823](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39536588823) | **225,708 / 225,000 bytes gzip**, though 260/260 Node tests passed | HOSTED **FAIL**: 708-byte packaging overage |
+| Pinned Terser 5.51.2, two passes, Big Mac Node 26 | **219,605 / 225,000 bytes gzip**, separate Three.js vendor chunk retained | LOCAL PASS, hosted Node 22 recheck pending |
+| Existing eight browser suites | Full local chain passed FOCUS, Spatial, Strategic, Network, Temporal and deletion before its unattended 10-minute runner window ended with **exit 124**; recovery not reached. Hosted nine-suite run is the authoritative gate | PARTIAL, not a local 9/9 PASS |
 | Real Galaxy Tab S9 Ultra/S Pen | No physical device run | **NOT VERIFIED** |
+
+**Build decision:** A free, pinned BSD-2-Clause Terser **devDependency** (5.51.2; `compress.passes=2`) replaces default esbuild minification for production JS. Locally it reduced gzip from **224,298 to 219,605 bytes**, creating **5,395 bytes** of Big Mac headroom without raising budget, removing the Three.js vendor chunk or altering runtime source semantics. A single-chunk ES2022 experiment only saved ~247 bytes and sacrificed vendor caching, so it was rejected. GitHub Node 22 and actual Chromium journeys must revalidate the final Terser output.
 
 **Key limitations:** The current implementation is a semantic zoom transition into existing 3D system views; it is **not** physical Keplerian travel. Mobile test uses Chromium touch emulation, not real-device gesture/thermal proof. The original legacy optional companion star is not ported merely to increase effects; any future orbital dressing must respect the gzip/GPU budget and be explicitly marked illustrative.
 

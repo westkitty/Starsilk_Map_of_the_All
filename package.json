@@ -16,8 +16,9 @@
     "three": "0.174.0"
   },
   "devDependencies": {
-    "vite": "6.2.0",
-    "playwright-core": "1.56.1"
+    "playwright-core": "1.56.1",
+    "terser": "5.51.2",
+    "vite": "6.2.0"
   },
   "description": "Standalone editable, non-canonical Three.js survey of the Starsilk All"
 }
