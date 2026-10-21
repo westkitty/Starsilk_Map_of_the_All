@@ -187,7 +187,8 @@ function change(mutator,{geometry=true,immediate=false}={}){
     if(immediate&&!persist(true))throw new Error('Draft not stored; no deletion or other destructive edit applied. Export your draft.');
   }catch(e){
     state=JSON.parse(prior);
-    if(hadPending)persist();
+    if(externalDraftConflict)preserveConflictedSession();
+    else if(hadPending)persist();
     message('Change rejected: '+e.message,true);return false;
   }
   history.push(prior);if(history.length>30)history.shift();
@@ -993,6 +994,7 @@ function executeImport(){
   rejectedDraftRaw=null;
   if(!persist(true,priorRejection!==null)){
     state=JSON.parse(previous);rejectedDraftRaw=priorRejection;
+    if(externalDraftConflict)preserveConflictedSession();
     $('savedStatus').textContent=priorRejection!==null?'RECOVERY REQUIRED':'EXPORT REQUIRED';
     message('Import not applied: neither local nor session storage accepted it. Original retained.',true);
     return;
@@ -1015,7 +1017,7 @@ function undo(){if(!history.length){message('No changes to undo.');return;}
   const current=JSON.stringify(state);
   state=JSON.parse(history[history.length-1]);
   if(!persist(true)){
-    state=JSON.parse(current);message('Undo not applied: unable to store this state.',true);return;
+    state=JSON.parse(current);if(externalDraftConflict)preserveConflictedSession();message('Undo not applied: unable to store this state.',true);return;
   }
   redoStack.push(current);if(redoStack.length>30)redoStack.shift();
   history.pop();
@@ -1027,7 +1029,7 @@ function redo(){if(!redoStack.length){message('No changes to redo.');return;}
   const current=JSON.stringify(state);
   state=JSON.parse(redoStack[redoStack.length-1]);
   if(!persist(true)){
-    state=JSON.parse(current);message('Redo not applied: unable to store this state.',true);return;
+    state=JSON.parse(current);if(externalDraftConflict)preserveConflictedSession();message('Redo not applied: unable to store this state.',true);return;
   }
   history.push(current);if(history.length>30)history.shift();
   redoStack.pop();
