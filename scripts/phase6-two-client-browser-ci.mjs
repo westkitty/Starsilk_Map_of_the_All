@@ -83,6 +83,30 @@ try{
     const download=await downloadPromise;
     const exported=(await readFile(await download.path())).toString('utf8');
     assert.equal(exported,original,'Retirement entry must export byte-identical browser JSON');
+    // Prove the exact downloaded bytes can be imported into a separate, empty
+    // dedicated Atlas profile and retain the independent Post-era suppression.
+    const restoreContext=await browser.newContext({viewport:{width:1280,height:800},
+      serviceWorkers:'block',acceptDownloads:true,reducedMotion:'reduce'});
+    const restorePage=await restoreContext.newPage();
+    await restorePage.goto(base+'/Starsilk_Map_of_the_All/',{waitUntil:'domcontentloaded',timeout:35000});
+    await restorePage.locator('[data-drawer="nav"]').click();
+    await restorePage.locator('#fileInput').setInputFiles({
+      name:'retired-legacy-raw-copy.json',mimeType:'application/json',buffer:Buffer.from(exported)
+    });
+    await restorePage.locator('#importConfirmDialog').waitFor({state:'visible',timeout:15000});
+    assert.equal((await restorePage.locator('#importSummaryEras').textContent()).trim(),'3');
+    await restorePage.locator('#importConfirmBtn').click();
+    await restorePage.waitForFunction(key=>{
+      try{return JSON.parse(localStorage.getItem(key))?.nodes?.some(n=>n.name==='QA CROSS-WRITER SURVIVAL MARKER');}
+      catch{return false;}
+    },STORAGE_KEY,{timeout:12000});
+    const restored=JSON.parse(await restorePage.evaluate(key=>localStorage.getItem(key),STORAGE_KEY));
+    assert.deepEqual(validateAtlas(restored),[]);
+    assert.equal(restored.timeline.snapshots.post.suppressedVisuals.includes('network:all'),true);
+    await restorePage.reload({waitUntil:'domcontentloaded'});
+    assert.ok(JSON.parse(await restorePage.evaluate(key=>localStorage.getItem(key),STORAGE_KEY))
+      .timeline.snapshots.post.suppressedVisuals.includes('network:all'));
+    await restoreContext.close();
     assert.equal(await legacy.evaluate(key=>localStorage.getItem(key),STORAGE_KEY),original,
       'Download must not change the saved key');
     assert.equal(await current.evaluate(key=>localStorage.getItem(key),STORAGE_KEY),original,
@@ -118,7 +142,7 @@ try{
     await root.waitForFunction(()=>document.getElementById('root')?.childElementCount>0,null,{timeout:35000});
     assert.equal(errors.length,0,'Root Planner and both Atlas surfaces must not throw browser errors: '+errors.join(' / '));
     await root.close();
-    console.log('PHASE6_LEGACY_RETIREMENT_PREVIEW_PASS no_legacy_controls=true bytes_preserved=true exact_raw_download=true malformed_raw_roundtrip=true empty_profile_unchanged=true planner_root_mounted=true disposable_profiles_only=true');
+    console.log('PHASE6_LEGACY_RETIREMENT_PREVIEW_PASS no_legacy_controls=true bytes_preserved=true exact_raw_download=true independent_three_era_restore=true malformed_raw_roundtrip=true empty_profile_unchanged=true planner_root_mounted=true disposable_profiles_only=true');
     await context.close();
   }else{
   await legacy.locator('.world-label').first().waitFor({timeout:35000});
