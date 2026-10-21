@@ -1,4 +1,6 @@
 import {validateRegions} from './strategic-model.js';
+import {deleteObject} from './deletion-engine.js';
+import {validateSuppressed} from './visual-suppression.js';
 import {validateTimeline, sanitizeTimeline} from './temporal-model.js';
 export const VERSION = 1;
 export const STORAGE_KEY = 'starsilk.map-of-the-all.draft.v1';
@@ -38,13 +40,13 @@ export const LAYERS = [
 ];
 export const DEFAULT_LAYERS = Object.fromEntries(LAYERS.map(([key])=>[key,key!=='grid']));
 const galaxyDefs = [
-  ['north-reach','NORTH REACH',-102,26,-46,'#83bcff',1.0],
-  ['halcyon-arm','HALCYON ARM',-106,-5,18,'#85dcff',0.92],
-  ['perseus-confluence','PERSEUS CONFLUENCE',-28,2,7,'#ffe1ac',1.4],
-  ['triangulum','TRIANGULUM',-112,-17,57,'#8bbfff',0.68],
-  ['centauri-marches','CENTAURI MARCHES',38,1,30,'#bdaaff',0.90],
-  ['ember-span','EMBER SPAN',92,6,1,'#ffd5a2',0.93],
-  ['southern-territories','SOUTHERN TERRITORIES',130,-12,53,'#7aa9ff',0.83],
+  ['north-reach','NORTH REACH',-52,22,-58,'#83bcff',1.05],
+  ['halcyon-arm','HALCYON ARM',-108,6,-12,'#85dcff',0.95],
+  ['perseus-confluence','PERSEUS CONFLUENCE',-26,2,8,'#ffe1ac',1.45],
+  ['triangulum','TRIANGULUM',-96,-10,42,'#8bbfff',0.72],
+  ['centauri-marches','CENTAURI MARCHES',44,3,20,'#bdaaff',0.92],
+  ['ember-span','EMBER SPAN',102,7,-8,'#ffd5a2',0.95],
+  ['southern-territories','SOUTHERN TERRITORIES',128,-14,52,'#7aa9ff',0.85],
 ];
 export const RESEARCH_ANCHORS = [
   { name: 'WorldsVault', description: 'Published topology and its direct-authored relationships; layout is explicitly not canonical.', url: CANON_BASE + '/worldsvault/' },
@@ -81,7 +83,7 @@ export function seedAtlas() {
   ];
   const routes=connections.map(([from,to],i)=>({id:`lane-${i+1}`,from,to,kind:i%3===0?'starsilk':'hookshot',status:'draft'}));
   return { version:VERSION, title:'THE MAP OF THE ALL', epoch:'post', layers:{...DEFAULT_LAYERS},
-    nodes,routes, regions:[], selected:null, quality:'balanced', motion:true, typographyScale:1, updatedAt:new Date().toISOString() };
+    nodes,routes, regions:[], suppressedVisuals:[], selected:null, quality:'balanced', motion:true, typographyScale:1, updatedAt:new Date().toISOString() };
 }
 export const childNodes = (state,parentId,kind=null)=>state.nodes.filter(n=>n.parentId===parentId&&(!kind||n.kind===kind));
 export const nodeById = (state,id)=>state.nodes.find(n=>n.id===id)||null;
@@ -121,6 +123,7 @@ export function validateAtlas(value) {
   for(const r of value.routes){if(!r||!ids.has(r.from)||!ids.has(r.to)||r.from===r.to||!['hookshot','starsilk'].includes(r.kind)||!/^[-a-zA-Z0-9_]{1,90}$/.test(r.id)) errors.push('Invalid route');}
   if(!EPOCHS.some(e=>e.id===value.epoch))errors.push('Invalid epoch');
   if(!value.layers||LAYERS.some(([key])=>typeof value.layers[key]!=='boolean'))errors.push('Invalid layers');
+  errors.push(...validateSuppressed(value.suppressedVisuals));
   if(!['balanced','cinematic','battery'].includes(value.quality))errors.push('Invalid quality tier');
   if(typeof value.motion!=='boolean'||!Number.isFinite(value.typographyScale)||value.typographyScale<.6||value.typographyScale>2)errors.push('Invalid preferences');
   errors.push(...validateRegions(value));
@@ -132,6 +135,8 @@ export function normalizeDraft(raw) {
   const data=JSON.parse(JSON.stringify(raw));
   if(data.version!==VERSION)return {valid:false,errors:['Unsupported atlas schema version']};
   if(!Array.isArray(data.regions))data.regions=[];
+  if(data.suppressedVisuals===undefined)data.suppressedVisuals=[];
+  for(const snap of Object.values(data.timeline?.snapshots||{}))if(snap&&typeof snap==='object'&&snap.suppressedVisuals===undefined)snap.suppressedVisuals=[];
   if(!data.layers||typeof data.layers!=='object')data.layers={...DEFAULT_LAYERS};
   else{for(const [key] of LAYERS)if(typeof data.layers[key]!=='boolean')data.layers[key]=key!=='grid';}
   if(!data.quality||!['balanced','cinematic','battery'].includes(data.quality))data.quality='balanced';
@@ -167,13 +172,8 @@ export function sanitizeAtlas(value) {
   return data;
 }
 export function removeNode(state,id){
-  const removal=new Set([id]);let changed=true;
-  while(changed){changed=false;for(const n of state.nodes)if(n.parentId&&removal.has(n.parentId)&&!removal.has(n.id)){removal.add(n.id);changed=true;}}
-  state.nodes=state.nodes.filter(n=>!removal.has(n.id));
-  state.routes=state.routes.filter(r=>!removal.has(r.from)&&!removal.has(r.to));
-  if(Array.isArray(state.regions))state.regions=state.regions.filter(r=>!removal.has(r.parentId));
-  if(removal.has(state.selected))state.selected=null;
-  return removal.size;
+  // Retained v1 API: route all mutations through the source-safe deletion engine.
+  return deleteObject(state,id,{type:'node'}).nodeCount;
 }
 export function uniqueId(state,prefix){let id;do{id=prefix+'-'+Math.random().toString(36).slice(2,9);}while(state.nodes.some(n=>n.id===id));return id;}
 export function addNode(state,kind,parentId=null){

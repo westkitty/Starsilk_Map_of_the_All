@@ -30,6 +30,9 @@
 .strategy-nudge button{padding:6px 2px;min-height:46px;font-size:10px}
 .strategy-primary{background:linear-gradient(110deg,#0a6480,#168ea7)!important;border-color:#67dff7!important;color:#fff!important;font-weight:600!important}
 .strategy-danger{border-color:#925a58!important;color:#ffb2a6!important}
+.strategy-delete-group{width:100%;min-height:44px;border:1px solid #925a58;background:#341c22;color:#ffbbb1;cursor:pointer;font:600 10px/1.4 var(--mono);letter-spacing:.09em}
+.strategy-delete-group:not(:disabled):hover{background:#52272c;border-color:#db8073;color:#fff}
+.strategy-delete-group:focus-visible{outline:2px solid #86e4ff;outline-offset:3px}
 .strategy-region-list{max-height:170px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-right:3px}
 .strategy-sector-row{width:100%;text-align:left;min-height:44px}
 .strategy-sector-row.active{border-color:#88f2ff;color:#fff;background:#225169}

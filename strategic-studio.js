@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {deleteObject,deleteObjects,planDeletionBatch} from './deletion-engine.js';
 import {eligibleGroup,translatedGroup,regionFromGroup,validatePolygon,regionReport,strategicAnalysis,pointInPolygon,polygonCentroid,polygonBounds,strategicPosture,convexHull,MAX_REGIONS,MAX_VERTICES} from './strategic-model.js';
 
 /**
@@ -26,6 +27,7 @@ export class StrategicStudio {
     for(const key of ['group','region','pan'])this.$('strategyMode'+key[0].toUpperCase()+key.slice(1)).addEventListener('click',()=>this.setMode(key));
     this.$('strategySelectAll').addEventListener('click',()=>this.selectAll());
     this.$('strategyClear').addEventListener('click',()=>this.applyGroup([]));
+    this.$('strategyDeleteGroup').addEventListener('click',()=>this.deleteGroup());
     this.$('strategyGroupAxis').addEventListener('change',()=>this.cancelGesture());
     this.$('strategyGroupSnap').addEventListener('change',()=>this.cancelGesture());
     for(const [id,delta] of [['strategyNudgeLeft',[-1,0,0]],['strategyNudgeRight',[1,0,0]],['strategyNudgeUp',[0,0,-1]],['strategyNudgeDown',[0,0,1]],['strategyNudgeHeight',[0,1,0]]]){
@@ -50,23 +52,33 @@ export class StrategicStudio {
     this.canvas.addEventListener('pointerup',this._up=e=>this.canvasUp(e));
     this.canvas.addEventListener('pointercancel',this._cancel=()=>this.cancelGesture());
     this._resize=()=>this.updateGuides();window.addEventListener('resize',this._resize);
-    this._keys=e=>{if(!this.opened||e.target.closest('input,textarea,select')||e.ctrlKey||e.metaKey)return;
+    this._keys=e=>{
+      if(!this.opened||document.querySelector('dialog[open]')||e.target?.closest?.('input,textarea,select,[contenteditable],[role="textbox"]')||e.ctrlKey||e.metaKey||e.altKey)return;
       if(e.key==='Escape'&&(this.drawing||this.gesture||this.dragVertices)){
         this.cancelDrawing();this.cancelGesture();e.preventDefault();e.stopImmediatePropagation();return;
       }
-      if(this.drawing){
-        if(e.key==='Backspace'||e.key==='Delete'){
-          if(this.drawingPoints.length>0){
+      if(e.key==='Backspace'||e.key==='Delete'){
+        // An active strategic tool owns destructive keys. Never delete a stale
+        // single-object inspector selection when its own group/region is active.
+        e.preventDefault();e.stopImmediatePropagation();
+        if(this.drawing){
+          if(this.drawingPoints.length){
             this.drawingPoints.pop();
             this.$('strategyFinishDraw').disabled=this.drawingPoints.length<3;
-            this.$('strategyDrawHint').textContent=`Drawing provisional region (${this.drawingPoints.length} vertices): Tap to place, Backspace to undo, Enter to finish, ESC to cancel.`;
-            this.updateGuides();this.onMessage(`Removed vertex (${this.drawingPoints.length} remaining).`);
-            e.preventDefault();e.stopImmediatePropagation();
+            this.$('strategyDrawHint').textContent='Drawing provisional region ('+this.drawingPoints.length+' vertices): Tap to place, Backspace to undo, Enter to finish, ESC to cancel.';
+            this.updateGuides();this.onMessage('Removed vertex ('+this.drawingPoints.length+' remaining).');
           }
-        }else if(e.key==='Enter'){
-          if(this.drawingPoints.length>=3){this.finishDrawing();e.preventDefault();e.stopImmediatePropagation();}
-          else{this.onMessage('A region requires at least 3 non-collinear vertices.',true);}
+        }else if(this.mode==='group'&&this.groupIds.length&&!this.gesture&&!this.dragVertices){
+          this.deleteGroup();
+        }else if(this.mode==='region'&&e.key==='Delete'&&this.regionId&&!this.gesture&&!this.dragVertices){
+          this.deleteRegion();
         }
+        return;
+      }
+      if(this.drawing&&e.key==='Enter'){
+        e.preventDefault();e.stopImmediatePropagation();
+        if(this.drawingPoints.length>=3)this.finishDrawing();
+        else this.onMessage('A region requires at least 3 non-collinear vertices.',true);
       }
     };document.addEventListener('keydown',this._keys,true);
     this.setMode('group');this.close();
@@ -101,14 +113,33 @@ export class StrategicStudio {
   }
   applyGroup(ids){const limited=ids.slice(0,32),eligible=this.eligibleVisible();this.groupIds=limited.filter(id=>eligible.some(n=>n.id===id));this.syncSelection();this.updateGuides();}
   selectAll(){this.applyGroup(this.eligibleVisible().slice(0,32).map(n=>n.id));}
+  deleteGroup(){
+    if(!this.opened||this.mode!=='group'||!this.groupIds.length)return;
+    const targets=this.groupIds.map(id=>({type:'node',id}));
+    let plan;
+    try{plan=planDeletionBatch(this.getState(),targets);}
+    catch(error){this.onMessage('Delete refused: '+error.message,true);return;}
+    const warning='DELETE '+plan.selectedCount+' SELECTED DRAFT OBJECT(S)?'
+      +'\nTotal nodes including descendants: '+plan.nodeCount
+      +'\nConnected draft routes: '+plan.routeCount
+      +'\nDependent draft regions: '+plan.regionCount
+      +'\nOnly the current era changes. Undo restores the entire selection in one step.';
+    if(!window.confirm(warning))return;
+    this.cancelGesture();
+    if(this.onChange(state=>deleteObjects(state,targets),{immediate:true})){
+      this.groupIds=[];this.sync();
+      this.onMessage('Deleted '+plan.nodeCount+' draft node(s), '+plan.routeCount+' corridor(s), '+plan.regionCount+' region(s). One Undo restores all.');
+    }
+  }
   syncSelection(){
     this.$('strategyCount').textContent=String(this.groupIds.length);
     this.$('strategyFromGroup').disabled=!this.groupIds.length||this.getState().regions?.length>=MAX_REGIONS;
+    this.$('strategyDeleteGroup').disabled=!this.groupIds.length||!this.opened||this.mode!=='group';
     const selected=new Set(this.groupIds);
     for(const btn of document.querySelectorAll('.node-btn')){const id=btn.dataset.atlasId;btn.classList.toggle('strategy-selected',selected.has(id));btn.setAttribute('aria-pressed',String(selected.has(id)));}
     for(const label of this.labelsRoot.querySelectorAll('.world-label'))label.classList.toggle('strategy-selected',selected.has(label.dataset.atlasId));
     const count=this.groupIds.length;
-    this.$('strategyGroupSummary').textContent=count?`${count} draft object${count===1?'':'s'} / one bounded translation / one undo`:'Click markers, Shift-click to add, or drag a selection marquee.';
+    this.$('strategyGroupSummary').textContent=count?`${count} draft object${count===1?'':'s'} / translate or remove together / one undo`:'Click markers, Shift-click to add, or drag a selection marquee.';
     for(const id of ['strategyNudgeLeft','strategyNudgeRight','strategyNudgeUp','strategyNudgeDown','strategyNudgeHeight'])this.$(id).disabled=!count;
   }
   sync(){
@@ -321,7 +352,7 @@ export class StrategicStudio {
   }
   deleteRegion(){const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
     if(!window.confirm('Delete this editorial draft sector? Undo restores it.'))return;
-    this.onChange(s=>{s.regions=s.regions.filter(x=>x.id!==r.id);});this.regionId=null;this.sync();
+    this.onChange(s=>deleteObject(s,r.id,{type:'region'}),{immediate:true});this.regionId=null;this.sync();
   }
   selectEnclosed(){
     const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;

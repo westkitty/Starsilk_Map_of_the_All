@@ -48,6 +48,12 @@ jobs:
         run: node scripts/phase5-browser-ci.mjs
       - name: Verify Temporal Atlas
         run: node scripts/phase6-browser-ci.mjs
+      - name: Verify Draft Deletion and Canonical Reference Protection
+        run: node scripts/delete-browser-ci.mjs
+      - name: Verify Deletion Recovery and Storage Failure Integrity
+        run: node scripts/deletion-recovery-browser-ci.mjs
+      - name: Verify Procedural Subtraction and Era-Safe Suppression
+        run: node scripts/procedural-suppression-browser-ci.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

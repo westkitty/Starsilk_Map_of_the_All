@@ -4,9 +4,16 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
+import { BRIDGES, isSuppressed } from './visual-suppression.js';
 
 const V = (p) => new THREE.Vector3(p[0],p[1],p[2]);
-const PALETTE = {azure:0x49dfff, gold:0xffd5a2, void:0x01040b};
+const ORNAMENTS={
+  'perseus-confluence':[['Glow',52,'#ffd5a2',.48],['Glow',15,'#ffffff',.82],['Starburst',14,'#fffbeb',.8],['Ring',18,'#fde047',.24,0]],
+  'centauri-marches':[['Glow',40,'#c084fc',.35],['Starburst',11,'#c084fc',.75],['Ring',16,'#a855f7',.2,0]],
+  'halcyon-arm':[['Starburst',11,'#bae6fd',.75],['Ring',16,'#38bdf8',.2,0]],
+  'ember-span':[['Glow',42,'#fb923c',.38]],
+  'southern-territories':[['Ring',16,null,.18,.35]]
+};
 const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
 function hash(t){let h=2166136261;for(const c of t){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
 function rng(seed){let s=seed>>>0;return()=>{s=(s+0x6d2b79f5)>>>0;let x=Math.imul(s^(s>>>15),1|s);x^=x+Math.imul(x^(x>>>7),61|x);return ((x^(x>>>14))>>>0)/4294967296;};}
@@ -35,7 +42,7 @@ function disposeTree(root){
     const mats=obj.material?Array.isArray(obj.material)?obj.material:[obj.material]:[];
     for(const mat of mats){
       if(!mat.userData?.isShared){
-        for(const key of ['map','alphaMap','emissiveMap'])if(mat[key]?.dispose)mat[key].dispose();
+        for(const key of ['map','alphaMap','emissiveMap'])if(mat[key]?.dispose&&!mat[key].userData?.isShared)mat[key].dispose();
         mat.dispose?.();
       }
     }
@@ -43,13 +50,67 @@ function disposeTree(root){
   root.clear();
 }
 const sphere = (radius,color,emissive=0x000000) => new THREE.Mesh(new THREE.SphereGeometry(radius,24,16),new THREE.MeshStandardMaterial({color,emissive,roughness:.7,metalness:.12}));
+function makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity=0.5,speed=2.0,pulseFreq=10.0}){
+  return new THREE.ShaderMaterial({
+    uniforms:{
+      uTime:{value:0},
+      uColorCore:{value:new THREE.Color(colorCore)},
+      uColorBody:{value:new THREE.Color(colorBody)},
+      uColorGlow:{value:new THREE.Color(colorGlow)},
+      uOpacity:{value:opacity},
+      uSpeed:{value:speed},
+      uPulseFreq:{value:pulseFreq}
+    },
+    vertexShader:String.raw`
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPosition;
+void main(){
+vUv=uv;
+vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
+vViewPosition=-mvPosition.xyz;
+vNormal=normalize(normalMatrix*normal);
+gl_Position=projectionMatrix*mvPosition;
+}
+`,
+    fragmentShader:String.raw`
+uniform float uTime;
+uniform vec3 uColorCore;
+uniform vec3 uColorBody;
+uniform vec3 uColorGlow;
+uniform float uOpacity;
+uniform float uSpeed;
+uniform float uPulseFreq;
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPosition;
+void main(){
+float edgeFade=smoothstep(0.0,0.08,vUv.y)*smoothstep(1.0,0.92,vUv.y);
+vec3 viewDir=normalize(vViewPosition);
+float fresnel=1.0-abs(dot(vNormal,viewDir));
+float coreIntensity=pow(1.0-fresnel,2.5);
+float flow=vUv.y*32.0-uTime*uSpeed;
+float wave=sin(flow)*0.5+0.5;
+float pulse=pow(sin(vUv.y*uPulseFreq-uTime*(uSpeed*0.75))*0.5+0.5,6.0);
+vec3 col=mix(uColorGlow,uColorBody,fresnel*0.65+wave*0.35);
+col=mix(col,uColorCore,coreIntensity*0.85+pulse*0.6);
+float alpha=uOpacity*edgeFade*(0.35+0.45*wave+0.45*pulse+0.25*fresnel);
+gl_FragColor=vec4(col,alpha);
+}
+`,
+    transparent:true,
+    blending:THREE.AdditiveBlending,
+    depthWrite:false,
+    side:THREE.DoubleSide
+  });
+}
 export class AtlasEngine {
   constructor(canvas,labelsRoot,callbacks){
     this.canvas=canvas;this.labelsRoot=labelsRoot;this.callbacks=callbacks;
-    this.scene=new THREE.Scene();this.scene.background=new THREE.Color(PALETTE.void);
+    this.scene=new THREE.Scene();this.scene.background=new THREE.Color(0x01040b);
     this.scene.fog=new THREE.FogExp2(0x02070d, 0.0012);
-    this.camera=new THREE.PerspectiveCamera(48,1,.1,5000);
-    this.camera.position.set(0,215,280);
+    this.camera=new THREE.PerspectiveCamera(44,1,.1,5000);
+    this.camera.position.set(0,195,260);
     try{
       this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
     }catch(err){
@@ -61,12 +122,12 @@ export class AtlasEngine {
     this.controls.enableDamping=true;this.controls.dampingFactor=.075;
     this.controls.minDistance=6;this.controls.maxDistance=950;this.controls.maxPolarAngle=Math.PI*.91;
     this.controls.screenSpacePanning=true;
-    this.controls.target.set(0,-4,-12);
+    this.controls.target.set(6,-2,-6);
     this.group=new THREE.Group();this.scene.add(this.group);
     this.bg=new THREE.Group();this.scene.add(this.bg);
     this.scene.add(new THREE.AmbientLight(0x8db9ec,1.2));
     this.sunLight=new THREE.PointLight(0xffe0b8,24,500);this.scene.add(this.sunLight);
-    this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];this.labelNodes=new Map();
+    this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];this.animatedShaders=[];this.labelNodes=new Map();
     this.raycaster=new THREE.Raycaster();this.pointer=new THREE.Vector2();
     this.view={kind:'all',id:null};this.state=null;this.resizeObserver=new ResizeObserver(()=>this.resize());
     this.resizeObserver.observe(canvas.parentElement);
@@ -164,29 +225,17 @@ export class AtlasEngine {
   }
   initBackground(){
     const rnd=rng(1106),p=[],colors=[],sizes=[],alphas=[];
-    for(let i=0;i<1900;i++){
+    const warm=new THREE.Color('#ffd29d'),cool=new THREE.Color('#93e6ff'),white=new THREE.Color('#ffffff');
+    for(let i=0;i<1300;i++){
       const x=(rnd()-.5)*1450,y=(rnd()-.5)*780,z=(rnd()-.5)*1050;
-      if(z < -110)continue; // The area beyond the Siege Wall is deliberately starless.
+      if(z < -110)continue;
+      if(x > -30 && z < -72)continue; // Strictly starless in Siege Wall devouring void
       p.push(x,y,z);
       const t=rnd();
-      const c = t > 0.85 ? new THREE.Color('#ffd29d') : t < 0.25 ? new THREE.Color('#93e6ff') : new THREE.Color('#ffffff');
+      const c=t>.85?warm:t<.25?cool:white;
       colors.push(c.r,c.g,c.b);
-      sizes.push(.75+Math.pow(rnd(),3)*2.4);
-      alphas.push(.4+rnd()*.55);
-    }
-    for(let i=0;i<1100;i++){
-      const fAngle=rnd()*Math.PI*2;
-      const fRadius=340+rnd()*460;
-      const fTilt=(rnd()-.5)*260;
-      const x=Math.cos(fAngle)*fRadius+(rnd()-.5)*130;
-      const y=fTilt+(rnd()-.5)*70;
-      const z=Math.sin(fAngle)*fRadius+(rnd()-.5)*130;
-      if(z < -110)continue; // Siege Wall black-hole containment lattice: strictly starless
-      p.push(x,y,z);
-      const c=new THREE.Color('#7ca0c4').lerp(new THREE.Color('#b3c3db'),rnd());
-      colors.push(c.r,c.g,c.b);
-      sizes.push(1.6+rnd()*1.8);
-      alphas.push(.18+rnd()*.22);
+      sizes.push(.65+Math.pow(rnd(),3)*1.8);
+      alphas.push(.3+rnd()*.45);
     }
     const g=new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
@@ -197,32 +246,34 @@ export class AtlasEngine {
     const m=new THREE.ShaderMaterial({
       uniforms:{pixelRatio:{value:this.dpr||1}},
       vertexShader: String.raw`
-        attribute float aSize;
-        attribute float aAlpha;
-        attribute vec3 color;
-        uniform float pixelRatio;
-        varying vec3 vColor;
-        varying float vAlpha;
-        void main(){
-          vColor=color;vAlpha=aAlpha;
-          vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
-          gl_Position=projectionMatrix*mvPosition;
-          float distanceScale=320.0/max(40.0,-mvPosition.z);
-          gl_PointSize=clamp(aSize*distanceScale*pixelRatio,1.2,4.5*pixelRatio);
-        }`,
+attribute float aSize;
+attribute float aAlpha;
+attribute vec3 color;
+uniform float pixelRatio;
+varying vec3 vColor;
+varying float vAlpha;
+void main(){
+vColor=color;vAlpha=aAlpha;
+vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
+gl_Position=projectionMatrix*mvPosition;
+float distanceScale=320.0/max(40.0,-mvPosition.z);
+gl_PointSize=clamp(aSize*distanceScale*pixelRatio,1.2,4.5*pixelRatio);
+}
+`,
       fragmentShader: String.raw`
-        varying vec3 vColor;
-        varying float vAlpha;
-        void main(){
-          float r=length(gl_PointCoord-.5)*2.0;
-          if(r>1.0) discard;
-          float core=exp(-12.0*r*r);
-          float halo=pow(max(0.0,1.0-r),2.5);
-          float alpha=(core*.85+halo*.3)*vAlpha;
-          gl_FragColor=vec4(vColor,alpha);
-          #include <tonemapping_fragment>
-          #include <colorspace_fragment>
-        }`,
+varying vec3 vColor;
+varying float vAlpha;
+void main(){
+float r=length(gl_PointCoord-.5)*2.0;
+if(r>1.0)discard;
+float core=exp(-12.0*r*r);
+float halo=pow(max(0.0,1.0-r),2.5);
+float alpha=(core*.85+halo*.3)*vAlpha;
+gl_FragColor=vec4(vColor,alpha);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
+`,
       transparent:true,blending:THREE.AdditiveBlending,
       depthWrite:false
     });
@@ -278,13 +329,14 @@ export class AtlasEngine {
       onComplete
     };
   }
+  syncFog(){
+    if(!this.state?.epoch||!this.scene?.fog)return;
+    const ep=this.state.epoch;
+    this.scene.fog.color.setHex(ep==='war'?0x0c0406:ep==='locking'?0x020812:0x010408);
+    this.scene.fog.density=ep==='war'?0.0014:ep==='locking'?0.0013:0.0010;
+  }
   transitionEra(durationMs=350){
-    if(this.state?.epoch&&this.scene?.fog){
-      const ep=this.state.epoch;
-      if(ep==='war'){this.scene.fog.color.setHex(0x0c0406);this.scene.fog.density=0.0014;}
-      else if(ep==='locking'){this.scene.fog.color.setHex(0x020812);this.scene.fog.density=0.0013;}
-      else{this.scene.fog.color.setHex(0x010408);this.scene.fog.density=0.0010;}
-    }
+    this.syncFog();
     if(this.reducedMotion||!this.canvas)return;
     this.canvas.style.transition='opacity 0.12s ease-out';
     this.canvas.style.opacity='0.68';
@@ -296,17 +348,13 @@ export class AtlasEngine {
     },120);
   }
   rebuild(){if(!this.state)return;
-    if(this.state?.epoch&&this.scene?.fog){
-      const ep=this.state.epoch;
-      if(ep==='war'){this.scene.fog.color.setHex(0x0c0406);this.scene.fog.density=0.0014;}
-      else if(ep==='locking'){this.scene.fog.color.setHex(0x020812);this.scene.fog.density=0.0013;}
-      else{this.scene.fog.color.setHex(0x010408);this.scene.fog.density=0.0010;}
-    }
-    disposeTree(this.group);this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];
+    this.syncFog();
+    disposeTree(this.group);this.pickables=[];this.labelItems=[];this.motionObjects=[];this.routeParticles=[];this.animatedShaders=[];
     if(this.view.kind==='all')this.buildAll();
     if(this.view.kind==='galaxy')this.buildGalaxy();
     if(this.view.kind==='system')this.buildSystem();
   }
+  hidden(id){return isSuppressed(this.state,id);}
   hitTarget(node,obj){obj.userData.atlasId=node.id;this.pickables.push(obj);this.labelItems.push({node,obj});}
   addGlow(parent,size,color,opacity=.9){
     const m=new THREE.SpriteMaterial({map:makeGlow(color),color:0xffffff,blending:THREE.AdditiveBlending,transparent:true,opacity,depthWrite:false});
@@ -317,12 +365,19 @@ export class AtlasEngine {
     const m=new THREE.MeshBasicMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false});
     const mesh=new THREE.Mesh(g,m);mesh.rotation.x=-Math.PI/2+tilt;parent.add(mesh);return mesh;
   }
+  addStarburst(parent,size,color='#ffffff',opacity=.75){
+    const geom=points=>new THREE.BufferGeometry().setFromPoints(points.map(([x,z])=>new THREE.Vector3(x*size,0,z*size)));
+    const material=new THREE.LineBasicMaterial({color,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false});
+    const starburst=new THREE.LineSegments(geom([[-1,0],[1,0],[0,-1],[0,1]]),material);
+    parent.add(starburst,new THREE.Line(geom([[0,.35],[.12,0],[0,-.35],[-.12,0],[0,.35]]),material));
+    return starburst;
+  }
   /**
    * Stylized volumetric galaxy: the cloudy spiral disc is a single transparent
    * mesh, and its luminous stars live in one GPU particle batch. This is
    * editorial cartography, never a real astrometric reconstruction.
    */
-  makeDropStem(parent,pos,gridY=-19,color=0x2f6485,size=1.0,isReference=false){
+  makeDropStem(parent,pos,gridY=-22,color=0x2f6485,size=1.0,isReference=false){
     const [x,y,z]=pos;
     if(Math.abs(y-gridY)<1.2)return;
     const pts=[new THREE.Vector3(x,y,z),new THREE.Vector3(x,gridY,z)];
@@ -355,42 +410,44 @@ export class AtlasEngine {
         bar:{value:bar},
       },
       vertexShader: String.raw`
-        varying vec2 vUv;
-        void main(){
-          vUv=uv;
-          gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
-        }`,
+varying vec2 vUv;
+void main(){
+vUv=uv;
+gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+}
+`,
       fragmentShader: String.raw`
-        uniform vec3 tint;
-        uniform float phase;
-        uniform float arms;
-        uniform float pitch;
-        uniform float bar;
-        varying vec2 vUv;
-        float noise(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-        void main(){
-          vec2 q=(vUv-.5)*2.0;
-          float radius=length(q);
-          if(radius>1.0) discard;
-          float angle=atan(q.y,q.x);
-          float spiral=pow(max(.0,cos(arms*angle-pitch*radius+phase)*.5+.5),4.5);
-          if(bar > 0.0){
-            float barDist = abs(q.y) + max(0.0, abs(q.x) - 0.45);
-            float barGlow = exp(-barDist * barDist * 32.0) * bar;
-            spiral = mix(spiral, 1.0, clamp(barGlow, 0.0, 1.0));
-          }
-          float radial=1.0-smoothstep(.32,1.0,radius);
-          float cloud=noise(floor(q*130.0))+noise(floor(q*48.0))*.45;
-          float dust=radial*(.17+.78*spiral)*(.52+.42*cloud);
-          float inner=exp(-radius*radius*23.0);
-          float blue=exp(-radius*radius*3.0)*.075;
-          vec3 innerColor=vec3(1.0,.75,.47);
-          vec3 color=mix(tint,innerColor,clamp(inner*1.9,0.0,1.0));
-          float alpha=min(.76,dust+inner*.38+blue);
-          gl_FragColor=vec4(color,alpha);
-          #include <tonemapping_fragment>
-          #include <colorspace_fragment>
-        }`,
+uniform vec3 tint;
+uniform float phase;
+uniform float arms;
+uniform float pitch;
+uniform float bar;
+varying vec2 vUv;
+float noise(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+void main(){
+vec2 q=(vUv-.5)*2.0;
+float radius=length(q);
+if(radius>1.0)discard;
+float angle=atan(q.y,q.x);
+float spiral=pow(max(.0,cos(arms*angle-pitch*radius+phase)*.5+.5),4.5);
+if(bar > 0.0){
+float barDist=abs(q.y)+max(0.0,abs(q.x)- 0.45);
+float barGlow=exp(-barDist*barDist*32.0)*bar;
+spiral=mix(spiral,1.0,clamp(barGlow,0.0,1.0));
+}
+float radial=1.0-smoothstep(.32,1.0,radius);
+float cloud=noise(floor(q*130.0))+noise(floor(q*48.0))*.45;
+float dust=radial*(.17+.78*spiral)*(.52+.42*cloud);
+float inner=exp(-radius*radius*23.0);
+float blue=exp(-radius*radius*3.0)*.075;
+vec3 innerColor=vec3(1.0,.75,.47);
+vec3 color=mix(tint,innerColor,clamp(inner*1.9,0.0,1.0));
+float alpha=min(.76,dust+inner*.38+blue);
+gl_FragColor=vec4(color,alpha);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
+`,
       transparent:true,blending:THREE.AdditiveBlending,
       depthWrite:false,side:THREE.DoubleSide
     });
@@ -408,6 +465,8 @@ export class AtlasEngine {
     if(!this.state.layers.stars)return;
     const rnd=rng(hash(seed)),p=[],col=[],sizes=[],intensities=[];
     const armCount = Math.max(1, arms);
+    const style=['perseus','centauri','ember','halcyon'].find(x=>String(seed).includes(x));
+    const color=new THREE.Color();
     for(let i=0;i<count;i++){
       const r=Math.pow(rnd(),.8)*rad;
       const arm=(i%armCount)*(Math.PI*2/armCount);
@@ -418,9 +477,11 @@ export class AtlasEngine {
       const y=(rnd()-.5)*rad*flatten*(1-r/rad*.75);
       p.push(x,y,z);
       const temperature=rnd();
-      const warm=r/rad<.23||temperature>.90;
-      const violet=!warm&&temperature<.09;
-      const color=new THREE.Color(warm?'#ffd9a8':violet?'#c9b8ff':'#63cbfa');
+      if(style==='perseus')color.set(r/rad<.35?'#fff3d6':temperature>.4?'#fde047':'#93c5fd');
+      else if(style==='centauri')color.set(temperature>.5?'#c084fc':temperature>.2?'#fde047':'#93c5fd');
+      else if(style==='ember')color.set(temperature>.35?'#fb923c':temperature>.1?'#f59e0b':'#fed7aa');
+      else if(style==='halcyon')color.set(temperature>.25?'#38bdf8':'#e0f2fe');
+      else color.set(r/rad<.23||temperature>.90?'#ffd9a8':temperature<.09?'#c9b8ff':'#63cbfa');
       color.multiplyScalar(.75+rnd()*.5);
       col.push(color.r,color.g,color.b);
       sizes.push(.75+Math.pow(rnd(),4)*1.85);
@@ -435,32 +496,34 @@ export class AtlasEngine {
     const m=new THREE.ShaderMaterial({
       uniforms:{pixelRatio:{value:this.dpr||1}},
       vertexShader: String.raw`
-        attribute float aSize;
-        attribute float aLight;
-        attribute vec3 color;
-        uniform float pixelRatio;
-        varying vec3 vColor;
-        varying float vLight;
-        void main(){
-          vColor=color;vLight=aLight;
-          vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
-          gl_Position=projectionMatrix*mvPosition;
-          float distanceScale=220.0/max(32.0,-mvPosition.z);
-          gl_PointSize=clamp(aSize*distanceScale*pixelRatio,1.0,3.8*pixelRatio);
-        }`,
+attribute float aSize;
+attribute float aLight;
+attribute vec3 color;
+uniform float pixelRatio;
+varying vec3 vColor;
+varying float vLight;
+void main(){
+vColor=color;vLight=aLight;
+vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
+gl_Position=projectionMatrix*mvPosition;
+float distanceScale=220.0/max(32.0,-mvPosition.z);
+gl_PointSize=clamp(aSize*distanceScale*pixelRatio,1.0,3.8*pixelRatio);
+}
+`,
       fragmentShader: String.raw`
-        varying vec3 vColor;
-        varying float vLight;
-        void main(){
-          float r=length(gl_PointCoord-.5)*2.0;
-          if(r>1.0) discard;
-          float core=exp(-20.0*r*r);
-          float halo=pow(1.0-r,3.0);
-          float alpha=(core*.78+halo*.22)*vLight;
-          gl_FragColor=vec4(vColor*1.1,alpha);
-          #include <tonemapping_fragment>
-          #include <colorspace_fragment>
-        }`,
+varying vec3 vColor;
+varying float vLight;
+void main(){
+float r=length(gl_PointCoord-.5)*2.0;
+if(r>1.0)discard;
+float core=exp(-20.0*r*r);
+float halo=pow(1.0-r,3.0);
+float alpha=(core*.78+halo*.22)*vLight;
+gl_FragColor=vec4(vColor*1.1,alpha);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
+`,
       transparent:true,blending:THREE.AdditiveBlending,
       depthWrite:false
     });
@@ -475,12 +538,13 @@ export class AtlasEngine {
     if(s.layers.grid)this.makeGrid(360,24);
     if(s.layers.wall&&s.epoch!=='war')this.makeWall();
     if(s.layers.galaxies){
+      if(!this.hidden('nebula:bed'))this.makeContinentalNebula();
       for(const n of childNodes(s,null,'galaxy')){
         const group=new THREE.Group();group.position.copy(V(n.position));
         const tiltX=((hash(n.id)%19)-9)*.012,tiltZ=((hash(n.id+'z')%19)-9)*.012;
         group.rotation.set(tiltX,0,tiltZ);
         this.group.add(group);
-        if(s.layers.grid)this.makeDropStem(this.group,n.position,-19,0x2f6485,n.size,n.status==='reference');
+        if(s.layers.grid)this.makeDropStem(this.group,n.position,-22,0x2f6485,n.size,n.status==='reference');
         const level=s.quality==='cinematic'?2000:s.quality==='battery'?420:1150;
         const morph=getGalaxyMorphology(n);
         this.galaxyDisk(group,n.id,n.size*22,n.color,morph);
@@ -493,7 +557,11 @@ export class AtlasEngine {
 
         this.addGlow(group,37*n.size,n.color,.44);
         this.addGlow(group,7.5*n.size,'#fff0c9',.7);
+        if(!this.hidden('galaxy:ornaments')&&!this.hidden('galaxy:ornament:'+n.id)){
+        for(const [kind,size,color,opacity,tilt] of ORNAMENTS[n.id]||[])
+          this['add'+kind](group,size*n.size,color||n.color,opacity,tilt);
         this.addRing(group,12*n.size,n.color,.20,.24);
+        }
         this.createPickTarget(13*n.size,n,group);
         if(morph){
           const targetItem=this.labelItems[this.labelItems.length-1];
@@ -505,17 +573,113 @@ export class AtlasEngine {
     if(s.layers.worldsvault){
       for(const n of childNodes(s,null).filter(n=>n.kind==='landmark')){
         const group=new THREE.Group();group.position.copy(V(n.position));this.group.add(group);
-        if(s.layers.grid)this.makeDropStem(this.group,n.position,-19,0x6bbfe8,n.size,true);
+        if(s.layers.grid)this.makeDropStem(this.group,n.position,-22,0x6bbfe8,n.size,true);
         const crystal=new THREE.Mesh(new THREE.IcosahedronGeometry(4*n.size,1),new THREE.MeshStandardMaterial({color:n.color,wireframe:true,transparent:true,opacity:.75,emissive:n.color,emissiveIntensity:1.25}));group.add(crystal);
         this.addGlow(group,13,n.color,.6);this.addRing(group,7,n.color,.55);
+        this.addStarburst(group,10*n.size,'#e0f2fe',.85);
+        this.addRing(group,9*n.size,'#38bdf8',.3,0);
         this.createPickTarget(7,n,group);
       }
     }
     if(s.layers.rings&&s.epoch!=='post')this.makeRemnantRings();
     if(s.layers.annotations)this.makeAnnotations(null);
   }
-  makeGrid(size,step){for(let x=-size/2;x<=size/2;x+=step)this.group.add(lines([new THREE.Vector3(x,-19,-size/2),new THREE.Vector3(x,-19,size/2)],0x2d6581,.16));
-    for(let z=-size/2;z<=size/2;z+=step)this.group.add(lines([new THREE.Vector3(-size/2,-19,z),new THREE.Vector3(size/2,-19,z)],0x2d6581,.16));}
+  makeContinentalNebula(){
+    const s=this.state;
+    const count=s.quality==='cinematic'?2200:s.quality==='battery'?550:1300;
+    const rnd=rng(909);
+    const p=[];const colors=[];const sizes=[];const alphas=[];
+    const dustColor=new THREE.Color(),azureDust=new THREE.Color('#38bdf8');
+    const spine=[
+      [-108,6,-12,'#0284c7',34],
+      [-96,-10,42,'#0ea5e9',30],
+      [-52,22,-58,'#83bcff',26],
+      [-26,2,8,'#d97706',44],
+      [12,-3,14,'#38bdf8',34],
+      [44,3,20,'#8b5cf6',38],
+      [78,-2,10,'#0ea5e9',32],
+      [102,7,-8,'#f59e0b',34],
+      [128,-14,52,'#0284c7',32],
+    ];
+    for(let i=0;i<count;i++){
+      const hub=spine[Math.floor(rnd()*spine.length)];
+      const rad=hub[4]*(0.2+rnd()*0.9);
+      const angle=rnd()*Math.PI*2;
+      const x=hub[0]+Math.cos(angle)*rad+(rnd()-.5)*12;
+      const y=hub[1]+(rnd()-.5)*10*0.35;
+      const z=hub[2]+Math.sin(angle)*rad*0.75+(rnd()-.5)*12;
+      if(x>-24&&z<-66)continue;
+      if(x<-68&&x>-92&&z<-24&&z>-50)continue;
+      p.push(x,y,z);
+      const baseCol=dustColor.set(hub[3]);
+      if(rnd()>.65)baseCol.lerp(azureDust,.5);
+      colors.push(baseCol.r,baseCol.g,baseCol.b);
+      sizes.push(4.5+rnd()*12.0);
+      alphas.push(0.035+rnd()*0.075);
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
+    g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+    g.setAttribute('aSize',new THREE.Float32BufferAttribute(sizes,1));
+    g.setAttribute('aAlpha',new THREE.Float32BufferAttribute(alphas,1));
+    g.computeBoundingSphere();
+    const m=new THREE.ShaderMaterial({
+      uniforms:{pixelRatio:{value:this.dpr||1}},
+      vertexShader:String.raw`
+attribute float aSize;
+attribute float aAlpha;
+attribute vec3 color;
+uniform float pixelRatio;
+varying vec3 vColor;
+varying float vAlpha;
+void main(){
+vColor=color;vAlpha=aAlpha;
+vec4 mvPosition=modelViewMatrix*vec4(position,1.0);
+gl_Position=projectionMatrix*mvPosition;
+float distanceScale=320.0/max(40.0,-mvPosition.z);
+gl_PointSize=clamp(aSize*distanceScale*pixelRatio,2.0,30.0*pixelRatio);
+}
+`,
+      fragmentShader:String.raw`
+varying vec3 vColor;
+varying float vAlpha;
+void main(){
+float r=length(gl_PointCoord-.5)*2.0;
+if(r>1.0)discard;
+float halo=pow(max(0.0,1.0-r),2.0);
+gl_FragColor=vec4(vColor,halo*vAlpha);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+}
+`,
+      transparent:true,blending:THREE.AdditiveBlending,
+      depthWrite:false
+    });
+    const dust=new THREE.Points(g,m);
+    dust.name='continental-nebula-bed';
+    this.group.add(dust);
+  }
+  makeGrid(size=360,step=24){
+    const halfX=180,halfZ=110;
+    const gridY=-22;
+    for(let x=-halfX;x<=halfX;x+=step){
+      this.group.add(lines([new THREE.Vector3(x,gridY,-halfZ),new THREE.Vector3(x,gridY,halfZ)],0x1c445c,.16));
+    }
+    for(let z=-halfZ;z<=halfZ;z+=step){
+      this.group.add(lines([new THREE.Vector3(-halfX,gridY,z),new THREE.Vector3(halfX,gridY,z)],0x1c445c,.16));
+    }
+    this.makeRimDropStems(gridY);
+  }
+  makeRimDropStems(gridY=-22){
+    const rimPoints = [
+      [-128,4,-10],[-118,-4,18],[-104,-12,48],[-72,-10,58],[-36,-8,64],
+      [4,-6,62],[42,-5,58],[82,-8,62],[118,-12,56],[142,-15,48],
+    ];
+    for(const [x,y,z] of rimPoints){
+      const pts=[new THREE.Vector3(x,y,z),new THREE.Vector3(x,gridY,z)];
+      this.group.add(lines(pts,0x245878,0.28,true));
+    }
+  }
   makeTerritories(){
     for(const n of childNodes(this.state,null,'galaxy')){
       const c=new THREE.Color(n.color);
@@ -528,60 +692,315 @@ export class AtlasEngine {
     }
   }
   makeWall(){
-    const pts=[];const coords=[[-215,-90],[-170,-94],[-138,-77],[-113,-75],[-85,-82],[-56,-70],[-25,-90],[16,-85],[55,-94],[82,-96],[112,-105],[155,-110],[225,-95]];
-    for(const [x,z] of coords){
-      const py = 3+Math.sin(x*.06)*4;
-      pts.push(new THREE.Vector3(x,py,z));
-      this.group.add(lines([new THREE.Vector3(x,py,z),new THREE.Vector3(x,-36,z)],0x1c3852,0.32,true));
+    const coords=[
+      [-25,-68],[-2,-72],[22,-76],[48,-82],[78,-88],[112,-94],[148,-100],[186,-105],[230,-108],[275,-112]
+    ];
+    const rimPts=[];
+    const rnd=rng(707);
+    for(let i=0;i<coords.length;i++){
+      const [x,z]=coords[i];
+      const py=4+Math.sin(i*1.1)*5+rnd()*2;
+      rimPts.push(new THREE.Vector3(x,py,z));
     }
-    this.group.add(lines(pts,0x8ba6b8,.65));
-    const shape=new THREE.Shape();shape.moveTo(-250,-220);shape.lineTo(250,-220);shape.lineTo(250,-95);
-    for(let i=coords.length-1;i>=0;i--)shape.lineTo(coords[i][0],coords[i][1]);shape.lineTo(-250,-90);shape.closePath();
-    const geom=new THREE.ShapeGeometry(shape);geom.rotateX(-Math.PI/2);
-    const mesh=new THREE.Mesh(geom,new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide,depthWrite:true}));mesh.position.y=-10;this.group.add(mesh);
-    const rnd=rng(606);const debris=[];const latticeNodes=[];
-    for(let i=0;i<120;i++){
-      const seg=rnd()*(coords.length-1);const k=Math.floor(seg);const a=coords[k],b=coords[Math.min(k+1,coords.length-1)],t=seg-k;
-      const x=a[0]+(b[0]-a[0])*t, z=a[1]+(b[1]-a[1])*t;
-      debris.push(x+(rnd()-.5)*10,(rnd()-.5)*12,z+(rnd()-.5)*9);
-      if(i%2===0)latticeNodes.push(x+(rnd()-.5)*4,(rnd()-.5)*8,z+(rnd()-.5)*4);
+    this.group.add(lines(rimPts,0x7397b3,0.72));
+
+    for(let i=0;i<coords.length;i++){
+      const p=rimPts[i];
+      this.group.add(lines([p,new THREE.Vector3(p.x,-32,p.z)],0x16344d,0.38,true));
     }
-    const p=new THREE.BufferGeometry();p.setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
-    p.computeBoundingSphere();
-    this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0x526573,size:.55,transparent:true,opacity:.7})));
-    const lp=new THREE.BufferGeometry();lp.setAttribute('position',new THREE.Float32BufferAttribute(latticeNodes,3));
-    lp.computeBoundingSphere();
-    this.group.add(new THREE.Points(lp,new THREE.PointsMaterial({color:0x38bdf8,size:.65,transparent:true,opacity:.55})));
+
+    const shape=new THREE.Shape();
+    shape.moveTo(-35,-320);
+    shape.lineTo(320,-320);
+    shape.lineTo(320,-115);
+    for(let i=coords.length-1;i>=0;i--){
+      shape.lineTo(coords[i][0],coords[i][1]);
+    }
+    shape.lineTo(-35,-68);
+    shape.closePath();
+    const geom=new THREE.ShapeGeometry(shape);
+    geom.rotateX(-Math.PI/2);
+    geom.computeBoundingSphere();
+    const blackMat=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide,depthWrite:true});
+    const mesh=new THREE.Mesh(geom,blackMat);
+    mesh.position.y=-12;
+    this.group.add(mesh);
+
+    const curtainGeom=new THREE.PlaneGeometry(380,120);
+    curtainGeom.rotateY(-0.15);
+    curtainGeom.computeBoundingSphere();
+    const curtain=new THREE.Mesh(curtainGeom,blackMat);
+    curtain.position.set(130,15,-165);
+    this.group.add(curtain);
+
+    const debris=[];
+    const latticeNodes=[];
+    for(let i=0;i<220;i++){
+      const seg=rnd()*(coords.length-1);
+      const k=Math.floor(seg);
+      const a=coords[k],b=coords[Math.min(k+1,coords.length-1)],t=seg-k;
+      const x=a[0]+(b[0]-a[0])*t+(rnd()-.5)*12;
+      const py=rnd()*16-6;
+      const z=a[1]+(b[1]-a[1])*t+(rnd()-.5)*10;
+      debris.push(x,py,z);
+      if(i%2===0){
+        latticeNodes.push(x+(rnd()-.5)*4,py+(rnd()-.5)*6,z+(rnd()-.5)*4);
+      }
+    }
+    if(!this.hidden('wall:debris')){
+      const p=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
+      p.computeBoundingSphere();
+      this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0x475569,size:0.75,transparent:true,opacity:0.75})));
+    }
+    if(!this.hidden('wall:lattice')){
+      const lp=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(latticeNodes,3));
+      lp.computeBoundingSphere();
+      this.group.add(new THREE.Points(lp,new THREE.PointsMaterial({color:0x38bdf8,size:0.85,transparent:true,opacity:0.65})));
+    }
+
     const wallLabel={id:'wall-concept',name:'THE SIEGE WALL',status:'reference',label:{show:true,size:19,color:'#d1d6de',family:'display'}};
-    const o=new THREE.Object3D();o.position.set(35,10,-103);this.group.add(o);this.labelItems.push({node:wallLabel,obj:o,subtitle:'BLACK-HOLE LATTICE / ABSENCE'});
+    const o=new THREE.Object3D();
+    o.position.set(55,16,-92);
+    this.group.add(o);
+    this.labelItems.push({node:wallLabel,obj:o,subtitle:'BLACK-HOLE LATTICE / ABSENCE'});
   }
   makeRoutes(parentId=null){
+    const selectedId=this.state.selected;
     for(const r of this.state.routes){
       if((r.kind==='starsilk'&&!this.state.layers.starsilk)||(r.kind==='hookshot'&&!this.state.layers.routes))continue;
       const a=nodeById(this.state,r.from),b=nodeById(this.state,r.to);if(!a||!b||a.parentId!==parentId||b.parentId!==parentId)continue;
       const p=V(a.position),q=V(b.position),m=p.clone().add(q).multiplyScalar(.5);m.y+=9;
       const c=new THREE.QuadraticBezierCurve3(p,m,q);
-      const samples=c.getPoints(48);const azure=r.kind==='starsilk';
-      this.group.add(lines(samples,azure?0x60ebff:0xb6c8d6,azure?.82:.26,!azure));
-      if(azure){
-        const halo=new THREE.Mesh(new THREE.TubeGeometry(c,54,.32,5,false),new THREE.MeshBasicMaterial({color:0x0ea5e9,transparent:true,opacity:.22,blending:THREE.AdditiveBlending,depthWrite:false}));this.group.add(halo);
-        for(let i=0;i<5;i++){
-          const particle=this.addGlow(this.group,3.2,'#78f0ff',.7);
-          this.routeParticles.push({obj:particle,curve:c,phase:i/5,speed:.055});
+      const samples=c.getPoints(48);
+      const azure=r.kind==='starsilk';
+      const isIncident=selectedId&&(r.from===selectedId||r.to===selectedId||r.id===selectedId);
+
+      // Loop 47: Dynamic route highlighting for selected corridors
+      const lineColor=isIncident?0xfff3c4:(azure?0x60ebff:0x7dd3fc);
+      const lineOpacity=isIncident?0.95:(azure?0.85:0.42);
+      this.group.add(lines(samples,lineColor,lineOpacity,!azure));
+
+      // Loop 48: Luminous tube halo separating Starsilk from Hookshot corridors
+      const haloRadius=azure?(isIncident?0.55:0.35):(isIncident?0.42:0.22);
+      const haloColor=isIncident?0xf59e0b:(azure?0x0ea5e9:0x0284c7);
+      const haloOpacity=isIncident?0.45:(azure?0.25:0.14);
+      if(!this.hidden('routes:halos'))this.group.add(new THREE.Mesh(new THREE.TubeGeometry(c,54,haloRadius,5,false),new THREE.MeshBasicMaterial({color:haloColor,transparent:true,opacity:haloOpacity,blending:THREE.AdditiveBlending,depthWrite:false})));
+
+      if(azure||isIncident){
+        const particleCount=isIncident?6:4;
+        for(let i=0;i<particleCount;i++){
+          const particle=this.addGlow(this.group,isIncident?3.8:3.0,isIncident?'#fde047':'#78f0ff',.75);
+          this.routeParticles.push({obj:particle,curve:c,phase:i/particleCount,speed:isIncident?.07:.045});
         }
       }
     }
+    if(parentId===null&&this.state.layers.routes&&!this.hidden('network:all')){
+      this.makeSecondaryNetwork();
+    }
     if(parentId===null&&this.state.layers.starsilk){
-      const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-158,-11,65),new THREE.Vector3(-90,-9,77),new THREE.Vector3(-35,-15,87),new THREE.Vector3(30,-8,72),new THREE.Vector3(95,-10,80),new THREE.Vector3(152,-7,65)]);
-      const outerVeil=new THREE.Mesh(new THREE.TubeGeometry(curve,128,2.2,7,false),new THREE.MeshBasicMaterial({color:0x0284c7,transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false}));
-      const innerCore=new THREE.Mesh(new THREE.TubeGeometry(curve,128,0.95,7,false),new THREE.MeshBasicMaterial({color:0x06b6d4,transparent:true,opacity:.38,blending:THREE.AdditiveBlending,depthWrite:false}));
-      this.group.add(outerVeil,innerCore);
-      this.group.add(lines(curve.getPoints(128),0xbaf3ff,.78));
-      for(let i=0;i<16;i++){
-        const particle=this.addGlow(this.group,i%3?2.8:4.5,'#38bdf8',.72);
-        this.routeParticles.push({obj:particle,curve,phase:i/16,speed:.042});
+      this.makeStarsilkFlow();
+    }
+  }
+  makeSecondaryNetwork(){
+    // Loop 41-44: Multi-tier organic geometric triangulation network matching Reference 01 & 03
+    const s=this.state;
+    const galaxies=childNodes(s,null,'galaxy');
+    const galWorldMap=new Map();
+
+    for(const g of galaxies){
+      const gPos=V(g.position);
+      const systems=childNodes(s,g.id,'system');
+      const sysPositions=[];
+
+      for(let i=0;i<systems.length;i++){
+        const sys=systems[i];
+        const worldPos=gPos.clone().add(V(sys.position));
+        sysPositions.push({sys,worldPos});
+        if(this.hidden('network:system:'+sys.id))continue;
+
+        // Loop 43: Radial secondary corridor from galaxy core to child system
+        const radLine=lines([gPos,worldPos],0x38bdf8,0.25,true);
+        this.group.add(radLine);
+
+        // Loop 44: Hookshot node beads and major-system concentric navigation rings
+        const isMajor=i===0||i===2;
+        if(!this.hidden('network:beads')){
+        const bead=sphere(isMajor?0.55:0.38,0xffffff,0x38bdf8);
+        bead.position.copy(worldPos);
+        this.group.add(bead);
+
+        if(isMajor){
+          const ringGeom=new THREE.RingGeometry(1.4,1.8,24);
+          const ringMat=new THREE.MeshBasicMaterial({color:0x38bdf8,transparent:true,opacity:0.35,side:THREE.DoubleSide});
+          const ring=new THREE.Mesh(ringGeom,ringMat);
+          ring.position.copy(worldPos);
+          ring.rotation.x=Math.PI*0.5;
+          this.group.add(ring);
+          this.motionObjects.push({obj:ring,speed:0.0003});
+        }
+        }
+      }
+
+      // Intra-galaxy perimeter triangulation loop
+      for(let i=0;i<sysPositions.length;i++){
+        const next=(i+1)%sysPositions.length;
+        if(this.hidden('network:system:'+sysPositions[i].sys.id)||this.hidden('network:system:'+sysPositions[next].sys.id))continue;
+        const perimLine=lines([sysPositions[i].worldPos,sysPositions[next].worldPos],0x0284c7,0.18,true);
+        this.group.add(perimLine);
+      }
+
+      galWorldMap.set(g.id,sysPositions);
+    }
+
+    // Inter-galaxy secondary exploratory bridging links
+    if(this.hidden('network:bridges'))return;
+
+    for(const [gA,gB,idxA,idxB] of BRIDGES){
+      const listA=galWorldMap.get(gA);
+      const listB=galWorldMap.get(gB);
+      if(!listA||!listB||!listA[idxA]||!listB[idxB])continue;
+      if(this.hidden('network:bridge:'+gA+':'+gB)||this.hidden('network:system:'+listA[idxA].sys.id)||this.hidden('network:system:'+listB[idxB].sys.id))continue;
+
+      const pA=listA[idxA].worldPos;
+      const pB=listB[idxB].worldPos;
+      const interLine=lines([pA,pB],0x0ea5e9,0.22,true);
+      this.group.add(interLine);
+
+      if(!this.hidden('network:beads')){
+        const mid=pA.clone().add(pB).multiplyScalar(0.5);
+        const midBead=sphere(0.35,0xffffff,0x60ebff);
+        midBead.position.copy(mid);
+        this.group.add(midBead);
       }
     }
+  }
+  makeStarsilkFlow(){
+    const ep=this.state.epoch;
+    const isWar=ep==='war';
+    const isLocking=ep==='locking';
+
+    // Invariant-respecting chromatic palette
+    const colorCore=isWar?0xfffbeb:0xf0fdf4;
+    const colorBody=isWar?0xf59e0b:(isLocking?0x06b6d4:0x38bdf8);
+    const colorGlow=isWar?0x991b1b:(isLocking?0x0369a1:0x0284c7);
+
+    // Loop 31: Sinuous horizontal spline trajectory across lower-middle archipelago matching References 01–03
+    const masterControlPoints=[
+      new THREE.Vector3(-192,-12,58),
+      new THREE.Vector3(-145,-10,72),
+      new THREE.Vector3(-102,-13,84),
+      new THREE.Vector3(-55,-15,92),
+      new THREE.Vector3(-12,-10,86),
+      new THREE.Vector3(32,-8,76),
+      new THREE.Vector3(75,-12,82),
+      new THREE.Vector3(116,-14,80),
+      new THREE.Vector3(155,-11,68),
+      new THREE.Vector3(192,-8,52)
+    ];
+    const masterCurve=new THREE.CatmullRomCurve3(masterControlPoints);
+
+    // Loop 32: Multi-strand braided ribbon geometry with differentiated strand thicknesses and twists
+    const SAMPLES=180;
+    const points=[[],[],[],[]];
+    const up=new THREE.Vector3(0,1,0);
+    for(let i=0;i<=SAMPLES;i++){
+      const t=i/SAMPLES;
+      const p=masterCurve.getPointAt(t);
+      const tangent=masterCurve.getTangentAt(t);
+      const binormal=new THREE.Vector3().crossVectors(tangent,up).normalize();
+      const norm=new THREE.Vector3().crossVectors(binormal,tangent).normalize();
+
+      const widths=[
+        Math.sin(t*16)*1.6,
+        Math.sin(t*16+Math.PI)*2.2,
+        Math.sin(t*32+1.2)*1.4,
+        Math.sin(t*10-.5)*3.2+Math.cos(t*26)*.9
+      ];
+      const heights=[
+        Math.cos(t*12)*.8,
+        Math.cos(t*16+Math.PI)*1.1,
+        Math.sin(t*24)*1.2,
+        Math.sin(t*18+.8)*1.4
+      ];
+      for(let j=0;j<4;j++)points[j].push(p.clone().addScaledVector(binormal,widths[j]).addScaledVector(norm,heights[j]));
+    }
+
+    const curves=points.map(pts=>new THREE.CatmullRomCurve3(pts));
+
+    if(!this.hidden('flow:veil')){
+      const mat=makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity:0.16,speed:1.2,pulseFreq:6.0});
+      this.animatedShaders.push(mat);
+      this.group.add(new THREE.Mesh(new THREE.TubeGeometry(masterCurve,160,3.2,8,false),mat));
+    }
+    const strands=[
+      [.85,7,.65,2.2,12,0xe0f2fe,0xfde68a,.85],
+      [.58,6,.48,2.5,14,0x7dd3fc,0xf59e0b,.72],
+      [.38,5,.38,2.8,16,0x38bdf8,0xd97706,.60],
+      [0,0,0,0,0,0x0284c7,0xb45309,.48]
+    ];
+    for(let i=0;i<curves.length;i++){
+      const [radius,sides,opacity,speed,pulseFreq,azure,amber,lineOpacity]=strands[i];
+      if(i<3){
+        const mat=makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity,speed,pulseFreq});
+        this.animatedShaders.push(mat);
+        this.group.add(new THREE.Mesh(new THREE.TubeGeometry(curves[i],160,radius,sides,false),mat));
+      }
+      this.group.add(lines(curves[i].getPoints(160),isWar?amber:azure,lineOpacity));
+    }
+
+    // Loop 34: Embedded flow nodes at harmonic intersection points
+    const nodeIntervals=[0.12,0.26,0.39,0.52,0.65,0.78,0.90];
+    for(let k=0;k<nodeIntervals.length;k++){
+      if(this.hidden('flow:nodes')||this.hidden('flow:node:'+k))continue;
+      const pos=masterCurve.getPointAt(nodeIntervals[k]);
+      const nodeGroup=new THREE.Group();
+      nodeGroup.position.copy(pos);
+      this.group.add(nodeGroup);
+
+      const coreDot=sphere(0.65,0xffffff,colorBody);
+      const ringGeom=new THREE.RingGeometry(1.6,2.1,32);
+      const ringMat=new THREE.MeshBasicMaterial({color:colorBody,transparent:true,opacity:0.55,side:THREE.DoubleSide});
+      const navRing=new THREE.Mesh(ringGeom,ringMat);
+      navRing.rotation.x=Math.PI*0.5;
+      nodeGroup.add(coreDot,navRing);
+
+      this.motionObjects.push({obj:navRing,speed:0.00035});
+    }
+
+    // Traveling energy pulse particles
+    for(let c=0;c<curves.length;c++){
+      const count=c<2?8:6;
+      const targetCurve=curves[c];
+      for(let p=0;p<count;p++){
+        if(this.hidden('flow:pulses')||this.hidden('flow:pulse:'+c+':'+p))continue;
+        const particle=this.addGlow(this.group,p%3?2.8:4.8,isWar?'#fbbf24':'#38bdf8',0.75);
+        this.routeParticles.push({
+          obj:particle,
+          curve:targetCurve,
+          phase:p/count+(c*0.12),
+          speed:0.038+(c*0.008)
+        });
+      }
+    }
+
+    // Loop 36: Ambient blue glow reflection onto nearby dust clouds and archipelago underbelly
+    const reflectionPoints=[
+      new THREE.Vector3(-45,-18,88),
+      new THREE.Vector3(40,-16,78),
+      new THREE.Vector3(120,-18,76)
+    ];
+    for(const rPos of reflectionPoints){
+      const light=new THREE.PointLight(isWar?0xd97706:0x0284c7,2.8,55,2);
+      light.position.copy(rPos);
+      this.group.add(light);
+    }
+
+    // Reference 01 Typography label
+    const flowLabel={id:'starsilk-flow-master',name:'STARSILK FLOW',status:'reference',label:{show:true,size:10,color:isWar?'#fcd34d':'#7dd3fc',family:'mono'}};
+    const flowObj=new THREE.Object3D();
+    flowObj.position.set(-25,-10,88);
+    this.group.add(flowObj);
+    this.labelItems.push({node:flowLabel,obj:flowObj,subtitle:'THE LIVING WEAVE / SUBSTRATE'});
   }
   makeRemnantRings(){
     const pos=[[-70,-12,48],[63,5,49]];
@@ -637,7 +1056,7 @@ export class AtlasEngine {
 
     if(s.layers.grid)this.makeGrid(120,8);
     const planets=childNodes(s,sys.id,'planet');
-    if((s.layers.routes||s.layers.grid)&&planets.length>=3){
+    if((s.layers.routes||s.layers.grid)&&planets.length>=3&&!this.hidden('system:asteroids')){
       const beltRadius=25.5;
       const beltCount=s.quality==='cinematic'?340:s.quality==='battery'?120:230;
       const beltPts=[];const bRnd=rng(hash(sys.id+'-belt'));
@@ -659,12 +1078,14 @@ export class AtlasEngine {
       const a=k/72*Math.PI*2;
       cometPts.push(new THREE.Vector3(Math.cos(a)*cometA-14,Math.sin(a)*3.2,Math.sin(a)*cometB));
     }
+    if(!this.hidden('system:comet')){
     this.group.add(lines(cometPts,0x38bdf8,0.16,true));
     const cometGroup=new THREE.Group();
     const cometNucleus=sphere(0.42,0xdbeafe,0x60a5fa);
     cometGroup.add(cometNucleus);
     this.group.add(cometGroup);
     this.motionObjects.push({obj:cometGroup,isComet:true,a:cometA,b:cometB,cx:-14,cy:3.2,phase:(hash(sys.id+'comet')%628)/100,speed:0.00008});
+    }
 
     for(const [idx,n] of planets.entries()){
       const r=Math.max(7,V(n.position).length());
@@ -713,8 +1134,8 @@ export class AtlasEngine {
     this.transitionCamera(newCam,p,durationMs);
   }
   resetViewCamera(smooth=true){
-    const cam=this.view.kind==='all'?[0,215,280]:this.view.kind==='galaxy'?[0,55,110]:[0,38,82];
-    const tgt=this.view.kind==='all'?[0,-4,-12]:[0,0,0];
+    const cam=this.view.kind==='all'?[0,195,260]:this.view.kind==='galaxy'?[0,55,110]:[0,38,82];
+    const tgt=this.view.kind==='all'?[6,-2,-6]:[0,0,0];
     const targetCamera=new THREE.Vector3(...cam);
     const targetControls=new THREE.Vector3(...tgt);
     this.trackingNodeId=null;
@@ -853,6 +1274,7 @@ export class AtlasEngine {
         }else m.obj.rotation.y+=elapsed*m.speed;
       }
       for(const p of this.routeParticles){if(p.failed)continue;try{const t=wrapCurvePhase(p.phase+this.elapsed/1000*p.speed);const v=p.curve.getPointAt(t);if(v&&Number.isFinite(v.x)&&Number.isFinite(v.y)&&Number.isFinite(v.z))p.obj.position.copy(v);else p.failed=true;}catch(error){p.failed=true;console.warn('Atlas route particle disabled:',error);}}
+      for(const s of this.animatedShaders){if(s.uniforms?.uTime)s.uniforms.uTime.value=this.elapsed*0.001;}
     }
     this.controls.update();this.renderer.render(this.scene,this.camera);
     if(++this.frame%3===0)this.updateLabels();
