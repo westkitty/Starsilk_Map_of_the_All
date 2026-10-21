@@ -49,3 +49,11 @@ All seven proof states currently read **`blocked`**, with null receipts and no a
 Verify both applications' live behavior **after**, not before, a separately authorized merge and deployment. The independent Planner must keep its orbital simulator; the read-only canonical Dossier stays untouched. No official coordinates, faction borders, routes or event years were invented. The Blood Eclipse War remains **170 years**, including its established causal sequence.
 
 **Operational next action:** green exact-head GitHub test PR, keep it draft, then independently obtain real-owner backup and one-writer proof before planning any published switch. No production merge, Pages rerouting, or hidden approval variable is authorized by this implementation.
+
+## 2026-10-21 exceptional owner-directed release of throwaway drafts
+
+The owner explicitly stated that previous Atlas browser drafts contained no important work and directed publication. The seven historical proof fields in `RELEASE_READINESS.json` remain **blocked** because no owner's personal backup/restore or stale-tab retirement was verified. The user **waived preserving that old data**, not the application's code, canon, independent Planner or future saved work.
+
+A separate short-lived `disposableDraftCutover` authorization path expires on 2026-10-23 UTC, requires a push to this exact repository's `main`, and checks the reviewed Git blobs of both `index.html` and `main.js`. It cannot authorize a different runtime or ordinary later release. Before any publication, GitHub Actions must successfully fetch the **live** independently released Planner legacy URL and verify that it contains only the read-only retirement portal, plus verify the independent orbital Planner root. All normal standalone checks, Chromium suites, build/bundle budgets, Pages artifacts and postpublication URL/assets checks remain mandatory.
+
+An already-loaded or offline-cached old legacy editor cannot be forcibly killed by static hosting; close all such tabs/PWAs following the cutover. This exception may abandon *pre-cutover throwaway browser drafts*, but it does not call for clearing localStorage or overriding data-compatibility/canon code. Failed release tests remain a genuine BLOCK.
