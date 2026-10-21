@@ -19,6 +19,11 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Require explicit one-writer cutover and exact-head release approval
+        env:
+          ATLAS_RELEASE_APPROVED_SHA: ${{ vars.ATLAS_RELEASE_APPROVED_SHA }}
+          ATLAS_BROWSER_VERIFIED_SHA: ${{ vars.ATLAS_BROWSER_VERIFIED_SHA }}
+        run: node scripts/phase6-release-gate.mjs
       - name: Install pinned dependencies
         run: npm ci
       - name: Validate standalone models and build
@@ -32,6 +37,19 @@ jobs:
           node --check spatial-studio.js
           node --check strategic-studio.js
           node --check temporal-lab.js
+          node --check system-zoom.js
+          node --check scripts/stellar-zoom-browser-ci.mjs
+          node --check scripts/phase4-discovery-browser-ci.mjs
+          node --check network-geometry.js
+          node --check frame-timing.js
+          node --check scripts/phase5-cadence-browser-ci.mjs
+          node --check survey-sectors.js
+          node --check scripts/phase15-survey-browser-ci.mjs
+          node --check scripts/phase16-region-browser-ci.mjs
+          node --check scripts/phase16-matched-draw-benchmark.mjs
+          node --check scripts/phase17-labels-browser-ci.mjs
+          node --check release-cutover-gate.js
+          node --check scripts/phase6-release-gate.mjs
       - name: Verify standalone production routing
         run: |
           set -euo pipefail
@@ -48,6 +66,24 @@ jobs:
         run: node scripts/phase5-browser-ci.mjs
       - name: Verify Temporal Atlas
         run: node scripts/phase6-browser-ci.mjs
+      - name: Verify Draft Deletion and Canonical Reference Protection
+        run: node scripts/delete-browser-ci.mjs
+      - name: Verify Deletion Recovery and Storage Failure Integrity
+        run: node scripts/deletion-recovery-browser-ci.mjs
+      - name: Verify Procedural Subtraction and Era-Safe Suppression
+        run: node scripts/procedural-suppression-browser-ci.mjs
+      - name: Verify Stellar Zoom and Context HUD
+        run: node scripts/stellar-zoom-browser-ci.mjs
+      - name: Verify Search and Mobile Discovery
+        run: node scripts/phase4-discovery-browser-ci.mjs
+      - name: Verify Renderer Cadence and Resource Lifecycle
+        run: node scripts/phase5-cadence-browser-ci.mjs
+      - name: Verify Provisional Survey Cells and Draft Sectors
+        run: node scripts/phase15-survey-browser-ci.mjs
+      - name: Verify Authored Sector GPU Economy
+        run: node scripts/phase16-region-browser-ci.mjs
+      - name: Verify Safe Cartographic Labels and Touch Accessibility
+        run: node scripts/phase17-labels-browser-ci.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

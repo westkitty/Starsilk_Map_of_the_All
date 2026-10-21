@@ -8,7 +8,7 @@
     "build": "vite build && node scripts/bundle-budget.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test tests/*.node-check.mjs",
-    "test:browser": "node scripts/atlas-focus-browser-ci.mjs && node scripts/spatial-studio-browser-ci.mjs && node scripts/phase4-browser-ci.mjs && node scripts/phase5-browser-ci.mjs && node scripts/phase6-browser-ci.mjs",
+    "test:browser": "node scripts/atlas-focus-browser-ci.mjs && node scripts/spatial-studio-browser-ci.mjs && node scripts/phase4-browser-ci.mjs && node scripts/phase5-browser-ci.mjs && node scripts/phase6-browser-ci.mjs && node scripts/delete-browser-ci.mjs && node scripts/deletion-recovery-browser-ci.mjs && node scripts/procedural-suppression-browser-ci.mjs && node scripts/stellar-zoom-browser-ci.mjs && node scripts/phase4-discovery-browser-ci.mjs && node scripts/phase5-cadence-browser-ci.mjs && node scripts/phase15-survey-browser-ci.mjs && node scripts/phase16-region-browser-ci.mjs && node scripts/phase17-labels-browser-ci.mjs",
     "check": "npm run test && npm run build",
     "bundle:report": "node scripts/bundle-budget.mjs"
   },
@@ -16,8 +16,9 @@
     "three": "0.174.0"
   },
   "devDependencies": {
-    "vite": "6.2.0",
-    "playwright-core": "1.56.1"
+    "playwright-core": "1.56.1",
+    "terser": "5.51.2",
+    "vite": "6.2.0"
   },
   "description": "Standalone editable, non-canonical Three.js survey of the Starsilk All"
 }

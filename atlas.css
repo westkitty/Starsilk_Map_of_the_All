@@ -123,3 +123,23 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
 .source-integrity-grid{font:8.5px/1.4 var(--mono);color:#93c5fd;margin-bottom:4px}
 .source-integrity-notice{font:7.5px/1.2 var(--mono);color:#64748b;letter-spacing:.02em;line-height:1.35}
 .source-repair-badge{color:#f59e0b;font-weight:600}
+
+/* Recovery tools live in the existing Explore drawer; they never hide source data. */
+.atlas-recovery-tools{display:grid;gap:8px;padding:11px;border:1px solid #5a8e9b;background:#071d2beF;border-radius:5px;margin:10px 0}
+.atlas-recovery-tools .small-note{margin:0;color:#d1eaf0;line-height:1.55}
+.atlas-recovery-tools button{min-height:42px;white-space:normal;text-align:center}
+
+.visual-cleanup{display:grid;gap:7px;color:#a7c8d7;font:9px/1.45 var(--mono)}
+.visual-cleanup select{min-height:44px;background:#061725;border:1px solid #34687f}
+@media(max-width:620px){.left-panel .visual-cleanup{display:none}.left-panel.expanded .visual-cleanup{display:grid}}
+
+/* A restrained ink wash makes captions legible over bright galaxy cores. */
+.world-label .label-name{
+  padding-inline:4px;
+  background:linear-gradient(90deg,transparent,rgba(1,5,13,.6) 15%,rgba(1,5,13,.6) 85%,transparent);
+  text-shadow:0 1px 3px #000,0 0 8px #000;
+}
+/* Cartographic label hierarchy and stylus-sized touch affordances. */
+.world-label[data-kind="galaxy"] .label-name{font-weight:650;letter-spacing:.105em}
+.world-label[data-status="reference"] .label-name{font-weight:550}
+@media (pointer:coarse){.world-label{min-height:44px;min-width:44px}}

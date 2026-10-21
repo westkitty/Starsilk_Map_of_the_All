@@ -18,6 +18,7 @@ async function test(){await ready();browser=await chromium.launch({executablePat
    const page=await ctx.newPage();page.on('pageerror',e=>errors.push(name+': '+e.message));
    const res=await page.goto(ROOT,{waitUntil:'domcontentloaded',timeout:30000});assert.equal(res.status(),200);
    await page.locator('.world-label').first().waitFor({timeout:30000});
+   assert.equal(await page.evaluate(()=>typeof window.__atlasDiagnostics),'undefined','diagnostic API must be opt-in');
    await page.waitForFunction(()=>Number(document.querySelector('#drawCalls')?.textContent)>0,{timeout:25000});
    assert.equal(await page.locator('#atlas').getAttribute('data-active-drawer'),'none');
    for(const id of ['leftPanel','rightPanel','studioPanel','strategyPanel','networkPanel','temporalPanel'])assert.equal(await page.locator('#'+id).isVisible(),false,id+' default collapsed');
@@ -25,6 +26,12 @@ async function test(){await ready();browser=await chromium.launch({executablePat
    const geom=await page.evaluate(()=>{const c=document.getElementById('spaceCanvas').getBoundingClientRect();const rail=document.getElementById('atlasPullTabs').getBoundingClientRect();return {canvas:[c.width,c.height],rail:[rail.width,rail.height],scroll:document.documentElement.scrollWidth,viewport:innerWidth,draws:Number(document.getElementById('drawCalls').textContent),buttons:[...document.querySelectorAll('.atlas-pull-tab')].map(e=>({label:e.textContent,height:e.getBoundingClientRect().height,expanded:e.getAttribute('aria-expanded')}))}});
    assert.ok(geom.canvas[0]>=w-1&&geom.canvas[1]>=h-1,'canvas occupies full viewport');
    assert.ok(geom.draws>0,'scene actually renders GPU draw calls');
+   // Default Balanced seeded All-view draw submission ceiling, not an FPS claim.
+   // A future visual expansion must re-benchmark before raising this budget.
+   const drawCeiling=name==='phone'?180:320;
+   assert.ok(geom.draws<=drawCeiling,
+     name+' exceeds batched secondary-network draw budget: '+geom.draws+' / '+drawCeiling);
+   console.log('NETWORK_BATCH_DRAW_BUDGET '+name+' '+geom.draws+'/'+drawCeiling);
    assert.ok(geom.scroll<=geom.viewport,'no horizontal page overflow');
    assert.ok(geom.buttons.every(x=>x.height>=36&&!x.expanded.includes('true')),'accessible collapsed tabs');
    await page.screenshot({path:'atlas-qa-evidence/all-visible-'+name+'.png'});

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {deleteObject,deleteObjects,planDeletionBatch} from './deletion-engine.js';
 import {eligibleGroup,translatedGroup,regionFromGroup,validatePolygon,regionReport,strategicAnalysis,pointInPolygon,polygonCentroid,polygonBounds,strategicPosture,convexHull,MAX_REGIONS,MAX_VERTICES} from './strategic-model.js';
 
 /**
@@ -9,6 +10,7 @@ export class StrategicStudio {
   constructor({canvas,atlas,panel,labelsRoot,getState,getView,onChange,onMessage}) {
     Object.assign(this,{canvas,atlas,panel,labelsRoot,getState,getView,onChange,onMessage});
     this.engine=null;this.mode='group';this.opened=false;this.groupIds=[];this.regionId=null;
+    this.regionRenderKey=null;this.regionRebuilds=0;
     this.gesture=null;this.dragVertices=null;this.drawing=false;this.drawingPoints=[];this.pointer=null;
     this.$=id=>panel.querySelector('#'+id);
     this.selectHandle=document.createElement('button');this.selectHandle.id='strategyGroupHandle';
@@ -26,6 +28,7 @@ export class StrategicStudio {
     for(const key of ['group','region','pan'])this.$('strategyMode'+key[0].toUpperCase()+key.slice(1)).addEventListener('click',()=>this.setMode(key));
     this.$('strategySelectAll').addEventListener('click',()=>this.selectAll());
     this.$('strategyClear').addEventListener('click',()=>this.applyGroup([]));
+    this.$('strategyDeleteGroup').addEventListener('click',()=>this.deleteGroup());
     this.$('strategyGroupAxis').addEventListener('change',()=>this.cancelGesture());
     this.$('strategyGroupSnap').addEventListener('change',()=>this.cancelGesture());
     for(const [id,delta] of [['strategyNudgeLeft',[-1,0,0]],['strategyNudgeRight',[1,0,0]],['strategyNudgeUp',[0,0,-1]],['strategyNudgeDown',[0,0,1]],['strategyNudgeHeight',[0,1,0]]]){
@@ -50,23 +53,33 @@ export class StrategicStudio {
     this.canvas.addEventListener('pointerup',this._up=e=>this.canvasUp(e));
     this.canvas.addEventListener('pointercancel',this._cancel=()=>this.cancelGesture());
     this._resize=()=>this.updateGuides();window.addEventListener('resize',this._resize);
-    this._keys=e=>{if(!this.opened||e.target.closest('input,textarea,select')||e.ctrlKey||e.metaKey)return;
+    this._keys=e=>{
+      if(!this.opened||document.querySelector('dialog[open]')||e.target?.closest?.('input,textarea,select,[contenteditable],[role="textbox"]')||e.ctrlKey||e.metaKey||e.altKey)return;
       if(e.key==='Escape'&&(this.drawing||this.gesture||this.dragVertices)){
         this.cancelDrawing();this.cancelGesture();e.preventDefault();e.stopImmediatePropagation();return;
       }
-      if(this.drawing){
-        if(e.key==='Backspace'||e.key==='Delete'){
-          if(this.drawingPoints.length>0){
+      if(e.key==='Backspace'||e.key==='Delete'){
+        // An active strategic tool owns destructive keys. Never delete a stale
+        // single-object inspector selection when its own group/region is active.
+        e.preventDefault();e.stopImmediatePropagation();
+        if(this.drawing){
+          if(this.drawingPoints.length){
             this.drawingPoints.pop();
             this.$('strategyFinishDraw').disabled=this.drawingPoints.length<3;
-            this.$('strategyDrawHint').textContent=`Drawing provisional region (${this.drawingPoints.length} vertices): Tap to place, Backspace to undo, Enter to finish, ESC to cancel.`;
-            this.updateGuides();this.onMessage(`Removed vertex (${this.drawingPoints.length} remaining).`);
-            e.preventDefault();e.stopImmediatePropagation();
+            this.$('strategyDrawHint').textContent='Drawing provisional region ('+this.drawingPoints.length+' vertices): Tap to place, Backspace to undo, Enter to finish, ESC to cancel.';
+            this.updateGuides();this.onMessage('Removed vertex ('+this.drawingPoints.length+' remaining).');
           }
-        }else if(e.key==='Enter'){
-          if(this.drawingPoints.length>=3){this.finishDrawing();e.preventDefault();e.stopImmediatePropagation();}
-          else{this.onMessage('A region requires at least 3 non-collinear vertices.',true);}
+        }else if(this.mode==='group'&&this.groupIds.length&&!this.gesture&&!this.dragVertices){
+          this.deleteGroup();
+        }else if(this.mode==='region'&&e.key==='Delete'&&this.regionId&&!this.gesture&&!this.dragVertices){
+          this.deleteRegion();
         }
+        return;
+      }
+      if(this.drawing&&e.key==='Enter'){
+        e.preventDefault();e.stopImmediatePropagation();
+        if(this.drawingPoints.length>=3)this.finishDrawing();
+        else this.onMessage('A region requires at least 3 non-collinear vertices.',true);
       }
     };document.addEventListener('keydown',this._keys,true);
     this.setMode('group');this.close();
@@ -77,7 +90,7 @@ export class StrategicStudio {
     this.sync();
   }
   open(){if(this.opened)return;this.opened=true;this.panel.hidden=false;this.atlas.classList.add('strategic-open');this.setMode('group');this.sync();}
-  close(){this.cancelGesture();this.cancelDrawing();this.opened=false;this.panel.hidden=true;this.atlas.classList.remove('strategic-open');this.selectHandle.hidden=true;this.vertexLayer.replaceChildren();this.badgeLayer.replaceChildren();this.overlay.replaceChildren();if(this.engine){this.engine.controls.enabled=true;this.engine.paused=document.hidden;}this.regionId=null;this.groupIds=[];}
+  close(){this.cancelGesture();this.cancelDrawing();this.opened=false;this.panel.hidden=true;this.atlas.classList.remove('strategic-open');this.selectHandle.hidden=true;this.vertexLayer.replaceChildren();this.badgeLayer.replaceChildren();this.overlay.replaceChildren();if(this.engine){this.engine.controls.enabled=true;this.engine.paused=document.hidden;}this.regionId=null;this.groupIds=[];this.renderRegions();}
   setMode(mode){if(!['group','region','pan'].includes(mode))return;
     this.cancelGesture();this.cancelDrawing();this.mode=mode;
     for(const key of ['group','region','pan'])this.$('strategyMode'+key[0].toUpperCase()+key.slice(1)).setAttribute('aria-pressed',String(key===mode));
@@ -101,14 +114,33 @@ export class StrategicStudio {
   }
   applyGroup(ids){const limited=ids.slice(0,32),eligible=this.eligibleVisible();this.groupIds=limited.filter(id=>eligible.some(n=>n.id===id));this.syncSelection();this.updateGuides();}
   selectAll(){this.applyGroup(this.eligibleVisible().slice(0,32).map(n=>n.id));}
+  deleteGroup(){
+    if(!this.opened||this.mode!=='group'||!this.groupIds.length)return;
+    const targets=this.groupIds.map(id=>({type:'node',id}));
+    let plan;
+    try{plan=planDeletionBatch(this.getState(),targets);}
+    catch(error){this.onMessage('Delete refused: '+error.message,true);return;}
+    const warning='DELETE '+plan.selectedCount+' SELECTED DRAFT OBJECT(S)?'
+      +'\nTotal nodes including descendants: '+plan.nodeCount
+      +'\nConnected draft routes: '+plan.routeCount
+      +'\nDependent draft regions: '+plan.regionCount
+      +'\nOnly the current era changes. Undo restores the entire selection in one step.';
+    if(!window.confirm(warning))return;
+    this.cancelGesture();
+    if(this.onChange(state=>deleteObjects(state,targets),{immediate:true})){
+      this.groupIds=[];this.sync();
+      this.onMessage('Deleted '+plan.nodeCount+' draft node(s), '+plan.routeCount+' corridor(s), '+plan.regionCount+' region(s). One Undo restores all.');
+    }
+  }
   syncSelection(){
     this.$('strategyCount').textContent=String(this.groupIds.length);
     this.$('strategyFromGroup').disabled=!this.groupIds.length||this.getState().regions?.length>=MAX_REGIONS;
+    this.$('strategyDeleteGroup').disabled=!this.groupIds.length||!this.opened||this.mode!=='group';
     const selected=new Set(this.groupIds);
     for(const btn of document.querySelectorAll('.node-btn')){const id=btn.dataset.atlasId;btn.classList.toggle('strategy-selected',selected.has(id));btn.setAttribute('aria-pressed',String(selected.has(id)));}
     for(const label of this.labelsRoot.querySelectorAll('.world-label'))label.classList.toggle('strategy-selected',selected.has(label.dataset.atlasId));
     const count=this.groupIds.length;
-    this.$('strategyGroupSummary').textContent=count?`${count} draft object${count===1?'':'s'} / one bounded translation / one undo`:'Click markers, Shift-click to add, or drag a selection marquee.';
+    this.$('strategyGroupSummary').textContent=count?`${count} draft object${count===1?'':'s'} / translate or remove together / one undo`:'Click markers, Shift-click to add, or drag a selection marquee.';
     for(const id of ['strategyNudgeLeft','strategyNudgeRight','strategyNudgeUp','strategyNudgeDown','strategyNudgeHeight'])this.$(id).disabled=!count;
   }
   sync(){
@@ -211,15 +243,23 @@ export class StrategicStudio {
   }
   renderRegions(){
     if(!this.engine)return;
+    const state=this.getState(),view=this.getView(),regions=this.visibleRegions();
+    const active=this.opened&&this.mode==='region'?this.regionId:null;
+    // The editor owns GPU meshes. Selection/UI changes must not destroy and
+    // recreate unchanged geometry; engine rebuild detachment invalidates cache.
+    const key=JSON.stringify([view.kind,view.id,state.layers.territories,active,
+      regions.map(r=>[r.id,r.color,r.points])]);
+    if(this.regionGroup?.parent===this.engine.group&&this.regionRenderKey===key)return;
     if(this.regionGroup){if(this.regionGroup.parent)this.regionGroup.parent.remove(this.regionGroup);
       this.regionGroup.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});this.regionGroup=null;}
-    if(!this.getState().layers.territories)return;
-    const regions=this.visibleRegions();if(!regions.length)return;
+    this.regionRenderKey=key;
+    if(!state.layers.territories||!regions.length)return;
     const group=new THREE.Group();group.name='editorial-draft-regions';group.renderOrder=-1;this.regionGroup=group;
+    this.regionRebuilds++;
     const floorY=-19;
     for(const r of regions){
       if(r.points.length<3)continue;
-      const isSelected=r.id===this.regionId;
+      const isSelected=r.id===active;
       const shape=new THREE.Shape();shape.moveTo(r.points[0][0],-r.points[0][1]);
       for(const [x,z] of r.points.slice(1))shape.lineTo(x,-z);shape.closePath();
       const g=new THREE.ShapeGeometry(shape);g.rotateX(-Math.PI/2);
@@ -233,12 +273,14 @@ export class StrategicStudio {
         const accentBorder=new THREE.Line(new THREE.BufferGeometry().setFromPoints(accentCoords),new THREE.LineBasicMaterial({color:'#ffffff',transparent:true,opacity:.55,depthWrite:false}));
         accentBorder.renderOrder=2;group.add(accentBorder);
       }
-      for(const [vx,vz] of r.points){
+      // These are active edit affordances, not permanent strategic structures.
+      // Avoid 2 GPU objects per vertex across every unselected region.
+      if(isSelected)for(const [vx,vz] of r.points){
         const pinPts=[new THREE.Vector3(vx,this.planeY(),vz),new THREE.Vector3(vx,floorY,vz)];
         const pinLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pinPts),new THREE.LineBasicMaterial({color:r.color,transparent:true,opacity:isSelected?.45:.22,depthWrite:false}));
-        pinLine.renderOrder=0;group.add(pinLine);
+        pinLine.renderOrder=0;pinLine.name='editorial-sector-pin';group.add(pinLine);
         const anchor=new THREE.Mesh(new THREE.RingGeometry(.7,1.1,16),new THREE.MeshBasicMaterial({color:r.color,side:THREE.DoubleSide,transparent:true,opacity:isSelected?.6:.25,depthWrite:false}));
-        anchor.rotation.x=-Math.PI/2;anchor.position.set(vx,floorY+.05,vz);anchor.renderOrder=0;group.add(anchor);
+        anchor.rotation.x=-Math.PI/2;anchor.position.set(vx,floorY+.05,vz);anchor.renderOrder=0;anchor.name='editorial-sector-pin';group.add(anchor);
       }
     }
     this.engine.group.add(group);
@@ -321,7 +363,7 @@ export class StrategicStudio {
   }
   deleteRegion(){const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;
     if(!window.confirm('Delete this editorial draft sector? Undo restores it.'))return;
-    this.onChange(s=>{s.regions=s.regions.filter(x=>x.id!==r.id);});this.regionId=null;this.sync();
+    this.onChange(s=>deleteObject(s,r.id,{type:'region'}),{immediate:true});this.regionId=null;this.sync();
   }
   selectEnclosed(){
     const r=this.visibleRegions().find(x=>x.id===this.regionId);if(!r)return;

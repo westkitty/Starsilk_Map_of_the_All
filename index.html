@@ -11,7 +11,16 @@
 <link rel="stylesheet" href="./atlas-focus.css"/>
 </head><body>
 <div class="atlas atlas-minimal" id="atlas" data-active-drawer="none">
-  <div class="scene-host" id="sceneHost"><canvas id="spaceCanvas" aria-label="Rotatable 3D Starsilk universe. Drag to rotate, scroll or pinch to zoom; click to select."></canvas><div id="labels" class="labels"></div><div class="scene-grain" aria-hidden="true"></div></div>
+  <div class="scene-host" id="sceneHost"><canvas id="spaceCanvas" aria-label="Rotatable 3D Starsilk universe. Drag to orbit, scroll or pinch inward toward a focused system to enter; double-click to descend."></canvas><div id="labels" class="labels"></div><div class="scene-grain" aria-hidden="true"></div>
+    <section class="stellar-mini-hud" id="stellarDive" aria-label="Enter selected draft stellar system" hidden>
+      <small>SELECTED STELLAR SYSTEM · NON-CANON</small><strong id="stellarDiveName"></strong>
+      <button id="stellarDiveButton" type="button">ENTER SYSTEM ↓</button>
+    </section>
+    <section class="stellar-mini-hud" id="stellarHud" aria-label="Stellar system navigation" hidden>
+      <small>STELLAR LABORATORY · NON-CANON</small><strong id="stellarHudName"></strong>
+      <span id="stellarHudInfo"></span>
+      <div class="stellar-hud-actions"><button id="stellarBackButton" type="button">← GALAXY</button><button id="stellarOverviewButton" type="button">OVERVIEW</button></div>
+    </section></div>
   <div class="edge-top" aria-hidden="true"></div>
   <header class="top-bar">
     <div class="brandmark" aria-hidden="true"><span class="brandmark-a">S</span><span class="brandmark-line"></span></div>
@@ -34,6 +43,15 @@
     <div id="searchResults" class="search-results" hidden role="listbox" aria-label="Search results"></div>
     <div class="panel-heading inline"><span>VISIBLE STRUCTURES</span><button id="allLayersBtn" class="text-btn">ALL / NONE</button></div>
     <div id="layerControls" class="layer-controls"></div>
+    <div class="panel-heading inline"><span>PROCEDURAL CLEANUP</span><small>PROVISIONAL ONLY</small></div>
+    <div class="visual-cleanup">
+      <label for="visualTarget">Select a generated detail</label>
+      <select id="visualTarget" aria-label="Generated map detail"></select>
+      <button id="visualSuppressBtn" type="button" class="button-outline">SUPPRESS THIS DETAIL</button>
+      <button id="visualResetBtn" type="button" class="button-outline faint">RESTORE ALL DETAILS</button>
+      <p id="visualStatus" role="status" aria-live="polite"></p>
+      <small>HIDE toggles layers. SUPPRESS removes generated effects from this era across reloads. DELETE removes user drafts in the inspector. Canon stays intact.</small>
+    </div>
     <div class="panel-heading inline"><span>CARTOGRAPHIC LEGEND</span><small>SEMANTICS</small></div>
     <div class="carto-legend" id="cartoLegend">
       <div class="legend-item"><span class="legend-glyph glyph-ref">◆</span><span class="legend-label">SOURCE TOPOLOGY</span><span class="legend-desc">Canon Dossier entity; unauthored coordinate</span></div>
@@ -64,7 +82,8 @@
       <div class="two-col"><label>LABEL COLOR <input type="color" id="objLabelColor"/></label><label>FONT SIZE <input id="objLabelSize" type="number" min="9" max="36" step="1"/></label></div>
       <label>FONT FAMILY <select id="objLabelFamily"><option value="display">EDITORIAL / SERIF</option><option value="mono">CARTOGRAPHIC / MONO</option></select></label>
       <div class="editor-actions"><button type="submit" class="primary-button" id="applyBtn">APPLY CHANGES</button><button type="button" class="button-outline" id="enterBtn">ENTER</button><button type="button" class="button-outline" id="focusBtn">FOCUS</button></div>
-      <div class="editor-actions"><button type="button" class="text-btn" id="connectBtn">CONNECT ROUTE</button><button type="button" class="text-btn destructive" id="deleteBtn">DELETE DRAFT</button></div>
+      <div class="editor-actions"><button type="button" class="text-btn" id="connectBtn">CONNECT ROUTE</button><button type="button" class="text-btn destructive" id="deleteBtn" aria-describedby="deleteHint">DELETE SELECTED DRAFT</button></div>
+      <p id="deleteHint" class="small-note">DELETE removes the selected editable draft. Backspace removes it in an editing panel; otherwise Backspace navigates upward. Source references cannot be deleted. Undo restores accepted deletions.</p>
     </form>
     <section class="orbital-handoff" aria-label="Orbital handoff to system planner">
       <div class="panel-heading"><span>ORBITAL LABORATORY</span><small>NON-CANON</small></div>
@@ -144,6 +163,8 @@
       <div class="strategy-inline"><label>AXIS <select id="strategyGroupAxis"><option value="xz">XZ PLANE</option><option value="y">Y / HEIGHT</option></select></label><label>SNAP <select id="strategyGroupSnap"><option value="0">FREE</option><option value="0.1">0.1</option><option value="0.5">0.5</option><option value="1">1</option><option value="5">5</option><option value="10">10</option></select></label></div>
       <div class="strategy-nudge" aria-label="Accessible group translate controls"><button type="button" id="strategyNudgeLeft" aria-label="Nudge X negative">← X</button><button type="button" id="strategyNudgeRight" aria-label="Nudge X positive">X →</button><button type="button" id="strategyNudgeUp" aria-label="Nudge Z negative">↑ Z</button><button type="button" id="strategyNudgeDown" aria-label="Nudge Z positive">Z ↓</button><button type="button" id="strategyNudgeHeight" aria-label="Nudge Y positive">Y +</button></div>
       <button type="button" id="strategyFromGroup" class="strategy-primary" disabled>CREATE SURVEY BOUNDARY FROM SELECTION</button>
+      <button type="button" id="strategyDeleteGroup" class="strategy-danger strategy-delete-group" aria-describedby="strategyDeleteGroupHint" disabled>DELETE SELECTED DRAFTS</button>
+      <small id="strategyDeleteGroupHint">Only selected editable drafts will be removed. Confirm dependent objects and corridors first; one Undo restores the group. Source references are protected.</small>
       <small>✥ Drag the group handle to translate all selected draft markers in one undo step. Snap units are editorial only.</small>
     </div>
     <div id="strategyRegionTools" class="strategy-region-tools" hidden>
@@ -226,7 +247,7 @@
     <div class="source-bottom-grid"><section><h3>DIRECT-AUTHORED RELATIONS</h3><div id="sourceGraphRelations" class="source-relations"></div></section><section id="sourceGraphDetails" aria-live="polite" class="source-details"></section></div>
     <p class="source-license-note">Read-only projection · Dossier machine publication SHA 862bc476fb8165784704151eed35c915cbf31bf4. No atlas editor action changes these records.</p>
   </dialog>
-  <dialog id="helpDialog" class="help-dialog"><h2>THE CARTOGRAPHER'S DESK</h2><p>This is a spatial hypothesis, not a canonical star chart. Every starting point and corridor is editable draft geometry. Only verified names and relationships should be promoted through separate canon governance.</p><div class="help-grid"><div><b>EXPLORATION</b><p>Drag or swipe to orbit. Pinch or scroll to zoom. Select a marker. Double-click a galaxy to explore its systems; double-click a system to inspect planets.</p></div><div><b>AUTHORING</b><p>Use Spatial Studio: ORBIT for camera movement, MOVE to drag editable draft markers in XZ or Y, ROUTE to connect same-tier draft objects, TYPE to drag editable labels. Press Escape to cancel an active gesture. The inspector also supports precise XYZ and typography values. Edits are saved in this browser and can be exported as JSON.</p></div><div><b>NETWORK INTELLIGENCE</b><p>Trace minimal corridor hops, inspect disconnected clusters and cut edges, simulate temporary closures, and optionally create one explicit draft link. No real travel metrics.</p></div><div><b>THE TEMPORAL ATLAS</b><p>Use EDIT / COMPARE by the era selector to switch independent draft periods, inspect added/moved/removed objects, and save editorial era notes. Change trails are schematic. No historical dates or canonical coordinates are inferred.</p></div><div><b>STRATEGY LAB</b><p>Select draft objects into groups, drag the centroid handle or use nudge controls; draw or edit validated polygon boundaries; inspect corridor connectivity. Undo is one atomic edit per release.</p></div><div><b>KEYBOARD</b><p>H: hide HUD. /: search. Escape: up one scale. F: focus selection. Home: return to the All.</p></div><div><b>CANON BOUNDARY</b><p>WorldsVault identities and documented relationships have references. None of the map's coordinates, proposed regions, displayed routes, or exemplary planetary orbits is established lore.</p></div></div><button id="closeHelp" class="primary-button">CLOSE INSTRUMENT</button></dialog>
+  <dialog id="helpDialog" class="help-dialog"><h2>THE CARTOGRAPHER'S DESK</h2><p>This is a spatial hypothesis, not a canonical star chart. Every starting point and corridor is editable draft geometry. Only verified names and relationships should be promoted through separate canon governance.</p><div class="help-grid"><div><b>EXPLORATION</b><p>Drag or swipe to orbit. Pinch or scroll to zoom. Select a marker. Double-click a galaxy to explore its systems; double-click a system to inspect planets.</p></div><div><b>AUTHORING</b><p>Use Spatial Studio: ORBIT for camera movement, MOVE to drag editable draft markers in XZ or Y, ROUTE to connect same-tier draft objects, TYPE to drag editable labels. Press Escape to cancel an active gesture. The inspector also supports precise XYZ and typography values. Edits are saved in this browser and can be exported as JSON.</p></div><div><b>NETWORK INTELLIGENCE</b><p>Trace minimal corridor hops, inspect disconnected clusters and cut edges, simulate temporary closures, and optionally create one explicit draft link. No real travel metrics.</p></div><div><b>THE TEMPORAL ATLAS</b><p>Use EDIT / COMPARE by the era selector to switch independent draft periods, inspect added/moved/removed objects, and save editorial era notes. Change trails are schematic. No historical dates or canonical coordinates are inferred.</p></div><div><b>STRATEGY LAB</b><p>Shift-click or marquee-select editable drafts, then translate as a group or choose DELETE SELECTED DRAFTS. Confirm descendant objects, corridors and sectors before removal; one Undo restores the group. Draw and edit draft sector boundaries; source identities remain immutable.</p></div><div><b>KEYBOARD</b><p>H: hide HUD. /: search. Escape: up one scale. F: focus selection. Home: return to the All. Delete: remove an editable selection after confirmation. Within Strategic GROUP, Delete/Backspace applies to the group, not an old inspector selection. Keys never delete while typing or using modal dialogs.</p></div><div><b>CANON BOUNDARY</b><p>WorldsVault identities and documented relationships have references. None of the map's coordinates, proposed regions, displayed routes, or exemplary planetary orbits is established lore.</p></div></div><button id="closeHelp" class="primary-button">CLOSE INSTRUMENT</button></dialog>
   <dialog id="handoffInstructionsDialog" class="help-dialog" aria-labelledby="handoffDialogHeading">
     <h2 id="handoffDialogHeading">ATLAS → STAR SYSTEM PLANNER HANDOFF</h2>
     <div class="dialog-badge-bar"><span class="dialog-badge">STANDALONE COMPATIBILITY</span><span class="dialog-badge">SCHEMA 1.1.0</span><span class="dialog-badge">NON-CANON INITIAL CONDITIONS</span></div>

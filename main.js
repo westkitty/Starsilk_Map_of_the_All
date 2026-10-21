@@ -1,5 +1,5 @@
 import { AtlasEngine } from './atlas-engine.js';
-import {readDraft} from './draft-recovery.js';
+import {readStoredDraft} from './draft-recovery.js';
 import {setupFullscreenAtlas} from './atlas-focus.js';
 import { TemporalLab } from './temporal-lab.js';
 import {ensureTimeline, syncEra, switchEra, cloneEra, writeEraNote} from './temporal-model.js';
@@ -9,12 +9,15 @@ import { SpatialStudio } from './spatial-studio.js';
 import { validateCorridor } from './studio-math.js';
 import { initSourceGraph } from './source-graph-ui.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename, getHandoffSystemMetadata } from './planner-handoff.js';
-import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, normalizeDraft, addNode, removeNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
+import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, normalizeDraft, addNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
+import {planDeletion, deleteObject} from './deletion-engine.js';
+import {isSuppressed,listVisualTargets,setSuppressed} from './visual-suppression.js';
 import { searchCanonEntities, findCanonEntity, listCanonGroups, CANON_INVARIANTS, CANON_REPAIR_HIGHLIGHTS, getCanonicalRelations, WORLDSVAULT_IDENTITIES, CANON_REVISION_METADATA } from './canon-registry.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
 import { getNodeSigilSvg, getAssetProvenance } from './source-assets.js';
 
+const SESSION_FALLBACK_KEY=STORAGE_KEY+'.sessionFallback';
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
 const gui={
@@ -22,7 +25,8 @@ const gui={
   source:$('sourceLinks'), layers:$('layerControls'), nodes:$('nodeList'), breadcrumb:$('breadcrumb'),
   form:$('objectForm'), search:$('search'), results:$('searchResults'), filterBar:$('searchFilterBar')
 };
-let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let redoStack=[];let pendingImportData=null;let rejectedDraftRaw=null;let sourceGraphInstance=null;let drawerController=null;let searchFilter='all';let searchSelectedIdx=-1;
+let lastKnownLocalDraftRaw=null;let externalDraftConflict=false;
+let state;let view={kind:'all',id:null};let engine=null;let studio=null;let strategy=null;let networkLab=null;let temporal=null;let revision=0;let pendingRoute=null;let saveTimer=null;let history=[];let redoStack=[];let pendingImportData=null;let rejectedDraftRaw=null;let sessionRecovered=false;let sourceGraphInstance=null;let drawerController=null;let searchFilter='all';let searchSelectedIdx=-1;
 function message(text,error=false){const toast=el('div','toast'+(error?' error':''),text);$('notifications').append(toast);setTimeout(()=>toast.remove(),3500);}
 function updateUndoRedoButtons(){
   const u=$('undoBtn'),r=$('redoBtn');
@@ -30,82 +34,169 @@ function updateUndoRedoButtons(){
   if(r)r.disabled=redoStack.length===0;
 }
 function bootstrapState(){
-  let raw=null;
-  try{raw=localStorage.getItem(STORAGE_KEY);}
+  let localRaw=null,sessionRaw=null,sessionPreferred=false;
+  try{localRaw=localStorage.getItem(STORAGE_KEY);lastKnownLocalDraftRaw=localRaw;}
   catch(e){console.warn('LocalStorage inaccessible:',e);}
-  if(!raw){
-    try{raw=sessionStorage.getItem(STORAGE_KEY);}
-    catch(e){console.warn('SessionStorage inaccessible:',e);}
-  }
-  if(!raw) return seedAtlas();
-  const result=readDraft(raw);
+  try{
+    sessionRaw=sessionStorage.getItem(STORAGE_KEY);
+    sessionPreferred=sessionStorage.getItem(SESSION_FALLBACK_KEY)==='1';
+  }catch(e){console.warn('SessionStorage inaccessible:',e);}
+  const result=readStoredDraft(localRaw,sessionRaw,sessionPreferred);
   if(result.rejectedRaw!==null){
     rejectedDraftRaw=result.rejectedRaw;
     $('savedStatus').textContent='RECOVERY REQUIRED';
-    message('Stored JSON rejected. Open EXPLORE to download the original before replacing it.',true);
+    message('Unreadable saved JSON retained unchanged. Download the original before replacing it.',true);
+  }else if(result.source==='session'){
+    sessionRecovered=true;
+    $('savedStatus').textContent='SESSION RECOVERED / EXPORT';
+    message('Recovered newer session draft; local copy may be stale. Export a JSON backup.',true);
   }
   return result.state;
 }
 state=bootstrapState();
 ensureTimeline(state);
-function writeDraftNow(){
-  if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
+function preserveConflictedSession(){
+  externalDraftConflict=true;
   try{
-    state.updatedAt=new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    sessionStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    sessionStorage.setItem(SESSION_FALLBACK_KEY,'1');
+    sessionRecovered=true;
+    $('savedStatus').textContent='EXTERNAL WRITE / SESSION BACKUP';
+    message('Another Atlas tab changed your saved draft. This tab is preserved in session storage. Export both versions before continuing.',true);
+  }catch(error){
+    $('savedStatus').textContent='EXTERNAL WRITE / EXPORT REQUIRED';
+    message('Another Atlas tab changed your saved draft. Export this open draft now; session backup failed.',true);
+  }
+}
+// A cached legacy editor can silently replace valid v1 JSON on the shared origin.
+// Keep the open modern state recoverable without overwriting either copy.
+window.addEventListener('storage',event=>{
+  if(event.key!==STORAGE_KEY || event.newValue===lastKnownLocalDraftRaw)return;
+  if(!externalDraftConflict)preserveConflictedSession();
+});
+function writeDraftNow(requireLocal=false){
+  if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
+  if(externalDraftConflict){
+    preserveConflictedSession();
+    return false;
+  }
+  // Compare the exact prior bytes before every write, including debounced writes.
+  // Valid JSON v1 alone cannot distinguish legacy loss of optional era fields.
+  try{
+    if(localStorage.getItem(STORAGE_KEY)!==lastKnownLocalDraftRaw){
+      preserveConflictedSession();
+      return false;
+    }
+  }catch(error){console.warn('Cannot check concurrent draft writes:',error);}
+  const previous=Date.parse(state.updatedAt);
+  // A local write after a session fallback must sort strictly newer,
+  // even when two saves occur within one millisecond.
+  state.updatedAt=new Date(Math.max(Date.now(),Number.isFinite(previous)?previous+1:0)).toISOString();
+  const serialized=JSON.stringify(state);
+  try{
+    localStorage.setItem(STORAGE_KEY,serialized);
+    lastKnownLocalDraftRaw=serialized;
+    try{
+      sessionStorage.removeItem(SESSION_FALLBACK_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
+    }catch(e){console.warn('Cannot clear prior session fallback:',e);}
+    sessionRecovered=false;
+    $('atlasSessionRecovery')?.remove();
     $('savedStatus').textContent='DRAFT SAVED';
     return true;
-  }catch(e){
-    try{
-      sessionStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-      $('savedStatus').textContent='SESSION SAVED (EXPORT)';
-      message('Local storage quota reached; draft preserved in session. Export your JSON.',true);
-    }catch(se){
-      $('savedStatus').textContent='EXPORT REQUIRED';
-      message('Storage full or blocked. Export your draft.',true);
+  }catch(error){
+    if(requireLocal){
+      $('savedStatus').textContent='RECOVERY REQUIRED';
+      message('Previous unreadable JSON was not replaced; local storage is unavailable.',true);
+      return false;
     }
-    return false;
+    try{
+      sessionStorage.setItem(STORAGE_KEY,serialized);
+      try{sessionStorage.setItem(SESSION_FALLBACK_KEY,'1');}
+      catch(e){console.warn('Session fallback marker unavailable; timestamp recovery remains active:',e);}
+      $('savedStatus').textContent='SESSION SAVED / EXPORT';
+      message('Local storage unavailable. Session draft saved; export a backup before closing the browser.',true);
+      return true;
+    }catch(sessionError){
+      $('savedStatus').textContent='EXPORT REQUIRED';
+      message('Both browser storage locations refused the edit. Export your draft.',true);
+      return false;
+    }
   }
 }
 function flushPendingSave(){
   if(saveTimer===null)return;
   clearTimeout(saveTimer);saveTimer=null;writeDraftNow();
 }
-function persist(){
-  if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return;}
-  clearTimeout(saveTimer);
+function persist(immediate=false,requireLocal=false){
+  if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
+  if(externalDraftConflict){
+    clearTimeout(saveTimer);saveTimer=null;
+    preserveConflictedSession();
+    return false;
+  }
+  clearTimeout(saveTimer);saveTimer=null;
+  if(immediate)return writeDraftNow(requireLocal);
   saveTimer=setTimeout(()=>{saveTimer=null;writeDraftNow();},250);
+  return true;
+}
+function downloadRejectedDraft(){
+  if(rejectedDraftRaw===null)return;
+  const blob=new Blob([rejectedDraftRaw],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=el('a');
+  a.href=url;a.download='starsilk-map-rejected-local-draft.json.txt';
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  message('Exact rejected saved JSON offered for download. Stored original remains intact.');
 }
 function setupRecoveryUI(){
   if(rejectedDraftRaw===null)return;
   const tools=el('section','atlas-recovery-tools');tools.id='atlasRecoveryTools';
   tools.setAttribute('aria-label','Unreadable saved draft');
-  const note=el('p','small-note','The previous local draft could not be loaded. It has NOT been overwritten. Download its exact contents before starting another saved draft.');
-  const download=button('DOWNLOAD ORIGINAL JSON','button-outline',()=>{
-    if(rejectedDraftRaw===null)return;
-    const blob=new Blob([rejectedDraftRaw],{type:'text/plain;charset=utf-8'});
-    const url=URL.createObjectURL(blob),a=el('a');a.href=url;a.download='starsilk-map-rejected-local-draft.json.txt';
-    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    message('Original bytes offered for download. Stored draft is still untouched.');
-  });
+  const note=el('p','small-note','A previous browser draft could not be loaded. Its exact bytes remain untouched. Download the original before approving a replacement.');
+  const download=button('DOWNLOAD ORIGINAL JSON','button-outline',downloadRejectedDraft);
   const replaceDraft=button('REPLACE WITH NEW DRAFT','button-outline',()=>{
     if(!confirm('Replace the unreadable saved draft with the currently open draft? Download the original first if you need recovery.'))return;
-    rejectedDraftRaw=null;tools.remove();persist();
-    message('New draft selected. The old local data will be replaced.');
+    const previous=rejectedDraftRaw;rejectedDraftRaw=null;
+    if(!persist(true,true)){
+      rejectedDraftRaw=previous;
+      $('savedStatus').textContent='RECOVERY REQUIRED';
+      message('Original retained. Cannot replace until storage becomes available.',true);
+      return;
+    }
+    tools.remove();message('New draft saved. Original JSON was replaced after your confirmation.');
   });
   tools.append(note,download,replaceDraft);
   gui.left.prepend(tools);
 }
-function change(mutator,{geometry=true}={}){
-  const prior=JSON.stringify(state);
-  try{mutator();syncEra(state);const errors=validateAtlas(state);if(errors.length)throw new Error(errors[0]);}
-  catch(e){state=JSON.parse(prior);message('Change rejected: '+e.message,true);return false;}
+function setupSessionRecoveryUI(){
+  if(!sessionRecovered||rejectedDraftRaw!==null)return;
+  const tools=el('section','atlas-recovery-tools');tools.id='atlasSessionRecovery';
+  tools.setAttribute('aria-label','Recover draft from temporary session storage');
+  const note=el('p','small-note','A newer session draft is open instead of an older device copy. Save it locally, or export JSON before closing this session.');
+  const retry=button('SAVE RECOVERED DRAFT LOCALLY','button-outline',()=>{
+    if(writeDraftNow()&&!sessionRecovered)message('Recovered session draft saved locally.');
+  });
+  const backup=button('EXPORT RECOVERED JSON','button-outline',exportAtlas);
+  tools.append(note,retry,backup);gui.left.prepend(tools);
+}
+function change(mutator,{geometry=true,immediate=false}={}){
+  const prior=JSON.stringify(state),hadPending=saveTimer!==null;
+  try{
+    mutator();syncEra(state);
+    const errors=validateAtlas(state);if(errors.length)throw new Error(errors[0]);
+    if(immediate&&!persist(true))throw new Error('Draft not stored; no deletion or other destructive edit applied. Export your draft.');
+  }catch(e){
+    state=JSON.parse(prior);
+    if(externalDraftConflict)preserveConflictedSession();
+    else if(hadPending)persist();
+    message('Change rejected: '+e.message,true);return false;
+  }
   history.push(prior);if(history.length>30)history.shift();
   redoStack=[];
   revision++;
   updateUndoRedoButtons();
   if(geometry)engine?.setState(state,view);else engine?.updateLabels();
-  updateUI();persist();return true;
+  updateUI();if(!immediate)persist();return true;
 }
 function enter(viewKind,id,preserveSelectedId=null){
   studio?.cancel();studio?.routeStop();strategy?.cancelGesture();strategy?.cancelDrawing();pendingRoute=null;
@@ -114,7 +205,8 @@ function enter(viewKind,id,preserveSelectedId=null){
   if(viewKind==='system'&&n?.kind!=='system')return;
   view={kind:viewKind,id:viewKind==='all'?null:id};
   state.selected=preserveSelectedId;engine?.setView(view);updateUI();
-  const name=n?.name||'THE ALL';$('savedStatus').textContent='VIEW / '+name.slice(0,14);
+  const name=n?.name||'THE ALL';
+  if(!/RECOVERY|SESSION|EXPORT REQUIRED/.test($('savedStatus').textContent))$('savedStatus').textContent='VIEW / '+name.slice(0,14);
   if(viewKind==='galaxy'&&n)message('Entered '+n.name+': '+childNodes(state,n.id,'system').length+' provisional stellar systems mapped.');
   else if(viewKind==='system'&&n)message('Entered '+n.name+': '+childNodes(state,n.id,'planet').length+' draft planetary bodies.');
   else if(viewKind==='all')message('Ascended to The All: 7 galaxies and cosmic landmarks.');
@@ -209,6 +301,16 @@ function updateLayers(){const frag=document.createDocumentFragment();
   }
   gui.layers.replaceChildren(frag);
 }
+function updateVisualCleanup(){
+  const select=$('visualTarget'),targets=listVisualTargets(state),prior=select.value;
+  select.replaceChildren(...targets.map(([id,name])=>{const o=el('option','',name);o.value=id;return o;}));
+  select.value=targets.some(([id])=>id===prior)?prior:targets[0][0];
+  const hidden=isSuppressed(state,select.value),count=state.suppressedVisuals?.length||0;
+  $('visualSuppressBtn').textContent=hidden?'RESTORE THIS DETAIL':'SUPPRESS THIS DETAIL';
+  $('visualSuppressBtn').setAttribute('aria-pressed',hidden?'true':'false');
+  $('visualStatus').textContent=count+' hidden in '+state.epoch.toUpperCase()+' era.';
+  $('visualResetBtn').disabled=count===0;
+}
 function currentNodes(){
   if(view.kind==='all')return childNodes(state,null).filter(n=>n.kind==='galaxy'||n.kind==='landmark'||n.kind==='annotation');
   return childNodes(state,view.id).filter(n=>view.kind==='galaxy'?['system','annotation'].includes(n.kind):['planet','annotation'].includes(n.kind));
@@ -233,7 +335,7 @@ function updateRoutes(){
     const label=el('span','',(a?.name||route.from)+' / '+(b?.name||route.to));
     const mode=button(route.kind==='hookshot'?'H':'S','route-mode',()=>{change(()=>{route.kind=route.kind==='hookshot'?'starsilk':'hookshot';});});
     mode.title='Toggle illustrative Hookshot / Starsilk representation';
-    const del=button('×','route-delete',()=>{change(()=>{state.routes=state.routes.filter(r=>r.id!==route.id);});});
+    const del=button('×','route-delete',()=>{if(change(()=>deleteObject(state,route.id,{type:'route'}),{immediate:true}))message('Draft corridor removed. Undo available.');});
     del.title='Remove draft corridor';del.setAttribute('aria-label','Remove corridor '+label.textContent);
     row.append(label,mode,del);frag.append(row);
   }
@@ -287,7 +389,8 @@ function fillInspector(){const n=nodeById(state,state.selected);const intro=$('i
   const readOnly=n.status==='reference';
   for(const field of gui.form.querySelectorAll('input,textarea,select'))field.disabled=readOnly;
   $('applyBtn').disabled=readOnly;$('enterBtn').disabled=!['galaxy','system'].includes(n.kind);
-  $('deleteBtn').textContent=readOnly?'FORK AS DRAFT':'DELETE DRAFT';
+  $('deleteBtn').textContent=readOnly?'FORK AS DRAFT':'DELETE SELECTED DRAFT';
+  $('deleteBtn').title=readOnly?'Copy the immutable reference to an editable draft; the source stays intact':'Delete the selected draft and any dependent drafts, with confirmation and Undo';
   $('connectBtn').disabled=readOnly||!['galaxy','system','planet'].includes(n.kind);
 }
 function updateSources(){
@@ -429,7 +532,7 @@ function updateCounts(){ $('countGalaxy').textContent=String(state.nodes.filter(
 function activateEra(id){
   if(id===state.epoch)return;
   studio?.cancel();studio?.routeStop();pendingRoute=null;strategy?.close();networkLab?.close();
-  const accepted=change(()=>switchEra(state,id));
+  const accepted=change(()=>switchEra(state,id),{immediate:true});
   if(accepted){
     if(view.id&&!nodeById(state,view.id))enter('all',null);
     if(engine)engine.transitionEra?.();
@@ -497,8 +600,31 @@ function updateScaleGauge(){
     textEl.textContent=`STELLAR SYSTEM · ~5 AU SANDBOX (${sys?sys.name:'STAR'} · SSP COMPATIBLE)`;
   }
 }
+function updateInspectorAffordance(){
+  const tab=document.querySelector('.atlas-pull-tab[data-drawer="inspect"]');
+  if(!tab)return;
+  const selected=nodeById(state,state.selected);
+  tab.dataset.hasSelection=String(Boolean(selected));
+  tab.setAttribute('aria-label',selected?'Inspect selected '+selected.name+' (key 2)':'Toggle inspect tools (key 2)');
+  tab.title=selected?'Inspect '+selected.name+' [Key: 2]':'INSPECT [Key: 2]';
+}
+function updateStellarNavigation(){
+  const system=view.kind==='system'?nodeById(state,view.id):null;
+  const selected=nodeById(state,state.selected);
+  const drill=view.kind==='galaxy'&&selected?.kind==='system'&&selected.parentId===view.id;
+  $('stellarDive').hidden=!drill;
+  if(drill)$('stellarDiveName').textContent=selected.name;
+  $('stellarHud').hidden=!system;
+  if(system){
+    $('stellarHudName').textContent=system.name;
+    $('stellarHudInfo').textContent=childNodes(state,system.id,'planet').length+' DRAFT PLANETS · EDITORIAL ORBITS';
+  }
+}
+function canDollyEnter(){return !pendingRoute&&(!studio||studio.mode==='orbit')&&
+  !strategy?.opened&&!networkLab?.opened&&!temporal?.opened&&
+  !document.querySelector('dialog[open]');}
 function updateUI(){
-  updateBreadcrumb();updateLayers();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
+  updateInspectorAffordance();updateStellarNavigation();updateBreadcrumb();updateLayers();updateVisualCleanup();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
   $('quality').value=state.quality;
   $('motionBtn').textContent=state.motion?'MOTION ON':'MOTION OFF';
   $('motionBtn').setAttribute('aria-pressed',state.motion?'true':'false');
@@ -519,7 +645,7 @@ function cycleSelection(delta=1){
     message(`Selected ${nextNode.name} (${nextIdx+1}/${nodes.length}).`);
   }
 }
-function focusSearch(){gui.search.focus();if(innerWidth<=620)gui.left.classList.add('expanded');}
+function focusSearch(){drawerController?.open('nav');gui.search.focus({preventScroll:true});if(innerWidth<=620)gui.left.classList.add('expanded');}
 function inspectCanonEntity(c){
   state.selected=null;
   fillInspector();
@@ -776,13 +902,34 @@ function saveInspector(ev){ev.preventDefault();const n=nodeById(state,state.sele
   if(change(()=>{n.name=$('objName').value.trim();n.description=$('objDescription').value.trim();n.position=nums;
     n.color=$('objColor').value;n.size=sz;n.label={show:$('objLabelShow').checked,color:$('objLabelColor').value,size:fs,family:$('objLabelFamily').value, ...(n.label.offset?{offset:[...n.label.offset]}:{})};}))message('Draft geometry and typography updated.');
 }
-function removeOrFork(){const n=nodeById(state,state.selected);if(!n)return;
+function removeOrFork(){
+  const n=nodeById(state,state.selected);if(!n)return;
   if(n.status==='reference'){
-    let id;change(()=>{id=uniqueId(state,'draft-reference');state.nodes.push({...structuredClone(n),id,name:n.name+' / DRAFT',status:'draft',sourceUrl:null});});
-    select(id);message('Created an editable draft. The source reference remains protected.');return;
+    let id;
+    if(change(()=>{id=uniqueId(state,'draft-reference');state.nodes.push({...structuredClone(n),id,name:n.name+' / DRAFT',status:'draft',sourceUrl:null});})){
+      select(id);message('Created an editable draft. The source reference remains protected.');
+    }
+    return;
   }
-  if(!confirm('Delete this draft object and any children or connected routes?'))return;
-  change(()=>{removeNode(state,n.id);});message('Draft object deleted.');
+  let plan;
+  try{plan=planDeletion(state,n.id,{type:'node'});}catch(error){message('Delete refused: '+error.message,true);return;}
+  const dependencies=plan.nodeCount-1;
+  const warning='Delete '+n.name+' (draft)?'
+    +'\nDependent draft objects: '+dependencies
+    +'\nConnected draft routes: '+plan.routeCount
+    +'\nDependent draft regions: '+plan.regionCount
+    +'\nOnly the current era is affected. Undo restores this deletion.';
+  if(!confirm(warning))return;
+  studio?.cancel();studio?.routeStop();strategy?.cancelGesture();strategy?.cancelDrawing();pendingRoute=null;
+  const previousView=view;
+  const leavingView=Boolean(view.id&&plan.nodeIds.includes(view.id));
+  if(leavingView)view={kind:'all',id:null};
+  if(change(()=>deleteObject(state,n.id,{type:'node'}),{immediate:true})){
+    if(leavingView){engine?.setView(view);updateUI();}
+    message('Deleted '+plan.nodeCount+' draft object(s), '+plan.routeCount+' corridor(s), '+plan.regionCount+' region(s). Undo available.');
+  }else{
+    view=previousView;
+  }
 }
 function connectRoute(){const n=nodeById(state,state.selected);if(!n||n.status!=='draft')return;
   studio?.setMode('route');pendingRoute=n.id;studio?.routeStart(n.id);
@@ -839,12 +986,20 @@ async function importAtlas(file){if(!file)return;if(file.size>1200000){message('
 }
 function executeImport(){
   if(!pendingImportData)return;
-  const previous=JSON.stringify(state);
+  const previous=JSON.stringify(state),priorRejection=rejectedDraftRaw;
   strategy?.cancelGesture();strategy?.cancelDrawing();
   studio?.cancel();studio?.routeStop();
   state=pendingImportData.parsed;
   ensureTimeline(state);
-  history.push(previous);
+  rejectedDraftRaw=null;
+  if(!persist(true,priorRejection!==null)){
+    state=JSON.parse(previous);rejectedDraftRaw=priorRejection;
+    if(externalDraftConflict)preserveConflictedSession();
+    $('savedStatus').textContent=priorRejection!==null?'RECOVERY REQUIRED':'EXPORT REQUIRED';
+    message('Import not applied: neither local nor session storage accepted it. Original retained.',true);
+    return;
+  }
+  history.push(previous);if(history.length>30)history.shift();
   redoStack=[];
   view={kind:'all',id:null};
   pendingRoute=null;
@@ -852,9 +1007,7 @@ function executeImport(){
   engine?.setView(view);
   updateUI();
   updateUndoRedoButtons();
-  rejectedDraftRaw=null;
   $('atlasRecoveryTools')?.remove();
-  persist();
   $('importConfirmDialog')?.close();
   message(`Imported ${pendingImportData.filename}: source status intentionally demoted to draft.`);
   pendingImportData=null;
@@ -862,22 +1015,43 @@ function executeImport(){
 function undo(){if(!history.length){message('No changes to undo.');return;}
   strategy?.cancelGesture();strategy?.cancelDrawing();studio?.cancel();studio?.routeStop();pendingRoute=null;
   const current=JSON.stringify(state);
+  state=JSON.parse(history[history.length-1]);
+  if(!persist(true)){
+    state=JSON.parse(current);if(externalDraftConflict)preserveConflictedSession();message('Undo not applied: unable to store this state.',true);return;
+  }
   redoStack.push(current);if(redoStack.length>30)redoStack.shift();
-  state=JSON.parse(history.pop());
+  history.pop();
   if(view.id&&!nodeById(state,view.id))view={kind:'all',id:null};
-  engine?.setState(state,view);updateUI();persist();updateUndoRedoButtons();message('Reverted last edit.');
+  engine?.setState(state,view);updateUI();updateUndoRedoButtons();message('Reverted last edit.');
 }
 function redo(){if(!redoStack.length){message('No changes to redo.');return;}
   strategy?.cancelGesture();strategy?.cancelDrawing();studio?.cancel();studio?.routeStop();pendingRoute=null;
   const current=JSON.stringify(state);
+  state=JSON.parse(redoStack[redoStack.length-1]);
+  if(!persist(true)){
+    state=JSON.parse(current);if(externalDraftConflict)preserveConflictedSession();message('Redo not applied: unable to store this state.',true);return;
+  }
   history.push(current);if(history.length>30)history.shift();
-  state=JSON.parse(redoStack.pop());
+  redoStack.pop();
   if(view.id&&!nodeById(state,view.id))view={kind:'all',id:null};
-  engine?.setState(state,view);updateUI();persist();updateUndoRedoButtons();message('Redone edit.');
+  engine?.setState(state,view);updateUI();updateUndoRedoButtons();message('Redone edit.');
 }
 function resetCamera(){engine?.setView(view);}
 function toggleFocus(){gui.atlas.classList.toggle('focus-view');if(!gui.atlas.classList.contains('focus-view'))gui.right.classList.remove('mobile-open');}
 function bind(){
+  $('stellarDiveButton').addEventListener('click',enterSelected);
+  $('stellarBackButton').addEventListener('click',up);
+  $('stellarOverviewButton').addEventListener('click',resetCamera);
+  $('visualTarget').addEventListener('change',updateVisualCleanup);
+  $('visualSuppressBtn').addEventListener('click',()=>{
+    const id=$('visualTarget').value,hidden=isSuppressed(state,id);
+    if(change(()=>setSuppressed(state,id,!hidden),{immediate:true}))
+      message((hidden?'Restored':'Suppressed')+' editorial detail. Undo available.');
+  });
+  $('visualResetBtn').addEventListener('click',()=>{
+    if(change(()=>{state.suppressedVisuals=[];},{immediate:true}))
+      message('All procedural details restored for this era. Undo available.');
+  });
   $('temporalOpen').addEventListener('click',()=>{networkLab?.close();strategy?.close();studio?.setMode('orbit');temporal?.open();});
   $('strategyOpen').addEventListener('click',()=>{if(!strategy)return;temporal?.close();networkLab?.close();studio?.setMode('orbit');strategy.open();});
   $('networkOpen').addEventListener('click',()=>{if(!networkLab)return;temporal?.close();studio?.setMode('orbit');strategy?.close();networkLab.open();});
@@ -904,7 +1078,7 @@ function bind(){
     $('importConfirmDialog')?.close();
     pendingImportData=null;
   });
-  $('importBackupBtn')?.addEventListener('click',()=>{exportAtlas();});
+  $('importBackupBtn')?.addEventListener('click',()=>{if(rejectedDraftRaw!==null)downloadRejectedDraft();else exportAtlas();});
   $('handoffExportBtn').addEventListener('click',exportPlannerHandoff);
   $('handoffHelpBtn')?.addEventListener('click',()=>$('handoffInstructionsDialog')?.showModal());
   $('closeHandoffInstructions')?.addEventListener('click',()=>$('handoffInstructionsDialog')?.close());
@@ -923,7 +1097,7 @@ function bind(){
     }
   });
   document.addEventListener('keydown',ev=>{
-    if(ev.target?.closest?.('input,textarea,select,[contenteditable]')||$('helpDialog').open||$('sourceGraphDialog').open||$('importConfirmDialog')?.open)return;
+    if(ev.target?.closest?.('input,textarea,select,[contenteditable],[role="textbox"]')||document.querySelector('dialog[open]'))return;
     if((ev.ctrlKey||ev.metaKey)&&!ev.altKey){
       const k=ev.key.toLowerCase();
       if(!ev.shiftKey&&k==='z'){ev.preventDefault();undo();return;}
@@ -937,7 +1111,15 @@ function bind(){
     else if(ev.key.toLowerCase()==='h'){toggleFocus();}
     else if(ev.key.toLowerCase()==='f'){focusSelected();}
     else if(ev.key==='Escape'){ev.preventDefault();up();gui.right.classList.remove('mobile-open');}
-    else if(ev.key==='Backspace'&&!ev.target?.closest?.('input,textarea,select')){ev.preventDefault();up();}
+    else if((ev.key==='Delete'||(ev.key==='Backspace'&&
+        (['move','label'].includes(studio?.mode)||strategy?.opened||!gui.right.hidden)))&&
+        state.selected&&!strategy?.drawing&&!strategy?.gesture&&studio?.mode!=='route'){
+      ev.preventDefault();
+      const selected=nodeById(state,state.selected);
+      if(selected?.status==='draft')removeOrFork();
+      else message('This source identity is immutable. Use FORK AS DRAFT instead.',true);
+    }
+    else if(ev.key==='Backspace'){ev.preventDefault();up();}
     else if(ev.key==='0'){ev.preventDefault();engine?.resetViewCamera(true);message('Camera reset to default.');}
     else if(ev.key==='Home'){enter('all',null);}
   });
@@ -974,14 +1156,18 @@ function init(){updateUI();bind();
       }
     });
   }catch(e){$('sourceGraphOpen').disabled=true;message('Source topology unavailable: '+e.message,true);}
-  try{engine=new AtlasEngine(gui.canvas,gui.labels,{onSelect:select,onViewChanged:updateUI});engine.setState(state,view);
+  try{engine=new AtlasEngine(gui.canvas,gui.labels,{onSelect:select,onViewChanged:updateUI,
+    canDollyEnter,onDollyEnter:id=>{
+      const n=nodeById(state,id);
+      if(view.kind==='galaxy'&&n?.kind==='system'&&n.parentId===view.id)enter('system',id);
+    }});engine.setState(state,view);
     studio=new SpatialStudio({canvas:gui.canvas,labelsRoot:gui.labels,atlas:gui.atlas,panel:$('studioPanel'),
       getState:()=>state,getView:()=>view,onMove:moveDraftNode,onLabelCommit:moveDraftLabel,
       onRouteCancel:()=>{pendingRoute=null;},
       onScale:value=>change(()=>{state.typographyScale=value;},{geometry:false}),
       onModeChange:()=>{pendingRoute=null;strategy?.close();networkLab?.close();},message});studio.attachEngine(engine);
     strategy=new StrategicStudio({canvas:gui.canvas,labelsRoot:gui.labels,atlas:gui.atlas,panel:$('strategyPanel'),
-      getState:()=>state,getView:()=>view,onChange:mutator=>change(()=>mutator(state)),onMessage:message});
+      getState:()=>state,getView:()=>view,onChange:(mutator,options)=>change(()=>mutator(state),options),onMessage:message});
     strategy.attachEngine(engine);
     networkLab=new NetworkLab({canvas:gui.canvas,atlas:gui.atlas,panel:$('networkPanel'),
       getState:()=>state,getView:()=>view,onCommit:commitNetworkLink,message,
@@ -1006,6 +1192,26 @@ function init(){updateUI();bind();
     console.error('Atlas startup:',e);
   }
 }
+// Opt-in, read-only metrics for disposable-profile performance QA.
+// Never exports drafts or alters renderer, state, persistence or DOM layout.
+if(new URLSearchParams(location.search).get('atlasDiagnostics')==='1'){
+  Object.defineProperty(window,'__atlasDiagnostics',{
+    configurable:true,
+    value:()=>({
+      ...(engine?.info()||{}),
+      epoch:state?.epoch||null,
+      quality:state?.quality||null,
+      viewKind:view.kind,
+      provisionalCells:engine?.group.getObjectByName('provisional-survey-cells')?.userData.cellCount??0,
+      authoredSectors:engine?.group.getObjectByName('editorial-draft-regions')?.children.filter(o=>o.isMesh&&o.geometry?.type==='ShapeGeometry').length??0,
+      regionObjects:engine?.group.getObjectByName('editorial-draft-regions')?.children.length??0,
+      regionPins:engine?.group.getObjectByName('editorial-draft-regions')?.children.filter(o=>o.name==='editorial-sector-pin').length??0,
+      regionRebuilds:strategy?.regionRebuilds??0,
+      viewport:[innerWidth,innerHeight]
+    })
+  });
+}
 init();
 drawerController=setupFullscreenAtlas();
 setupRecoveryUI();
+setupSessionRecoveryUI();
