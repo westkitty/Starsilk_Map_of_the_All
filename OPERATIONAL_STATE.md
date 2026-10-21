@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 30
+revision: 31
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -446,3 +446,12 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - The GitHub PR workflow adds a **two-stage, disposable** test: (1) original pinned Planner+modern Atlas collision witness, then (2) copy candidate read-only HTML into the *temporary CI checkout* of Planner, rebuild, and run `phase6-two-client-browser-ci.mjs --retired` asserting no new legacy editor controls, zero change to the primary key, exact-byte backup download, safe standalone link, and runtime health. No persistent Planner repository mutation occurs.
 - New evidence source: `docs/consolidation/PHASE_06_LEGACY_RETIREMENT_PREVIEW.md`. The result is **UNVERIFIED until exact-head GitHub Actions completion**. Even a PASS cannot neutralize previously loaded old tabs, recover real owner's data, or authorize release.
 - The independent Planner root orbital simulator and read-only Starsilk Dossier remain untouched in Git. The dedicated Atlas `RELEASE_READINESS.json` stays **BLOCKED** with all seven required proof receipts missing. Production merge, Pages deployment, destructive migrations, key changes, and any source mutation of the independent Planner are still prohibited until applicable approval and recovery proof.
+
+## 2026-10-21 — Phase 6 compiled legacy retirement preview independently verified (revision 31)
+
+- **Exact tested source:** dedicated Atlas candidate `2240ff4f08f612ccd0ba15294a2484d1a68d2de7`, GitHub Actions [run 39570763673](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39570763673). Both jobs completed **SUCCESS** on that code SHA. The Atlas check reported **280/280 Node tests**, all 14 browser acceptance scripts passed, disposable three-era backup/import/reload/corrupt-raw recovery passed, and compressed bundle **223793/225000 bytes** under Node 22. The original immutable Planner checkout passed **239/239 native tests**, TypeScript, build and PWA/bundle audit. This entry is a proof record for that tested ancestor; any later commit requires independent exact-head status.
+- **Original legacy hazard still reproducible:** `PHASE6_TWO_CLIENT_WRITER_COLLISION` proves the existing production legacy editor overwrites current-origin JSON v1, removes synthetic galaxy name and Post-era suppression, and the modern reader still accepts the downgraded file. That is an **unsafe behavior**, not a compatibility pass.
+- **Conflicted modern-session mitigation verified:** `PHASE6_MODERN_CONFLICT_FENCE_PASS` confirms the current tab detects the overwrite, leaves conflicting bytes intact, and retains modern state in session-only fallback. This is **not persistent owner recovery or atomic compare-and-swap**.
+- **Legacy-written JSON import verified:** `PHASE6_LEGACY_V1_IMPORT_PASS` imported genuine compiled older-client output through the modern UI in a fresh disposable browser context, including three-era confirmation and reload. This does not imply that missing modern fields from the original collision can be recovered.
+- **Proposed read-only legacy entry verified only in disposable Planner checkout:** `PHASE6_LEGACY_RETIREMENT_PREVIEW_PASS` confirmed original-key bytes untouched, exact raw export, malformed raw round-trip, empty-profile no-op, standalone restore preserving three eras and suppression, independent Planner root app mounted, no retired editor controls or runtime exceptions. This is not actual Planner deployment and does not neutralize stale tabs or cached service workers.
+- **Release remains BLOCKED**: owner-operated personal draft backup **and independent restoration**, separate actual Planner legacy-route retirement approval, stale-tab/PWA transition proof, rollback rehearsal and exact-release-SHA approval are missing. `RELEASE_READINESS.json` keeps all seven gates blocked; neither production main branch nor Pages nor read-only Dossier was modified.
