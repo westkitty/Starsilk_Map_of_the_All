@@ -132,3 +132,14 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
 .visual-cleanup{display:grid;gap:7px;color:#a7c8d7;font:9px/1.45 var(--mono)}
 .visual-cleanup select{min-height:44px;background:#061725;border:1px solid #34687f}
 @media(max-width:620px){.left-panel .visual-cleanup{display:none}.left-panel.expanded .visual-cleanup{display:grid}}
+
+/* A restrained ink wash makes captions legible over bright galaxy cores. */
+.world-label .label-name{
+  padding-inline:4px;
+  background:linear-gradient(90deg,transparent,rgba(1,5,13,.6) 15%,rgba(1,5,13,.6) 85%,transparent);
+  text-shadow:0 1px 3px #000,0 0 8px #000;
+}
+/* Cartographic label hierarchy and stylus-sized touch affordances. */
+.world-label[data-kind="galaxy"] .label-name{font-weight:650;letter-spacing:.105em}
+.world-label[data-status="reference"] .label-name{font-weight:550}
+@media (pointer:coarse){.world-label{min-height:44px;min-width:44px}}

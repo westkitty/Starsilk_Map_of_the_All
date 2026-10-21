@@ -42,6 +42,7 @@ jobs:
           node --check scripts/phase15-survey-browser-ci.mjs
           node --check scripts/phase16-region-browser-ci.mjs
           node --check scripts/phase16-matched-draw-benchmark.mjs
+          node --check scripts/phase17-labels-browser-ci.mjs
       - name: Verify standalone production routing
         run: |
           set -euo pipefail
@@ -74,6 +75,8 @@ jobs:
         run: node scripts/phase15-survey-browser-ci.mjs
       - name: Verify Authored Sector GPU Economy
         run: node scripts/phase16-region-browser-ci.mjs
+      - name: Verify Safe Cartographic Labels and Touch Accessibility
+        run: node scripts/phase17-labels-browser-ci.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

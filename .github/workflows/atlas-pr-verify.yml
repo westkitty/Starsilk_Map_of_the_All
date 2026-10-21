@@ -2,7 +2,7 @@ name: Atlas Pull Request Verification
 
 on:
   pull_request:
-    branches: [main, consolidation/phase-02-omni-recovery-20261020, feature/phase03-stellar-navigation, feature/phase04-zero-loss-ux, feature/phase05-network-batching, feature/phase05-frame-observability, feature/phase15-provisional-survey-cells, feature/phase16-region-render-economy]
+    branches: [main, consolidation/phase-02-omni-recovery-20261020, feature/phase03-stellar-navigation, feature/phase04-zero-loss-ux, feature/phase05-network-batching, feature/phase05-frame-observability, feature/phase15-provisional-survey-cells, feature/phase16-region-render-economy, feature/phase17-safe-cartography-labels]
 
 # Read-only validation; never publishes or modifies GitHub Pages.
 permissions:
@@ -56,6 +56,7 @@ jobs:
           node --check scripts/phase15-survey-browser-ci.mjs
           node --check scripts/phase16-region-browser-ci.mjs
           node --check scripts/phase16-matched-draw-benchmark.mjs
+          node --check scripts/phase17-labels-browser-ci.mjs
 
       - name: Run existing Chromium acceptance suites
         run: npm run test:browser

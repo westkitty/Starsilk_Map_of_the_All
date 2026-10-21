@@ -166,7 +166,7 @@
     width:calc(100% - 14px);max-height:calc(100dvh - 99px)}
   .atlas.atlas-minimal .notifications{top:93px}
   .atlas.atlas-minimal .side-tools{bottom:12px;left:12px}
-  .atlas.atlas-minimal .world-label{font-size:10px!important;max-width:100px}
+  .atlas.atlas-minimal .world-label{font-size:12px!important;max-width:132px}
   .atlas-era-chooser .era-options{grid-template-columns:repeat(3,minmax(0,1fr))}
   .atlas-era-chooser .era-btn{min-height:51px}
   .first-action-hud{bottom:40px;padding:4px 8px;gap:5px}

@@ -1215,6 +1215,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     if(!state||!state.layers.labels){for(const node of this.labelNodes.values())node.remove();this.labelNodes.clear();return;}
     const candidates=[];const w=this.width,h=this.height;
     const budget=w<640?14:w<1024?22:32;
+    const coarsePointer=window.matchMedia('(pointer:coarse)').matches;
     // Reuse scratch vectors: projected labels can update 20 times per second.
     const wp=this._labelWorldPos||(this._labelWorldPos=new THREE.Vector3());
     const p=this._labelProjectedPos||(this._labelProjectedPos=new THREE.Vector3());
@@ -1236,7 +1237,13 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const used=[],live=new Set();
     for(const {n,x,y,item,d} of candidates.slice(0,budget)){
       const font=clamp((n.label?.size||12)*state.typographyScale,9,42);
-      const wd=Math.min(360,n.name.length*font*.68+16),ht=font+18;
+      // Expanded source badges need accurate space at the All scale. Deeper
+      // levels must preserve the existing tight system/planet pick targets.
+      const badgeLength=item.subtitle?.length||0;
+      const deepView=this.view.kind!=='all';
+      const wd=Math.min(360,deepView?n.name.length*font*.68+16:
+        Math.max(n.name.length*font*.68+16,badgeLength*5.6+16));
+      const ht=deepView?font+18:Math.max(font+(badgeLength?30:18),coarsePointer?44:0);
       if(used.some(q=>Math.abs(x-q[0])<(wd+q[2])/2&&Math.abs(y-q[1])<(ht+q[3])/2))continue;
       used.push([x,y,wd,ht]);live.add(n.id);
       let btn=this.labelNodes.get(n.id);
@@ -1251,12 +1258,20 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       if(btn.dataset.status!==(n.status||'draft'))btn.dataset.status=n.status||'draft';
       if(btn.dataset.kind!==(n.kind||''))btn.dataset.kind=n.kind||'';
       const isRef=n.status==='reference';
+      const accessibleName=n.name+(isRef?' — source reference, illustrative map position':' — editable atlas draft');
+      if(btn._accessibleName!==accessibleName){btn._accessibleName=accessibleName;btn.setAttribute('aria-label',accessibleName);}
       const pipClass=isRef?'pip-canon':(n.kind==='galaxy'?'pip-draft':'pip-aux');
       const badgeText=isRef?(item.subtitle||'SOURCE TOPOLOGY'):(item.subtitle||'');
       const contentKey=`${pipClass}|${n.name}|${badgeText}`;
       if(btn._contentKey!==contentKey){
         btn._contentKey=contentKey;
-        btn.innerHTML=`<span class="label-pip ${pipClass}" aria-hidden="true"></span><span class="label-name">${n.name}</span>${badgeText?`<span class="label-badge">${badgeText}</span>`:''}`;
+        // Names arrive from locally imported JSON v1. Never parse them as HTML.
+        const pip=document.createElement('span');pip.className='label-pip '+pipClass;pip.setAttribute('aria-hidden','true');
+        const name=document.createElement('span');name.className='label-name';name.textContent=n.name;
+        if(badgeText){
+          const badge=document.createElement('span');badge.className='label-badge';badge.textContent=badgeText;
+          btn.replaceChildren(pip,name,badge);
+        }else btn.replaceChildren(pip,name);
       }
       if(btn._lastX===undefined||Math.abs(x-btn._lastX)>=0.25||Math.abs(y-btn._lastY)>=0.25){
         btn._lastX=x;btn._lastY=y;
@@ -1268,7 +1283,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       if(btn._lastColor!==fontColor){btn._lastColor=fontColor;btn.style.color=fontColor;}
       const fontFamily=n.label?.family==='mono'?'var(--mono)':'var(--display)';
       if(btn._lastFamily!==fontFamily){btn._lastFamily=fontFamily;btn.style.fontFamily=fontFamily;}
-      const alpha=isSelected?1.0:clamp(1.2-(d/700),0.42,1.0);
+      const alpha=isSelected?1.0:clamp(1.2-(d/700),coarsePointer?0.82:0.42,1.0);
       if(btn._lastAlpha===undefined||Math.abs(alpha-btn._lastAlpha)>=0.02){
         btn._lastAlpha=alpha;
         btn.style.opacity=alpha.toFixed(2);
