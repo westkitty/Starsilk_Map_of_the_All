@@ -19,6 +19,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Require explicit one-writer cutover and exact-head release approval
+        env:
+          ATLAS_RELEASE_APPROVED_SHA: ${{ vars.ATLAS_RELEASE_APPROVED_SHA }}
+        run: node scripts/phase6-release-gate.mjs
       - name: Install pinned dependencies
         run: npm ci
       - name: Validate standalone models and build
@@ -43,6 +47,8 @@ jobs:
           node --check scripts/phase16-region-browser-ci.mjs
           node --check scripts/phase16-matched-draw-benchmark.mjs
           node --check scripts/phase17-labels-browser-ci.mjs
+          node --check release-cutover-gate.js
+          node --check scripts/phase6-release-gate.mjs
       - name: Verify standalone production routing
         run: |
           set -euo pipefail

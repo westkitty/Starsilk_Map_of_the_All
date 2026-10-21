@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "productionTarget": "westkitty/Starsilk_Map_of_the_All",
+  "storageKey": "starsilk.map-of-the-all.draft.v1",
+  "draftVersion": 1,
+  "proofs": {
+    "owner_backup_restore": {
+      "status": "blocked",
+      "receipt": null
+    },
+    "legacy_writer_decommissioned": {
+      "status": "blocked",
+      "receipt": null
+    },
+    "legacy_to_standalone_v1": {
+      "status": "blocked",
+      "receipt": null
+    },
+    "independent_planner_checks": {
+      "status": "blocked",
+      "receipt": null
+    },
+    "standalone_browser_recovery": {
+      "status": "blocked",
+      "receipt": null,
+      "commit": null
+    },
+    "rollback_rehearsal": {
+      "status": "blocked",
+      "receipt": null
+    },
+    "canon_and_era_preservation": {
+      "status": "blocked",
+      "receipt": null
+    }
+  }
+}
