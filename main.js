@@ -77,7 +77,7 @@ window.addEventListener('storage',event=>{
 function writeDraftNow(requireLocal=false){
   if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
   if(externalDraftConflict){
-    $('savedStatus').textContent='EXTERNAL WRITE / EXPORT REQUIRED';
+    preserveConflictedSession();
     return false;
   }
   // Compare the exact prior bytes before every write, including debounced writes.
@@ -130,6 +130,7 @@ function flushPendingSave(){
 }
 function persist(immediate=false,requireLocal=false){
   if(rejectedDraftRaw!==null){$('savedStatus').textContent='RECOVERY REQUIRED';return false;}
+  if(externalDraftConflict){preserveConflictedSession();return false;}
   clearTimeout(saveTimer);saveTimer=null;
   if(immediate)return writeDraftNow(requireLocal);
   saveTimer=setTimeout(()=>{saveTimer=null;writeDraftNow();},250);
