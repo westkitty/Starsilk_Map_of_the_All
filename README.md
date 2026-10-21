@@ -1,12 +1,10 @@
 # Starsilk Map of the All
 
-> **CURRENT OWNER AND PUBLICATION — 2026-10-20:** `westkitty/Starsilk_Map_of_the_All` is the **sole Atlas development repository** and its [standalone Atlas is live](https://westkitty.github.io/Starsilk_Map_of_the_All/). The separate [Star System Planner](https://westkitty.github.io/Star_System_Planner/) owns the orbital simulator. The older `/Star_System_Planner/map-of-the-all/` Atlas is a shared-storage legacy compatibility client, **not** a development destination. Its retirement has **not** been authorized.
->
-> **Consolidation governance:** [Master Plan — open PR #2, read-only source](https://github.com/westkitty/Starsilk_Map_of_the_All/blob/docs/atlas-consolidation-master-plan-20261020/CONSOLIDATION_MASTER_PLAN.md) · [Phase 1 baseline](docs/consolidation/PHASE_01_BASELINE.md) · [Draft recovery runbook](docs/consolidation/DRAFT_RECOVERY_RUNBOOK.md). PR #2 remains unmerged; do not merge its OMNI feature branch, migrate browser drafts, redirect Pages, or deploy as part of Phase 1. Older "not published" statements below are **historical**, not current instructions. External ChatGPT Project instructions still naming the embedded Atlas require a separate owner update.
+> **Current consolidation direction (2026-10-20):** This standalone repository owns all Atlas development. Read the [Repository Consolidation Master Plan](CONSOLIDATION_MASTER_PLAN.md) before starting new Atlas work. The embedded Planner Atlas is a legacy compatibility implementation; the independent orbital Planner remains protected. Older phase notes below are archival and may describe an obsolete unpublished state.
 
 **The Map of the All** is a standalone Three.js, 4X-inspired, source-aware, editable survey of the Starsilk universe.
 
-- **Canonical Atlas GitHub repository:** https://github.com/westkitty/Starsilk_Map_of_the_All
+- **GitHub repository (canonical Atlas owner):** https://github.com/westkitty/Starsilk_Map_of_the_All
 - **Live standalone Atlas:** https://westkitty.github.io/Starsilk_Map_of_the_All/
 - **Orbital laboratory:** https://westkitty.github.io/Star_System_Planner/
 - **Lore authority (read-only):** https://github.com/westkitty/Starsilk_Character_Dossier
@@ -34,6 +32,8 @@ npm run test:browser  # Chrome/Chromium with working WebGL
 `npm run build` creates the static deployment in `dist/`. GitHub Actions tests and deploys this repository to its own GitHub Pages project path, independently from the Planner.
 
 ## Project separation
+
+> **Phase 1 evidence and safe recovery (2026-10-20):** [Verified repository baseline](docs/consolidation/PHASE_01_BASELINE.md) · [Backup and restore runbook](docs/consolidation/DRAFT_RECOVERY_RUNBOOK.md). The [governing master plan](https://github.com/westkitty/Starsilk_Map_of_the_All/blob/docs/atlas-consolidation-master-plan-20261020/CONSOLIDATION_MASTER_PLAN.md) is reviewed separately in [PR #2](https://github.com/westkitty/Starsilk_Map_of_the_All/pull/2). Both Atlas Pages paths can write the same browser-origin draft; never use the legacy page as an independent backup. No user-data migration or old-route retirement has been authorized.
 
 The Git history was extracted from `westkitty/Star_System_Planner/map-of-the-all/` with `git subtree split`, preserving the development lineage without importing the Planner's React app or physics runtime. The historical embedded Atlas URL remains published as a **writable legacy compatibility client** on the same browser origin, not an isolated backup or read-only snapshot. **All future Atlas development belongs exclusively in this repository**; do not redirect or retire the legacy path without a separately authorized data-safety release.
 
