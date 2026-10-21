@@ -6,7 +6,8 @@ try{manifest=JSON.parse(readFileSync(new URL('../docs/consolidation/RELEASE_READ
 catch(error){console.error('ATLAS_RELEASE_GATE_BLOCKED',String(error.message||error));process.exit(1);}
 const result=assessReleaseCutover(manifest,{
   headSha:process.env.GITHUB_SHA,
-  approvedSha:process.env.ATLAS_RELEASE_APPROVED_SHA
+  approvedSha:process.env.ATLAS_RELEASE_APPROVED_SHA,
+  recoveryVerifiedSha:process.env.ATLAS_BROWSER_VERIFIED_SHA
 });
 if(!result.ready){
   console.error('ATLAS_RELEASE_GATE_BLOCKED',result.issues.join(' | '));
