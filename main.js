@@ -1164,6 +1164,9 @@ if(new URLSearchParams(location.search).get('atlasDiagnostics')==='1'){
       viewKind:view.kind,
       provisionalCells:engine?.group.getObjectByName('provisional-survey-cells')?.userData.cellCount??0,
       authoredSectors:engine?.group.getObjectByName('editorial-draft-regions')?.children.filter(o=>o.isMesh&&o.geometry?.type==='ShapeGeometry').length??0,
+      regionObjects:engine?.group.getObjectByName('editorial-draft-regions')?.children.length??0,
+      regionPins:engine?.group.getObjectByName('editorial-draft-regions')?.children.filter(o=>o.name==='editorial-sector-pin').length??0,
+      regionRebuilds:strategy?.regionRebuilds??0,
       viewport:[innerWidth,innerHeight]
     })
   });

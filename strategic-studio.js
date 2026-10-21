@@ -10,6 +10,7 @@ export class StrategicStudio {
   constructor({canvas,atlas,panel,labelsRoot,getState,getView,onChange,onMessage}) {
     Object.assign(this,{canvas,atlas,panel,labelsRoot,getState,getView,onChange,onMessage});
     this.engine=null;this.mode='group';this.opened=false;this.groupIds=[];this.regionId=null;
+    this.regionRenderKey=null;this.regionRebuilds=0;
     this.gesture=null;this.dragVertices=null;this.drawing=false;this.drawingPoints=[];this.pointer=null;
     this.$=id=>panel.querySelector('#'+id);
     this.selectHandle=document.createElement('button');this.selectHandle.id='strategyGroupHandle';
@@ -89,7 +90,7 @@ export class StrategicStudio {
     this.sync();
   }
   open(){if(this.opened)return;this.opened=true;this.panel.hidden=false;this.atlas.classList.add('strategic-open');this.setMode('group');this.sync();}
-  close(){this.cancelGesture();this.cancelDrawing();this.opened=false;this.panel.hidden=true;this.atlas.classList.remove('strategic-open');this.selectHandle.hidden=true;this.vertexLayer.replaceChildren();this.badgeLayer.replaceChildren();this.overlay.replaceChildren();if(this.engine){this.engine.controls.enabled=true;this.engine.paused=document.hidden;}this.regionId=null;this.groupIds=[];}
+  close(){this.cancelGesture();this.cancelDrawing();this.opened=false;this.panel.hidden=true;this.atlas.classList.remove('strategic-open');this.selectHandle.hidden=true;this.vertexLayer.replaceChildren();this.badgeLayer.replaceChildren();this.overlay.replaceChildren();if(this.engine){this.engine.controls.enabled=true;this.engine.paused=document.hidden;}this.regionId=null;this.groupIds=[];this.renderRegions();}
   setMode(mode){if(!['group','region','pan'].includes(mode))return;
     this.cancelGesture();this.cancelDrawing();this.mode=mode;
     for(const key of ['group','region','pan'])this.$('strategyMode'+key[0].toUpperCase()+key.slice(1)).setAttribute('aria-pressed',String(key===mode));
@@ -242,15 +243,23 @@ export class StrategicStudio {
   }
   renderRegions(){
     if(!this.engine)return;
+    const state=this.getState(),view=this.getView(),regions=this.visibleRegions();
+    const active=this.opened&&this.mode==='region'?this.regionId:null;
+    // The editor owns GPU meshes. Selection/UI changes must not destroy and
+    // recreate unchanged geometry; engine rebuild detachment invalidates cache.
+    const key=JSON.stringify([view.kind,view.id,state.layers.territories,active,
+      regions.map(r=>[r.id,r.color,r.points])]);
+    if(this.regionGroup?.parent===this.engine.group&&this.regionRenderKey===key)return;
     if(this.regionGroup){if(this.regionGroup.parent)this.regionGroup.parent.remove(this.regionGroup);
       this.regionGroup.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});this.regionGroup=null;}
-    if(!this.getState().layers.territories)return;
-    const regions=this.visibleRegions();if(!regions.length)return;
+    this.regionRenderKey=key;
+    if(!state.layers.territories||!regions.length)return;
     const group=new THREE.Group();group.name='editorial-draft-regions';group.renderOrder=-1;this.regionGroup=group;
+    this.regionRebuilds++;
     const floorY=-19;
     for(const r of regions){
       if(r.points.length<3)continue;
-      const isSelected=r.id===this.regionId;
+      const isSelected=r.id===active;
       const shape=new THREE.Shape();shape.moveTo(r.points[0][0],-r.points[0][1]);
       for(const [x,z] of r.points.slice(1))shape.lineTo(x,-z);shape.closePath();
       const g=new THREE.ShapeGeometry(shape);g.rotateX(-Math.PI/2);
@@ -264,12 +273,14 @@ export class StrategicStudio {
         const accentBorder=new THREE.Line(new THREE.BufferGeometry().setFromPoints(accentCoords),new THREE.LineBasicMaterial({color:'#ffffff',transparent:true,opacity:.55,depthWrite:false}));
         accentBorder.renderOrder=2;group.add(accentBorder);
       }
-      for(const [vx,vz] of r.points){
+      // These are active edit affordances, not permanent strategic structures.
+      // Avoid 2 GPU objects per vertex across every unselected region.
+      if(isSelected)for(const [vx,vz] of r.points){
         const pinPts=[new THREE.Vector3(vx,this.planeY(),vz),new THREE.Vector3(vx,floorY,vz)];
         const pinLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pinPts),new THREE.LineBasicMaterial({color:r.color,transparent:true,opacity:isSelected?.45:.22,depthWrite:false}));
-        pinLine.renderOrder=0;group.add(pinLine);
+        pinLine.renderOrder=0;pinLine.name='editorial-sector-pin';group.add(pinLine);
         const anchor=new THREE.Mesh(new THREE.RingGeometry(.7,1.1,16),new THREE.MeshBasicMaterial({color:r.color,side:THREE.DoubleSide,transparent:true,opacity:isSelected?.6:.25,depthWrite:false}));
-        anchor.rotation.x=-Math.PI/2;anchor.position.set(vx,floorY+.05,vz);anchor.renderOrder=0;group.add(anchor);
+        anchor.rotation.x=-Math.PI/2;anchor.position.set(vx,floorY+.05,vz);anchor.renderOrder=0;anchor.name='editorial-sector-pin';group.add(anchor);
       }
     }
     this.engine.group.add(group);
