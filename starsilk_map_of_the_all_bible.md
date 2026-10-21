@@ -40,3 +40,9 @@ Implementation commit: e8ba3499731cd1d042c7aa7471e25cd07c8ae4ab (five uplift pas
 - Corrected 83 malformed Markdown inline-code closers on plan PR #2 (`bcf5520`); verified a conflict-free combined tree with Phase 1 PR #3 at `c921f20` (pre-review snapshot `01dbea13`). Two branch-dependent plan links were replaced with durable repository-relative links in PR #3.
 - Standalone combined-tree Node tests **216/216**, build and gzip budget passed. The first chained Chromium run failed once on a 5-second Spatial route-localStorage wait; unchanged Spatial alone and the bounded full browser rerun passed, 5/5 suites. The independent three-era disposable-profile draft recovery also passed. **Flake root cause remains unverified**; do not erase it from the Baseline ledger.
 - This is a documentation/CI/QA review only. No changes to application runtime, canon, JSON v1, real user drafts, Planner, `main`, Pages routing or deployment. Merge remains an explicit release boundary.
+
+## 2026-10-20 — Phase 1 Spatial browser witness (non-runtime QA)
+
+- Corrected a weak browser acceptance assertion that only counted saved routes. The test now requires the exact `north-reach` → `southern-territories` draft edge and real DOM clicks on both labels, with detailed timeout diagnostics and a failure screenshot.
+- Isolated `ef4f913`-based PR #3 Big Mac clone: syntax and 216/216 Node/build checks passed, bundle unchanged; **2 consecutive headless Chromium Spatial journeys passed** with true draft route persistence. **Historical intermittent five-second timeout remains root-cause unknown**, not claimed fixed; new evidence is in `docs/consolidation/PHASE_01_BASELINE.md`.
+- No change to the application's behavior, source authority, drafts, independent Planner, Dossier, `main`, Pages or Phase 2. Branch-only QA addition must receive GitHub CI proof before release consideration.

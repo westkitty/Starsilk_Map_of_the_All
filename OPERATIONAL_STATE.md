@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 16
+revision: 17
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -332,3 +332,10 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Verified:** disposable composite tree `npm ci`, `npm run check` (216/216), 218268/225000-byte bundle, 5/5 Chromium suites on a bounded full retry and separate three-era synthetic draft recovery. GitHub-hosted PR #3 validation previously passed at `c921f20`; fresh CI on any new PR commit must be independently checked.
 - **Known intermittent failure:** first full combined browser attempt failed at `scripts/spatial-studio-browser-ci.mjs:72` after a five-second localStorage route wait; the exact unchanged suite then passed in isolation and in the bounded complete rerun. **Root cause UNKNOWN, not fixed**. Failure evidence transcribed in `docs/consolidation/PHASE_01_BASELINE.md`; original Big Mac `/tmp/atlas-phase01-combined-qa-20261020.log` is transient and not a durable backup.
 - **Preserved:** all user draft storage, independent war/locking/post eras, JSON v1, canonical Dossier read-only boundaries, source demotion, orbital Planner and live Pages. No PR merged or deployed. **Phase 2 still gated by separate authorization.**
+
+## 2026-10-20 — Phase 1 browser-test evidence hardening (revision 17)
+
+- **QA witness changed, application not changed.** `scripts/spatial-studio-browser-ci.mjs` now asserts exact saved route endpoint identities and draft status in addition to cardinality; captures real label DOM clicks; emits structured `STUDIO_ROUTE_TIMEOUT` plus screenshot on failure instead of a non-diagnostic 5-second timeout. 12-second persistence budget is a tolerance adjustment, **not a proven application root-cause fix**.
+- **Observed validation on Big Mac isolated PR #3 clone** at pre-edit `ef4f913`: `npm ci`, script syntax, `npm run check` (**216/216** and production build) PASS; unchanged **218268/225000**-byte gzip bundle; two sequential Spatial Chromium suites **PASS**, including exact `north-reach` → `southern-territories` draft route persisted and both label clicks observed. No personal browser profile accessed.
+- **Historical failure retained:** original combined-PR Phase 3 wait expired once after 5 seconds, while untouched isolated and full-chain retries succeeded. The application or runner root cause **remains UNKNOWN**. On recurrence inspect `STUDIO_ROUTE_TIMEOUT`, route-label clicks, `atlas-qa-evidence/phase3-route-timeout.png`, storage and notification state. No attempt to suppress failure via automatic click retries.
+- **Protect:** Atlas source unchanged, JSON v1 and all three eras intact, Dossier/Planner read-only, PR #2 unmerged, `main` and live Pages unchanged. Fresh PR CI is required on any resulting commit; Phase 2 still gated.
