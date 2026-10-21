@@ -1,9 +1,11 @@
 # Starsilk Map of the All
 
+> **Current consolidation direction (2026-10-20):** This standalone repository owns all Atlas development. Read the [Repository Consolidation Master Plan](CONSOLIDATION_MASTER_PLAN.md) before starting new Atlas work. The embedded Planner Atlas is a legacy compatibility implementation; the independent orbital Planner remains protected. Older phase notes below are archival and may describe an obsolete unpublished state.
+
 **The Map of the All** is a standalone Three.js, 4X-inspired, source-aware, editable survey of the Starsilk universe.
 
-- **GitHub target (not published yet):** https://github.com/westkitty/Starsilk_Map_of_the_All
-- **Expected Pages URL (not yet live):** https://westkitty.github.io/Starsilk_Map_of_the_All/
+- **GitHub repository (canonical Atlas owner):** https://github.com/westkitty/Starsilk_Map_of_the_All
+- **Live standalone Atlas:** https://westkitty.github.io/Starsilk_Map_of_the_All/
 - **Orbital laboratory:** https://westkitty.github.io/Star_System_Planner/
 - **Lore authority (read-only):** https://github.com/westkitty/Starsilk_Character_Dossier
 
