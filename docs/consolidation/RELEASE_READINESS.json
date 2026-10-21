@@ -33,5 +33,16 @@
       "status": "blocked",
       "receipt": null
     }
+  },
+  "disposableDraftCutover": {
+    "mode": "temporary-disposable-draft-release",
+    "authorization": "User explicitly instructed on 2026-10-21: Ignore the previous data in the atlas. This was purely a draft. Nothing important was put there. Stage commit push merge onto main. Update pages.",
+    "scope": "Pre-release browser-draft data may be discarded; source canon, new runtime saves and independent Planner remain protected",
+    "acceptedRisk": "Already-open or PWA-cached old Atlas clients may continue writing the shared localStorage key until closed; new modern editor detects conflicting external writes and offers session salvage.",
+    "expectedAtlasEntryBlob": "850139d4e68dab96ff9adcfef334433a2d666bf3",
+    "expectedAtlasRuntimeBlob": "0306b379cc78f3e1aa104736dfd46daa94047609",
+    "requiredPublishedPlannerRoute": "https://westkitty.github.io/Star_System_Planner/map-of-the-all/",
+    "releaseWindowEndUTC": "2026-10-23T00:00:00Z",
+    "rollback": "Use previously verified 3D Atlas source or a safe static notice; never re-enable the legacy writable editor for fresh browser visits."
   }
 }
