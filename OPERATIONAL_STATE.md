@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 15
+revision: 16
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -325,3 +325,10 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Total Browser CI Suites**: 5 / 5 suites pass across Desktop, Tablet (1280x800), and Mobile (412x915).
 - **Production Bundle**: 218.2 kB gzip (Strict budget: < 225.0 kB gzip; 6.7 kB headroom preserved).
 - **Invariant Integrity**: 100% verified across 170-year War, black-hole Siege Wall, WorldsVault topology, Drakken non-approval, and independent System Planner orbital simulation.
+
+## 2026-10-20 — Phase 1 integration review (revision 16)
+
+- **Current release remains `main` `ba95b1e9`.** Governing PR #2 repaired to `bcf5520`, Phase 1 PR #3 integration-tested at `c921f20` prior to this additive evidence commit. Their read-only combined tree `01dbea13` merged without conflict and changed only eight docs/CI/isolated-test paths.
+- **Verified:** disposable composite tree `npm ci`, `npm run check` (216/216), 218268/225000-byte bundle, 5/5 Chromium suites on a bounded full retry and separate three-era synthetic draft recovery. GitHub-hosted PR #3 validation previously passed at `c921f20`; fresh CI on any new PR commit must be independently checked.
+- **Known intermittent failure:** first full combined browser attempt failed at `scripts/spatial-studio-browser-ci.mjs:72` after a five-second localStorage route wait; the exact unchanged suite then passed in isolation and in the bounded complete rerun. **Root cause UNKNOWN, not fixed**. Failure evidence transcribed in `docs/consolidation/PHASE_01_BASELINE.md`; original Big Mac `/tmp/atlas-phase01-combined-qa-20261020.log` is transient and not a durable backup.
+- **Preserved:** all user draft storage, independent war/locking/post eras, JSON v1, canonical Dossier read-only boundaries, source demotion, orbital Planner and live Pages. No PR merged or deployed. **Phase 2 still gated by separate authorization.**
