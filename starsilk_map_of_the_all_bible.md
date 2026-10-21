@@ -25,3 +25,24 @@ Remote blocker: GH CLI stored token invalid (HTTP 401); new GitHub repository an
 Start every future uplift with `OPERATIONAL_STATE.md`, this Bible and `docs/EXTRACTION_PROVENANCE.md`. Do not use `/Users/andrew/Star_System_Planner` without verifying its actual remote.
 
 Implementation commit: e8ba3499731cd1d042c7aa7471e25cd07c8ae4ab (five uplift passes, 81 model tests, five passing Chromium suites, vendor split, 186099 gzip bytes).
+
+## 2026-10-20 — Consolidation Phase 01: current ownership and baseline (additive supersession)
+
+- **Current authoritative Atlas repository:** `westkitty/Starsilk_Map_of_the_All`. The earlier paragraph saying the remote is "not yet created" is historical as of 2026-10-17, **not current**. Standalone `main` was verified at `ba95b1e9e3ff0aafe480e90b07573cad670e76f9` and [Pages workflow 39105968854](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39105968854) completed successfully. Standalone published URL, Planner root and legacy embedded Atlas returned HTTP 200.
+- **Governing document:** [Master Plan on open PR #2](https://github.com/westkitty/Starsilk_Map_of_the_All/pull/2), commit `c4e1ea3c2a037c6087222df3661062de7ff3ee92` is deliberately **not copied/merged** by Phase 1. Current development target is solely this dedicated Atlas repository; Planner remains an independent physics simulator; Dossier is read-only.
+- **Refs/safety:** clean isolated Big Mac clone of dedicated `main` at `ba95b1e9`, Phase 1 branch `consolidation/phase-01-baseline-20261020`. MacBook checkout `/Users/andrew/Starsilk_Map_of_the_All` was **clean on unmerged `feature/omni-uplift-100`** and left untouched. The OMNI branch is 16 ahead / 1 behind; do not merge, cherry-pick or overwrite it in Phase 1.
+- **Reproducible baseline:** `npm ci` passed; `npm run check` passed with **216/216 Node tests** and build; bundle 218,268 gzip bytes under 225,000; `npm audit` found one high pinned-Vite dev-server advisory. Full `npm run test:browser` passed all **5/5** Chromium suites with explicit terminal PASS markers and wrapper exit 0; the isolated synthetic draft-recovery suite also passed. These are emulator/headless results, not physical stylus acceptance. See `docs/consolidation/PHASE_01_BASELINE.md` for per-suite dispositions and known UX defects.
+- **Draft guardrails:** schema v1 and `starsilk.map-of-the-all.draft.v1` unchanged; independent war/locking/post snapshots, source demotion and real user storage untouched. Disposable-profile restore procedure and outcomes: `docs/consolidation/DRAFT_RECOVERY_RUNBOOK.md` and `scripts/phase1-draft-recovery-browser-ci.mjs`.
+- **Still open:** fix outdated external ChatGPT Project directives, assess shared-origin last-writer conflict and optional-field cross-version round trips, address audited Vite advisory separately. **No production deployment, branch merge, feature work or Planner/Dossier writes were performed.**
+
+## 2026-10-20 — Phase 1 PR integration verification (non-deploying)
+
+- Corrected 83 malformed Markdown inline-code closers on plan PR #2 (`bcf5520`); verified a conflict-free combined tree with Phase 1 PR #3 at `c921f20` (pre-review snapshot `01dbea13`). Two branch-dependent plan links were replaced with durable repository-relative links in PR #3.
+- Standalone combined-tree Node tests **216/216**, build and gzip budget passed. The first chained Chromium run failed once on a 5-second Spatial route-localStorage wait; unchanged Spatial alone and the bounded full browser rerun passed, 5/5 suites. The independent three-era disposable-profile draft recovery also passed. **Flake root cause remains unverified**; do not erase it from the Baseline ledger.
+- This is a documentation/CI/QA review only. No changes to application runtime, canon, JSON v1, real user drafts, Planner, `main`, Pages routing or deployment. Merge remains an explicit release boundary.
+
+## 2026-10-20 — Phase 1 Spatial browser witness (non-runtime QA)
+
+- Corrected a weak browser acceptance assertion that only counted saved routes. The test now requires the exact `north-reach` → `southern-territories` draft edge and real DOM clicks on both labels, with detailed timeout diagnostics and a failure screenshot.
+- Isolated `ef4f913`-based PR #3 Big Mac clone: syntax and 216/216 Node/build checks passed, bundle unchanged; **2 consecutive headless Chromium Spatial journeys passed** with true draft route persistence. **Historical intermittent five-second timeout remains root-cause unknown**, not claimed fixed; new evidence is in `docs/consolidation/PHASE_01_BASELINE.md`.
+- No change to the application's behavior, source authority, drafts, independent Planner, Dossier, `main`, Pages or Phase 2. Branch-only QA addition must receive GitHub CI proof before release consideration.

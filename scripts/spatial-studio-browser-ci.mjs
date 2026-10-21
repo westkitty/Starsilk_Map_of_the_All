@@ -1,4 +1,4 @@
-/** Phase 3 end-to-end acceptance. Runs only in feature-branch CI, no app runtime dependency. */
+/** Phase 3 browser acceptance, used by Atlas PR/release CI; no app runtime changes. */
 import {spawn} from 'node:child_process';
 import {existsSync,mkdirSync} from 'node:fs';
 import {chromium} from 'playwright-core';
@@ -66,13 +66,45 @@ async function test(){await ready();
  // Route source/target must match tier and be non-canonical drafts.
  await page.locator('[data-studio-mode="route"]').click();
  const routeCount=await page.evaluate(()=>JSON.parse(localStorage.getItem('starsilk.map-of-the-all.draft.v1')).routes.length);
+ // Capture real DOM clicks before application handlers; never simulate a selection or retry a failed one.
+ await page.evaluate(()=>{
+   window.__phase3RouteClicks=[];
+   document.addEventListener('click',event=>{
+     const target=event.target.closest?.('.world-label');
+     if(target)window.__phase3RouteClicks.push(target.dataset.atlasId);
+   },{capture:true});
+ });
+ const routeEvidence=()=>page.evaluate(()=>{
+   const stored=localStorage.getItem('starsilk.map-of-the-all.draft.v1');
+   let routes=null,linked=false;
+   try{const entries=JSON.parse(stored).routes;routes=entries.length;linked=entries.some(r=>r.from==='north-reach'&&r.to==='southern-territories'&&r.status==='draft');}catch{}
+   return {storedRoutes:routes,linked,clickIds:window.__phase3RouteClicks,
+     notification:document.querySelector('#notifications')?.textContent?.slice(0,240)||'',
+     previewHidden:document.querySelector('.studio-route-preview')?.hidden,
+     mode:document.querySelector('#atlas')?.dataset?.studioMode};
+ });
  await page.locator('.world-label[data-atlas-id="north-reach"]').click();
  expect(await page.locator('.studio-route-preview').isVisible(),'route preview appears when origin selected');
  await page.locator('.world-label[data-atlas-id="southern-territories"]').click();
- await page.waitForFunction(expected=>JSON.parse(localStorage.getItem('starsilk.map-of-the-all.draft.v1')).routes.length===expected,routeCount+1,{timeout:5000});
- const routes=await page.evaluate(()=>JSON.parse(localStorage.getItem('starsilk.map-of-the-all.draft.v1')).routes.length);
- console.log('STUDIO_ROUTE_DIAGNOSTIC '+JSON.stringify(await page.evaluate(()=>({storedRoutes:JSON.parse(localStorage.getItem('starsilk.map-of-the-all.draft.v1')).routes.length,notifications:document.querySelector('#notifications')?.textContent,previewHidden:document.querySelector('.studio-route-preview')?.hidden,mode:document.querySelector('#atlas')?.dataset?.studioMode}))));
- expect(routes===routeCount+1,'one proposed corridor created');console.log('STUDIO_BROWSER_STAGE corridor');
+ // A real drafted route must reach persistent v1 storage; count-only checks could pass for an unrelated change.
+ try{
+   await page.waitForFunction(expected=>{
+     try{const rows=JSON.parse(localStorage.getItem('starsilk.map-of-the-all.draft.v1')).routes;
+       return rows.length===expected&&rows.some(r=>r.from==='north-reach'&&r.to==='southern-territories'&&r.status==='draft');
+     }catch{return false;}
+   },routeCount+1,{timeout:12000,polling:100});
+ }catch(error){
+   const evidence=await routeEvidence();
+   console.error('STUDIO_ROUTE_TIMEOUT '+JSON.stringify(evidence));
+   try{await page.screenshot({path:'atlas-qa-evidence/phase3-route-timeout.png'});}catch{}
+   throw new Error('Expected route not persisted after real label clicks: '+JSON.stringify(evidence),{cause:error});
+ }
+ const evidence=await routeEvidence();
+ console.log('STUDIO_ROUTE_DIAGNOSTIC '+JSON.stringify(evidence));
+ expect(evidence.linked&&evidence.storedRoutes===routeCount+1,'exact draft corridor created and saved');
+ expect(evidence.clickIds.includes('north-reach')&&evidence.clickIds.includes('southern-territories'),'both route labels received genuine DOM clicks');
+ const routes=evidence.storedRoutes;
+ console.log('STUDIO_BROWSER_STAGE corridor');
  await page.locator('.world-label[data-atlas-id="north-reach"]').click();
  await page.locator('.world-label[data-atlas-id="southern-territories"]').click();
  await page.waitForTimeout(400);

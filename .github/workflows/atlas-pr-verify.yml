@@ -1,0 +1,65 @@
+name: Atlas Pull Request Verification
+
+on:
+  pull_request:
+    branches: [main]
+
+# Read-only validation; never publishes or modifies GitHub Pages.
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Validate Atlas build, browser and recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Validate all Node tests and production bundle
+        run: npm run check
+
+      - name: Check application and recovery script syntax
+        run: |
+          set -eu
+          for file in main.js atlas-engine.js atlas-data.js draft-recovery.js spatial-studio.js strategic-studio.js temporal-lab.js; do
+            node --check "$file"
+          done
+          if [ -f scripts/phase1-draft-recovery-browser-ci.mjs ]; then
+            node --check scripts/phase1-draft-recovery-browser-ci.mjs
+          fi
+
+      - name: Run existing Chromium acceptance suites
+        run: npm run test:browser
+
+      - name: Prove disposable-profile backup and restore
+        run: |
+          set -eu
+          if [ -f scripts/phase1-draft-recovery-browser-ci.mjs ]; then
+            node scripts/phase1-draft-recovery-browser-ci.mjs
+          else
+            echo "Phase 1 recovery fixture is not present in this branch."
+          fi
+
+      - name: Retain browser diagnostic images on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-pr-browser-evidence
+          path: atlas-qa-evidence/*.png
+          if-no-files-found: ignore
+          retention-days: 7

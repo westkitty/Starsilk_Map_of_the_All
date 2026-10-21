@@ -2,11 +2,21 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 14
+revision: 17
+
+## Current authority supersession — 2026-10-20 (Phase 01)
+
+- **Effective source:** The user's consolidation decision and [open governing plan PR #2](https://github.com/westkitty/Starsilk_Map_of_the_All/pull/2). Dedicated `westkitty/Starsilk_Map_of_the_All` **alone** owns new Atlas work; `westkitty/Star_System_Planner` owns only its separate orbital physics simulator and legacy comparison material.
+- **Observed current release:** standalone `main` `ba95b1e9e3ff0aafe480e90b07573cad670e76f9`; dedicated Pages URL responded HTTP 200 and Pages run 39105968854 succeeded at that SHA. Both root Planner and legacy embedded Atlas URLs returned HTTP 200. Older "not published" and stale local feature-branch claims below are dated historical evidence, **not current release status**.
+- **Unmerged refs:** plan PR #2 `c4e1ea3`; OMNI `a322a244` (16 commits ahead, 1 main-only commit behind). This Phase 1 branch begins at standalone main; no merge/deploy or production routing changes.
+- **Baseline:** isolated DEX//REACH Big Mac clean clone; `npm ci` and `npm run check` passed, **216/216 Node tests** and Vite build; bundle **218268/225000 gzip bytes**. One high Vite audit advisory remains. All 5/5 Chromium suites emitted explicit PASS markers in `npm run test:browser` (exit 0), and isolated synthetic draft recovery passed; complete observations and existing mobile defects in `docs/consolidation/PHASE_01_BASELINE.md` and `docs/consolidation/DRAFT_RECOVERY_RUNBOOK.md`.
+- **User-data boundary:** No real browser profiles, draft keys, schema, saved data, Planner/Dossier files, old Atlas routes or Pages configuration were changed. Disposable synthetic JSON recovery tests only. Exact localStorage key `starsilk.map-of-the-all.draft.v1`, schema v1, three eras and source-status demotion remain locked.
+- **Operational limitation:** External ChatGPT Project directives still naming the embedded Atlas must be corrected by the owner outside this repository. Physical S Pen, concurrent-tabs storage safety and all optional fields require later phase proof. **No Phase 2 work has begun.**
+
 
 ## Current baseline
 
-- Current primary repository: `westkitty/Starsilk_Map_of_the_All` on branch `feature/omni-uplift-100`.
+- Current primary repository: `westkitty/Starsilk_Map_of_the_All` **main** (verified `ba95b1e9`); `feature/omni-uplift-100` remains an **unmerged divergent branch**, not the current production baseline.
 - The Atlas is at this repository root. The earlier embedded Planner map and the mature orbital simulator remain protected and unchanged.
 - Local canvas/page code and versioned JSON schema v1 exist.
 - 7 starting galaxies, 35 starting systems, 105 starting planets, 2 labeled source-identity landmarks, 10 proposed corridors. Every numeric coordinate is generated/editorial.
@@ -315,3 +325,17 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Total Browser CI Suites**: 5 / 5 suites pass across Desktop, Tablet (1280x800), and Mobile (412x915).
 - **Production Bundle**: 218.2 kB gzip (Strict budget: < 225.0 kB gzip; 6.7 kB headroom preserved).
 - **Invariant Integrity**: 100% verified across 170-year War, black-hole Siege Wall, WorldsVault topology, Drakken non-approval, and independent System Planner orbital simulation.
+
+## 2026-10-20 — Phase 1 integration review (revision 16)
+
+- **Current release remains `main` `ba95b1e9`.** Governing PR #2 repaired to `bcf5520`, Phase 1 PR #3 integration-tested at `c921f20` prior to this additive evidence commit. Their read-only combined tree `01dbea13` merged without conflict and changed only eight docs/CI/isolated-test paths.
+- **Verified:** disposable composite tree `npm ci`, `npm run check` (216/216), 218268/225000-byte bundle, 5/5 Chromium suites on a bounded full retry and separate three-era synthetic draft recovery. GitHub-hosted PR #3 validation previously passed at `c921f20`; fresh CI on any new PR commit must be independently checked.
+- **Known intermittent failure:** first full combined browser attempt failed at `scripts/spatial-studio-browser-ci.mjs:72` after a five-second localStorage route wait; the exact unchanged suite then passed in isolation and in the bounded complete rerun. **Root cause UNKNOWN, not fixed**. Failure evidence transcribed in `docs/consolidation/PHASE_01_BASELINE.md`; original Big Mac `/tmp/atlas-phase01-combined-qa-20261020.log` is transient and not a durable backup.
+- **Preserved:** all user draft storage, independent war/locking/post eras, JSON v1, canonical Dossier read-only boundaries, source demotion, orbital Planner and live Pages. No PR merged or deployed. **Phase 2 still gated by separate authorization.**
+
+## 2026-10-20 — Phase 1 browser-test evidence hardening (revision 17)
+
+- **QA witness changed, application not changed.** `scripts/spatial-studio-browser-ci.mjs` now asserts exact saved route endpoint identities and draft status in addition to cardinality; captures real label DOM clicks; emits structured `STUDIO_ROUTE_TIMEOUT` plus screenshot on failure instead of a non-diagnostic 5-second timeout. 12-second persistence budget is a tolerance adjustment, **not a proven application root-cause fix**.
+- **Observed validation on Big Mac isolated PR #3 clone** at pre-edit `ef4f913`: `npm ci`, script syntax, `npm run check` (**216/216** and production build) PASS; unchanged **218268/225000**-byte gzip bundle; two sequential Spatial Chromium suites **PASS**, including exact `north-reach` → `southern-territories` draft route persisted and both label clicks observed. No personal browser profile accessed.
+- **Historical failure retained:** original combined-PR Phase 3 wait expired once after 5 seconds, while untouched isolated and full-chain retries succeeded. The application or runner root cause **remains UNKNOWN**. On recurrence inspect `STUDIO_ROUTE_TIMEOUT`, route-label clicks, `atlas-qa-evidence/phase3-route-timeout.png`, storage and notification state. No attempt to suppress failure via automatic click retries.
+- **Protect:** Atlas source unchanged, JSON v1 and all three eras intact, Dossier/Planner read-only, PR #2 unmerged, `main` and live Pages unchanged. Fresh PR CI is required on any resulting commit; Phase 2 still gated.

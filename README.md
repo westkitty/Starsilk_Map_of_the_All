@@ -33,7 +33,9 @@ npm run test:browser  # Chrome/Chromium with working WebGL
 
 ## Project separation
 
-The Git history was extracted from `westkitty/Star_System_Planner/map-of-the-all/` with `git subtree split`, preserving the development lineage without importing the Planner's React app or physics runtime. The historical embedded Atlas URL remains available as a **compatibility snapshot**, but **future Atlas changes belong in this repository**.
+> **Phase 1 evidence and safe recovery (2026-10-20):** [Verified repository baseline](docs/consolidation/PHASE_01_BASELINE.md) · [Backup and restore runbook](docs/consolidation/DRAFT_RECOVERY_RUNBOOK.md). The [governing master plan](CONSOLIDATION_MASTER_PLAN.md) is reviewed separately in [PR #2](https://github.com/westkitty/Starsilk_Map_of_the_All/pull/2). Both Atlas Pages paths can write the same browser-origin draft; never use the legacy page as an independent backup. No user-data migration or old-route retirement has been authorized.
+
+The Git history was extracted from `westkitty/Star_System_Planner/map-of-the-all/` with `git subtree split`, preserving the development lineage without importing the Planner's React app or physics runtime. The historical embedded Atlas URL remains published as a **writable legacy compatibility client** on the same browser origin, not an isolated backup or read-only snapshot. **All future Atlas development belongs exclusively in this repository**; do not redirect or retire the legacy path without a separately authorized data-safety release.
 
 From the Atlas, select a draft stellar system and choose **EXPORT SYSTEM .SSP**, then **OPEN PLANNER**. This navigates to the separate orbital simulator; you manually import the generated `.ssp.json` file. The bridge creates hypothetical physics with source status unknown. Neither app changes the other's repository or upgrades drafts to official canon.
 
@@ -56,7 +58,7 @@ Historical phase notes below still describe some work performed when the Atlas w
 
 This is an independent Vite app, not a refactor of the mature per-system simulator. Avoid copying the existing planner's physics engine into the cosmological rendering scale. The integration seam is the named child system: future deep dives may use a stable export/bridge into the mature `Star_System_Planner` system simulator instead of re-implementing n-body mechanics.
 
-`map-of-the-all/atlas-data.js` owns draft state + validation; `atlas-engine.js` owns Three.js WebGL scene, controls, level-of-detail, picking and animation; `main.js` owns semantic DOM + editing + persistence; `atlas.css` owns presentation. All objects are in display coordinates, not light years/AU or actual physical measurements. No root Dossier writes and no canon approval paths exist.
+`atlas-data.js` owns draft state + validation; `atlas-engine.js` owns Three.js WebGL scene, controls, level-of-detail, picking and animation; `main.js` owns semantic DOM + editing + persistence; `atlas.css` owns presentation. All objects are in display coordinates, not light years/AU or actual physical measurements. No root Dossier writes and no canon approval paths exist.
 
 ## Source hierarchy
 
