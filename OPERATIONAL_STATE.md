@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 19
+revision: 20
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -361,3 +361,10 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Current artifact**: `docs/consolidation/PHASE_03_STELLAR_NAVIGATION.md` governs the Phase 3 source and test ledger. No JSON v1 migration, no new localStorage key, no Pages route change, no Planner/Dossier write or real browser draft access.
 
 - **Phase 3 packaging correction after first PR #5 check (2026-10-20):** Hosted [run #39536588823](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39536588823) passed **260/260 Node tests** but **FAILED** the fixed gzip budget: Ubuntu Node 22 measured **225708/225000 bytes**, vs Big Mac Node 26 **224298/225000**. A single-chunk packaging experiment shaved only 247 bytes and would lose cacheable vendor splitting, so it was rejected. Pinned build-only Terser `5.51.2` (BSD-2-Clause), with `compress.passes=2`, now produces **219605/225000 gzip bytes locally** and preserves the vendor chunk, with `npm ci`, 260/260 Node tests and Vite build passing. Current-head hosted Node 22 CI and nine-browser/restore gate must still pass before declaring Phase 3 accepted. The initial failed check remains in the ledger.
+
+## 2026-10-20 — Phase 4 discoverability implementation (revision 20)
+
+- **Target:** isolated `feature/phase04-zero-loss-ux` atop Phase 3 PR #5 at `2e83f3372c853eb00dc7cfeba72dc1b4dae7d58a`. Phase 3 hosted [run #39537828745](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39537828745) PASSED exactly 260/260 Node tests, **9/9 browser suites**, isolated three-era recovery, and **220635/225000 gzip** on Ubuntu Node 22; not merged to production. Phase 2's legacy shared-key writer hazard remains unresolved.
+- **Phase 4 fixed:** `/` first opens Explore then focuses search, without making a hidden input active; 360–620px header exposes all six pull destinations in an accessible 44px six-column rail with zero hidden horizontal swipe. Existing Undo/Redo/Export/Import controls moved into the top of Explore without cloning, with original disabled state and listeners retained. Escape returns focus to drawer tab and clears search transient query; selected Inspector tab exposes context in aria-label/visual state.
+- **Local evidence:** Big Mac isolated Node 26 `npm ci` + `npm run check` **260/260 tests**, gzip **220141/225000** at first quick-action build, and disposable-profile 360/412px tab, search, synthetic export, and Undo/Redo journeys pass. All three dedicated 360/412/1280 browser journeys PASSED in disposable Brave/Chromium; full ten-suite hosted CI/recovery still require clean exact-head proof; physical stylus/thermal remain unknown. Never claim production-ready until these pass.
+- **Data and canon:** unchanged versioned JSON v1 key `starsilk.map-of-the-all.draft.v1`, original draft/canon distinctions, 170-year Blood Eclipse War, 3 independent eras, Star System Planner physics and Dossier read-only. No Pages routing or real user profile writes. Full Phase 4 ledger `docs/consolidation/PHASE_04_DISCOVERABILITY.md`.

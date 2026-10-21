@@ -69,3 +69,10 @@ Implementation commit: e8ba3499731cd1d042c7aa7471e25cd07c8ae4ab (five uplift pas
 - The first hosted Node 22 PR check **failed** the unchanged 225000-byte compressed limit at **225708 bytes**, despite 260/260 passing Node tests. Big Mac Node 26's 224298 bytes did not predict hosted outcome.
 - Rejected removing separate Three.js vendor caching for a negligible 247-byte improvement. Adopted pinned free open-source `terser@5.51.2` as a dev-only dependency, two compression passes; local gzip now **219605 bytes** (5395 bytes headroom), with a clean `npm ci` rebuild and 260/260 Node tests. Fresh hosted and browser evidence still required.
 - No change to renderer architecture, JSON v1, user drafts, exact storage key, the independent Planner or canonical Dossier. Phase 3 remains stacked on unmerged Phase 2 and must not be published until the multi-writer cutover gate is proven.
+
+## 2026-10-20 — Phase 4 zero-loss discovery candidate
+
+- Implemented within dedicated Atlas repository on Phase 3 PR #5 head `2e83f337`: `/` opens Explore before focus; six responsive pull-tabs all visible/tappable at 360–412px without sideways swipe; real existing Undo/Redo/Export/Import controls moved near the top of Explore; Escape/focus restoration and context-aware Inspector tab.
+- Automated disposable browser tests exercise six panels, 44px touch targets, focus/search, selected context, actual JSON download and synthetic Undo/Redo, preserving existing editors. Big Mac Node 26 260/260 Node/build and compressed payload 220141/225000 passed. All three dedicated widths (360/412/1280) passed local Playwright; full tenth-suite GitHub CI and physical S Pen remain gates.
+- No duplicate button listeners, duplicate data model, replacement physics or edits to canonical Dossier/independent Planner. JSON v1, source locks, three eras, import/export and user drafts are protected. Parent Phase 2 legacy multi-writer cutover remains blocked; no main merge or deploy.
+- See `docs/consolidation/PHASE_04_DISCOVERABILITY.md` for precise tests, partial evidence, remaining blockers and rollback.

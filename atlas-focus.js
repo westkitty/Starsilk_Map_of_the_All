@@ -34,6 +34,14 @@ export function setupFullscreenAtlas() {
   const nav=byId('leftPanel'),eras=byId('temporalPanel'),camera=byId('sideTools');
   const utilities=document.querySelector('.bottom-utility');
   if(utilities){utilities.classList.add('atlas-drawer-utilities');nav.append(utilities);}
+  // Move the REAL existing controls. Their listeners and disabled/Undo state
+  // survive; do not clone controls or create a second editing state owner.
+  const quick=document.createElement('div');quick.className='atlas-drawer-quick-actions';
+  quick.setAttribute('role','group');quick.setAttribute('aria-label','Draft history and import/export');
+  for(const id of ['undoBtn','redoBtn','exportBtn','importBtn']){
+    const control=byId(id);if(control)quick.append(control);
+  }
+  nav.querySelector('.search-box')?.after(quick);
   const eraTitle=document.querySelector('.bottom-bar .era-title');
   const eraOptions=byId('eraOptions');
   if(eraOptions){const slot=document.createElement('div');slot.className='atlas-era-chooser';
@@ -69,7 +77,7 @@ export function setupFullscreenAtlas() {
     reflect();
   }
   for(const [close,key] of [['closeNavPanel','nav'],['closeMobileInspector','inspect'],['strategyClose','regions'],['networkClose','routes'],['temporalClose','eras']]){
-    byId(close)?.addEventListener('click',()=>{if(active===key){active=null;reflect();}});
+    byId(close)?.addEventListener('click',()=>{if(active===key){activate(null);buttons.get(key)?.focus();}});
   }
   byId('canonHeaderPill')?.addEventListener('click',()=>{
     activate('nav');
@@ -86,7 +94,13 @@ export function setupFullscreenAtlas() {
   });
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'&&active&&!e.target.closest('dialog')){
-      e.preventDefault();e.stopImmediatePropagation();activate(null);
+      e.preventDefault();e.stopImmediatePropagation();
+      const previous=active;
+      if(e.target===byId('search')){
+        e.target.value='';
+        if(byId('searchResults'))byId('searchResults').hidden=true;
+      }
+      activate(null);buttons.get(previous)?.focus();
       return;
     }
     if(e.target?.closest?.('input,textarea,select,[contenteditable]')||document.querySelector('dialog[open]'))return;

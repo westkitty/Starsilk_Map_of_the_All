@@ -561,6 +561,14 @@ function updateScaleGauge(){
     textEl.textContent=`STELLAR SYSTEM · ~5 AU SANDBOX (${sys?sys.name:'STAR'} · SSP COMPATIBLE)`;
   }
 }
+function updateInspectorAffordance(){
+  const tab=document.querySelector('.atlas-pull-tab[data-drawer="inspect"]');
+  if(!tab)return;
+  const selected=nodeById(state,state.selected);
+  tab.dataset.hasSelection=String(Boolean(selected));
+  tab.setAttribute('aria-label',selected?'Inspect selected '+selected.name+' (key 2)':'Toggle inspect tools (key 2)');
+  tab.title=selected?'Inspect '+selected.name+' [Key: 2]':'INSPECT [Key: 2]';
+}
 function updateStellarNavigation(){
   const system=view.kind==='system'?nodeById(state,view.id):null;
   const selected=nodeById(state,state.selected);
@@ -577,7 +585,7 @@ function canDollyEnter(){return !pendingRoute&&(!studio||studio.mode==='orbit')&
   !strategy?.opened&&!networkLab?.opened&&!temporal?.opened&&
   !document.querySelector('dialog[open]');}
 function updateUI(){
-  updateStellarNavigation();updateBreadcrumb();updateLayers();updateVisualCleanup();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
+  updateInspectorAffordance();updateStellarNavigation();updateBreadcrumb();updateLayers();updateVisualCleanup();updateNodeList();updateRoutes();fillInspector();updateSources();updateCounts();updateEpoch();updateHandoff();updateScaleGauge();updateUndoRedoButtons();
   $('quality').value=state.quality;
   $('motionBtn').textContent=state.motion?'MOTION ON':'MOTION OFF';
   $('motionBtn').setAttribute('aria-pressed',state.motion?'true':'false');
@@ -598,7 +606,7 @@ function cycleSelection(delta=1){
     message(`Selected ${nextNode.name} (${nextIdx+1}/${nodes.length}).`);
   }
 }
-function focusSearch(){gui.search.focus();if(innerWidth<=620)gui.left.classList.add('expanded');}
+function focusSearch(){drawerController?.open('nav');gui.search.focus({preventScroll:true});if(innerWidth<=620)gui.left.classList.add('expanded');}
 function inspectCanonEntity(c){
   state.selected=null;
   fillInspector();

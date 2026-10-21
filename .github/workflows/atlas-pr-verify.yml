@@ -2,7 +2,7 @@ name: Atlas Pull Request Verification
 
 on:
   pull_request:
-    branches: [main, consolidation/phase-02-omni-recovery-20261020]
+    branches: [main, consolidation/phase-02-omni-recovery-20261020, feature/phase03-stellar-navigation]
 
 # Read-only validation; never publishes or modifies GitHub Pages.
 permissions:
@@ -43,6 +43,7 @@ jobs:
             node --check scripts/phase1-draft-recovery-browser-ci.mjs
           if [ -f scripts/stellar-zoom-browser-ci.mjs ]; then
             node --check scripts/stellar-zoom-browser-ci.mjs
+            node --check scripts/phase4-discovery-browser-ci.mjs
             node --check system-zoom.js
           fi
           fi
