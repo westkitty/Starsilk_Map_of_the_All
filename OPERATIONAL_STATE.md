@@ -2,7 +2,7 @@
 
 project_id: starsilk-map-of-the-all
 project_name: The Map of the All — 3D Prototype
-revision: 17
+revision: 18
 
 ## Current authority supersession — 2026-10-20 (Phase 01)
 
@@ -339,3 +339,15 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - **Observed validation on Big Mac isolated PR #3 clone** at pre-edit `ef4f913`: `npm ci`, script syntax, `npm run check` (**216/216** and production build) PASS; unchanged **218268/225000**-byte gzip bundle; two sequential Spatial Chromium suites **PASS**, including exact `north-reach` → `southern-territories` draft route persisted and both label clicks observed. No personal browser profile accessed.
 - **Historical failure retained:** original combined-PR Phase 3 wait expired once after 5 seconds, while untouched isolated and full-chain retries succeeded. The application or runner root cause **remains UNKNOWN**. On recurrence inspect `STUDIO_ROUTE_TIMEOUT`, route-label clicks, `atlas-qa-evidence/phase3-route-timeout.png`, storage and notification state. No attempt to suppress failure via automatic click retries.
 - **Protect:** Atlas source unchanged, JSON v1 and all three eras intact, Dossier/Planner read-only, PR #2 unmerged, `main` and live Pages unchanged. Fresh PR CI is required on any resulting commit; Phase 2 still gated.
+
+## 2026-10-20 — Phase 2 OMNI reconciliation candidate (revision 18)
+
+- **New active PR:** [#4](https://github.com/westkitty/Starsilk_Map_of_the_All/pull/4), `consolidation/phase-02-omni-recovery-20261020`, based on merged standalone `main` `38d78bcec686cd3edfdd24d47300e776c521e9a3`. Original feature branch `a322a244` remains intact. The 12 implementation commits were selectively ported in historical dependency order; 20 code/test/CI paths were byte-checked equal to the feature branch. No old README/governance replacements or unverified 5 PNG reference images imported.
+- **Candidate implementation:** Three.js continental composition, dark Siege Wall, braided Starsilk and network triangulation, immutable-source-safe individual/group/cascade deletion, fail-closed browser persistence, and era-local procedural suppression. Existing canonical Dossier and root Planner untouched; v1 key `starsilk.map-of-the-all.draft.v1` and version 1 unchanged; three eras/Undo/Redo protected.
+- **Validated locally:** `npm ci` PASS; `npm run check` **256/256 Node tests and Vite build PASS**; three new synthetic v1 compatibility tests PASS; focus rendering and Spatial rerun PASS on Big Mac headless Brave. **First local chained eight-suite run FAILED** the label-offset persistence assertion, and first visual-only focus run timed out on All/None button stability. Their isolated reruns passed, root cause unknown. No eight-suite first-attempt pass claimed.
+- **Hosted original CI failure:** first PR #4 check run [39528326259](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39528326259) passed all 256 Node tests but failed compressed bundle **226370 > 225000** under Ubuntu Node 22 (Mac Node 26 measured 224979). Build-target repair commit `a6dc21f` configures ES2022/native modulepreload with vendor splitting preserved; local gzip now **223091**. Hosted retest still REQUIRED before Phase 2 is deliverable.
+- **Security/data release hazard:** same-origin legacy Atlas writer can conflict with new optional per-era suppression; a test faithfully simulating pre-suppression `captureEra` demonstrates a mixed snapshot rejected by new validator while raw bytes remain recoverable. This is not proof of real dual-site compatibility. Release requires a verified one-editor migration/cutover and owner-held backups. Real user browser profile NEVER accessed.
+- **Measured renderer expense:** balanced All-view 368 desktop/tablet, 194 mobile SwiftShader draw calls, vs prior 156/93. Physical Galaxy Tab S9 Ultra/S Pen performance and frame-time UNKNOWN. One high Vite dependency advisory remains, unchanged.
+- **Disposition:** Phase 2 branch **implemented, tested at Node/model level, integration/release PENDING**. No Phase 2 merge/deploy; Phase 3–6 not started by this PR. Exact details: `docs/consolidation/PHASE_02_RECONCILIATION.md`.
+
+- **Hosted Phase 2 gate closed (run #39529008922 on `a6dc21f`):** Ubuntu Node 22 tests/build and immutable gzip budget, all 8 real Chromium acceptance suites and isolated three-era draft recovery **PASS**. The shared-origin older Atlas writer hazard remains the **release gate**, so no PR merge or real-user migration is implied.
