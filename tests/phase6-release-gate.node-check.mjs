@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
-import {RELEASE_PROOF_KEYS,assessReleaseCutover} from '../release-cutover-gate.js';
+import {RELEASE_PROOF_KEYS,assessReleaseCutover,assessDisposableDraftRelease} from '../release-cutover-gate.js';
 
 const A='a'.repeat(40),B='b'.repeat(40);
 const fixture=()=>({
@@ -57,4 +57,36 @@ test('committed default manifest and Pages CLI categorically deny release',()=>{
   assert.equal(run.status,1);
   assert.match(run.stderr,/ATLAS_RELEASE_GATE_BLOCKED/);
   assert.doesNotMatch(run.stdout,/ATLAS_RELEASE_GATE_READY/);
+});
+
+
+test('one-time throwaway-draft waiver preserves historical blocked proofs and limits release scope',()=>{
+  const manifest=JSON.parse(readFileSync(new URL('../docs/consolidation/RELEASE_READINESS.json',import.meta.url),'utf8'));
+  assert.ok(RELEASE_PROOF_KEYS.every(key=>manifest.proofs[key].status==='blocked'));
+  const args={headSha:A,repository:'westkitty/Starsilk_Map_of_the_All',ref:'refs/heads/main',
+    event:'push',now:Date.parse('2026-10-21T16:00:00Z'),
+    entryBlob:'850139d4e68dab96ff9adcfef334433a2d666bf3',
+    runtimeBlob:'0306b379cc78f3e1aa104736dfd46daa94047609'};
+  assert.equal(assessReleaseCutover(manifest,{headSha:A,approvedSha:A,recoveryVerifiedSha:A}).ready,false);
+  assert.deepEqual(assessDisposableDraftRelease(manifest,args),{ready:true,issues:[]});
+  assert.equal(assessDisposableDraftRelease(manifest,{...args,ref:'refs/heads/feature/test'}).ready,false);
+  assert.equal(assessDisposableDraftRelease(manifest,{...args,event:'workflow_dispatch'}).ready,false);
+  assert.equal(assessDisposableDraftRelease(manifest,{...args,now:Date.parse('2026-10-23T01:00:00Z')}).ready,false);
+  assert.equal(assessDisposableDraftRelease(manifest,{...args,runtimeBlob:B}).ready,false);
+  const tampered=structuredClone(manifest);tampered.proofs.owner_backup_restore.status='verified';
+  assert.equal(assessDisposableDraftRelease(tampered,args).ready,false);
+});
+
+test('CLI allows only simulated main release of unchanged reviewed Atlas sources',()=>{
+  const env={...process.env,GITHUB_SHA:A,GITHUB_REPOSITORY:'westkitty/Starsilk_Map_of_the_All',
+    GITHUB_REF:'refs/heads/main',GITHUB_EVENT_NAME:'push',ATLAS_RELEASE_APPROVED_SHA:'',
+    ATLAS_BROWSER_VERIFIED_SHA:''};
+  const script=new URL('../scripts/phase6-release-gate.mjs',import.meta.url).pathname;
+  const pass=spawnSync(process.execPath,[script],{env,encoding:'utf8'});
+  assert.equal(pass.status,0,'Authorized disposable draft only: '+pass.stderr);
+  assert.match(pass.stdout,/ATLAS_THROWAWAY_DRAFT_RELEASE_AUTHORIZED/);
+  const blocked=spawnSync(process.execPath,[script],{
+    env:{...env,GITHUB_REF:'refs/heads/other'},encoding:'utf8'});
+  assert.equal(blocked.status,1);
+  assert.match(blocked.stderr,/ATLAS_RELEASE_GATE_BLOCKED/);
 });
