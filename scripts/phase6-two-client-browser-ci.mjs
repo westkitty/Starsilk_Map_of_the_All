@@ -83,6 +83,21 @@ try{
   const suppressionPresent=parsed.timeline?.snapshots?.post?.suppressedVisuals?.includes('network:all')===true;
   assert.ok(!markerPresent||!suppressionPresent,'legacy writer unexpectedly preserved all synthetic new-client values');
   const newerRead=readDraft(overwritten);
+  // The modern tab must retain its open draft without writing over the legacy mutation.
+  await current.waitForFunction(()=>document.querySelector('#savedStatus')?.textContent?.includes('EXTERNAL WRITE'),null,{timeout:12000});
+  const survivor=await current.evaluate(({key})=>({
+    shared:localStorage.getItem(key),
+    session:sessionStorage.getItem(key),
+    fallback:sessionStorage.getItem(key+'.sessionFallback'),
+    status:document.querySelector('#savedStatus')?.textContent
+  }),{key:STORAGE_KEY});
+  assert.equal(survivor.shared,overwritten,'Modern tab must not automatically clobber conflicting shared draft');
+  assert.equal(survivor.fallback,'1','Modern tab must flag a session-only backup');
+  const savedSession=JSON.parse(survivor.session);
+  assert.equal(savedSession.nodes.find(n=>n.id==='ember-span')?.name,'QA CROSS-WRITER SURVIVAL MARKER');
+  assert.ok(savedSession.timeline?.snapshots?.post?.suppressedVisuals?.includes('network:all'),
+    'Modern open session must preserve era suppression');
+  console.log('PHASE6_MODERN_CONFLICT_FENCE_PASS same_origin=true session_backup=true no_reoverwrite=true');
   console.log('PHASE6_TWO_CLIENT_WRITER_COLLISION '+JSON.stringify({
     sharedOrigin:true,storageKey:STORAGE_KEY,legacyWrote:true,
     lostNamedDraft:!markerPresent,lostEraSuppression:!suppressionPresent,
