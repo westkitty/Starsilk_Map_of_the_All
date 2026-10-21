@@ -2,7 +2,7 @@ name: Atlas Pull Request Verification
 
 on:
   pull_request:
-    branches: [main, consolidation/phase-02-omni-recovery-20261020, feature/phase03-stellar-navigation, feature/phase04-zero-loss-ux, feature/phase05-network-batching, feature/phase05-frame-observability, feature/phase15-provisional-survey-cells, feature/phase16-region-render-economy, feature/phase17-safe-cartography-labels, feature/phase06-release-cutover-safety, feature/phase06-two-client-browser-replay]
+    branches: [main, consolidation/phase-02-omni-recovery-20261020, feature/phase03-stellar-navigation, feature/phase04-zero-loss-ux, feature/phase05-network-batching, feature/phase05-frame-observability, feature/phase15-provisional-survey-cells, feature/phase16-region-render-economy, feature/phase17-safe-cartography-labels, feature/phase06-release-cutover-safety, feature/phase06-two-client-browser-replay, feature/phase06-external-writer-conflict-fence]
 
 # Read-only validation; never publishes or modifies GitHub Pages.
 permissions:
@@ -82,7 +82,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
   legacy-same-origin:
-    name: Pinned Planner and dedicated Atlas shared-origin replay
+    name: Pinned Planner collision plus read-only retirement preview
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -119,4 +119,12 @@ jobs:
 
       - name: Replay pinned two-client writer collision in disposable browser context
         run: node atlas/scripts/phase6-two-client-browser-ci.mjs atlas/dist planner/dist
+      - name: Prove read-only legacy retirement preview in disposable built Planner
+        run: |
+          set -eu
+          cp atlas/docs/consolidation/LEGACY_RETIREMENT_PREVIEW.html planner/map-of-the-all/index.html
+          cd planner
+          npm run build
+          cd ..
+          node atlas/scripts/phase6-two-client-browser-ci.mjs atlas/dist planner/dist --retired
 
