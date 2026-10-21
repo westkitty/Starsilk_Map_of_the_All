@@ -22,6 +22,7 @@ jobs:
       - name: Require explicit one-writer cutover and exact-head release approval
         env:
           ATLAS_RELEASE_APPROVED_SHA: ${{ vars.ATLAS_RELEASE_APPROVED_SHA }}
+          ATLAS_BROWSER_VERIFIED_SHA: ${{ vars.ATLAS_BROWSER_VERIFIED_SHA }}
         run: node scripts/phase6-release-gate.mjs
       - name: Install pinned dependencies
         run: npm ci
