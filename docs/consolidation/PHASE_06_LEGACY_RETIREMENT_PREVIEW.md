@@ -23,14 +23,17 @@ The legacy embedded Atlas and the dedicated Atlas share the GitHub Pages origin 
 
 The dedicated Atlas PR workflow uses a disposable checkout of **immutable original Planner source**, compiles both real clients, and first reruns the known-writer-collision witness. It then copies the retirement HTML into **only the disposable Planner checkout**, rebuilds the Planner, and runs the same-origin browser replay with `--retired`. No commit, push, or mutation targets the independent Planner repository.
 
-The retirement test proves:
-- The entry shows only non-writing retirement controls, not `#allLayersBtn`.
-- The exact shared JSON bytes remain unchanged when the page opens.
+The dual-client tests are designed to prove, when exact-head CI passes:
+- The original pinned legacy editor **still reproduces** its proven shared-key overwrite (deliberately retained witness).
+- Genuine JSON-v1 output from that legacy writer can be imported through the new Atlas's real confirmation UI, validated, and reloaded in a fresh disposable browser profile.
+- The retirement entry shows only read-only controls, not `#allLayersBtn`.
+- The exact shared JSON bytes remain unchanged when the retirement page opens.
 - Clicking the backup button produces an **exact byte-for-byte raw download**.
-- The shared JSON bytes remain unchanged after download.
-- The original built modern Atlas remains able to read the seeded draft.
-- The expected dedicated Atlas link exists.
-- The disposable browser reports no page exceptions.
+- A second, independent dedicated Atlas profile can import those exact downloaded bytes, preserve three eras and Post-era suppression, and reload successfully.
+- An empty browser profile does not expose an active export button or create storage.
+- Malformed JSON still downloads with exactly the original bytes, without parsing or overwriting them.
+- The independent orbital Planner's root React application mounts after the candidate legacy HTML rebuild.
+- The expected dedicated Atlas link exists and the disposable browser reports no page exceptions.
 
 CI success does **not** prove old tabs are neutralized, a personal backup has been recovered, a live change was published, or a rollback has been rehearsed. A fresh exact-head receipt is required; until then status is **NOT VERIFIED**.
 
