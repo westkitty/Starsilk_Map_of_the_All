@@ -1,5 +1,9 @@
 # Starsilk Map of the All
 
+> **Current authority (verified 2026-11-02):** This repository, `westkitty/Starsilk_Map_of_the_All`, is the ONLY target for new Atlas development. Production `main` was `c98ff92f98e3c41022711a2804e87aca8e8dee48` at inspection; its 2026-10-21 Pages [deployment workflow](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39582475713) succeeded. The independent `westkitty/Star_System_Planner` remains the physics simulator; its legacy embedded Atlas route is a read-only portal as released on 2026-10-21. Earlier unpublished/writable-route notes below are archival, **not operating instructions**.
+>
+> **External instruction mismatch:** ChatGPT Project directives naming `Star_System_Planner/map-of-the-all/` as the permanent Atlas edit target are obsolete. Project settings must be corrected by the owner; a repository edit cannot update them. No cross-repo code writes are permitted during this transition. Read [the November uplift candidate report](docs/UPLIFT_2026-11-02_CANDIDATE.md) for proposed follow-up changes and their exact evidence state.
+
 > **Current consolidation direction (2026-10-20):** This standalone repository owns all Atlas development. Read the [Repository Consolidation Master Plan](CONSOLIDATION_MASTER_PLAN.md) before starting new Atlas work. The embedded Planner Atlas is a legacy compatibility implementation; the independent orbital Planner remains protected. Older phase notes below are archival and may describe an obsolete unpublished state.
 
 **The Map of the All** is a standalone Three.js, 4X-inspired, source-aware, editable survey of the Starsilk universe.

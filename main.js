@@ -8,6 +8,7 @@ import { NetworkLab } from './network-lab.js';
 import { SpatialStudio } from './spatial-studio.js';
 import { validateCorridor } from './studio-math.js';
 import { initSourceGraph } from './source-graph-ui.js';
+import { TOPOLOGY } from './source-topology.js';
 import { createPlannerHandoff, validateHandoff, makeHandoffFilename, getHandoffSystemMetadata } from './planner-handoff.js';
 import { VERSION, STORAGE_KEY, CANON_BASE, EPOCHS, LAYERS, seedAtlas, nodeById, childNodes, ancestry, validateAtlas, sanitizeAtlas, normalizeDraft, addNode, uniqueId, RESEARCH_ANCHORS } from './atlas-data.js';
 import {planDeletion, deleteObject} from './deletion-engine.js';
@@ -530,7 +531,7 @@ function updateCounts(){ $('countGalaxy').textContent=String(state.nodes.filter(
   $('countSystems').textContent=String(state.nodes.filter(n=>n.kind==='system').length).padStart(2,'0');
 }
 function activateEra(id){
-  if(id===state.epoch)return;
+  if(id===state.epoch)return true;
   studio?.cancel();studio?.routeStop();pendingRoute=null;strategy?.close();networkLab?.close();
   const accepted=change(()=>switchEra(state,id),{immediate:true});
   if(accepted){
@@ -538,6 +539,7 @@ function activateEra(id){
     if(engine)engine.transitionEra?.();
     message('Switched independent provisional draft to '+EPOCHS.find(e=>e.id===id)?.title+'.');
   }
+  return accepted;
 }
 function updateEpoch(){const current=EPOCHS.find(x=>x.id===state.epoch);
   $('eraLabel').textContent=current.title.toUpperCase();const frag=document.createDocumentFragment();
@@ -691,7 +693,7 @@ function inspectCanonEntity(c){
         else $('sourceGraphOpen')?.click();
       });
       relSec.append(chip);
-      const placedTarget=state.nodes.find(n=>n.id===r.targetId||n.name.toLowerCase()===r.targetName.toLowerCase());
+      const placedTarget=state.nodes.find(n=>n.status==='reference'&&n.id===r.targetId);
       if(placedTarget){
         const jumpBtn=el('button','source-jump-btn',`⛶ JUMP TO MAP LANDMARK (${placedTarget.name.toUpperCase()})`);
         jumpBtn.type='button';
@@ -820,18 +822,18 @@ function showSearch(){
       for(const c of canonHits){
         const b=el('button','search-result canon-result','');
         b.type='button';b.setAttribute('role','option');
-        const mapMatch=state.nodes.find(n=>n.id===c.id||n.name.toLowerCase()===c.name.toLowerCase());
+        const mapMatch=state.nodes.find(n=>n.status==='reference'&&n.id===c.id);
         const isPlaced=!!mapMatch;
         const topRow=el('div','search-result-header');
         topRow.append(
           el('span','search-result-name',c.name),
-          el('span',`search-badge badge-canon`,isPlaced?'◆ PLACED CANON':'◆ UNPLACED CANON')
+          el('span',`search-badge badge-canon`,isPlaced?'◆ REFERENCE LANDMARK':'◆ UNPLACED CANON')
         );
         let drakkenSnippet='';
         if(c.drakkenMetadata){
           drakkenSnippet=` · ${c.drakkenMetadata.candidateId} (${c.drakkenMetadata.threatTier}) · ${c.drakkenMetadata.affinity}`;
         }
-        const sub=el('small','',`${c.group.toUpperCase()}${drakkenSnippet} · ${isPlaced?'Placed Landmark':'Unauthored Coordinates (No 3D Placement)'}`);
+        const sub=el('small','',`${c.group.toUpperCase()}${drakkenSnippet} · ${isPlaced?'Illustrative Source Landmark':'Unauthored Coordinates (No 3D Placement)'}`);
         b.append(topRow,sub);
         b.addEventListener('click',()=>{
           gui.search.value='';gui.results.hidden=true;
@@ -1143,16 +1145,34 @@ function init(){updateUI();bind();
   try{
     sourceGraphInstance=initSourceGraph({
       onInspect3D:(id)=>{
-        const targetNode=state.nodes.find(n=>n.id===id||n.name.toLowerCase()===id.toLowerCase());
+        const targetNode=state.nodes.find(n=>n.status==='reference'&&n.id===id);
         if(targetNode){
           select(targetNode.id);
           if(engine){
             engine.focusOn(targetNode);
-            message('Focused 3D camera on '+targetNode.name+'.');
+            message('Focused illustrative 3D landmark: '+targetNode.name+'. Position is not source-authored.');
           }
-        }else{
-          message('Selected '+id+' in source topology. Node has unauthored spatial coordinates.');
+          return true;
         }
+        message('Source '+id+' is unplaced. No 3D coordinates exist in the published evidence.');
+        return false;
+      },
+      onProjectDraft:({sourceId,label})=>{
+        const spatial=TOPOLOGY.nodes.find(n=>n.id===sourceId&&n.label===label&&['homeworld','nebula','orbital-station','gas-giant'].includes(n.kind));
+        if(!spatial){message('This source is not a placeable astronomical study.',true);return false;}
+        if(!engine){message('3D Atlas is unavailable; no draft was created.',true);return false;}
+        if(!confirm('Create an editable, PROVISIONAL spatial study for '+label+'? The position is randomly illustrative and NOT a canonical location.'))return false;
+        let id;
+        const ok=change(()=>{
+          const n=addNode(state,'annotation',null);
+          n.name=('STUDY / '+label).slice(0,100);
+          n.description='Hypothetical reader-authored annotation for '+label+' ('+sourceId+'). Spatial position, distance, era placement and all implied routes are NOT sourced or canonical.';
+          n.status='draft';n.sourceUrl=null;id=n.id;
+        });
+        if(!ok)return false;
+        enter('all',null);select(id);focusSelected();drawerController?.open('inspect');
+        message('Created a provisional study marker for '+label+'. Edit or Undo freely; the source record was not changed.');
+        return true;
       }
     });
   }catch(e){$('sourceGraphOpen').disabled=true;message('Source topology unavailable: '+e.message,true);}

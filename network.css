@@ -63,6 +63,7 @@
 .network-highlight-line.starsilk{stroke:#26dfff;stroke-width:3.5;filter:drop-shadow(0 0 10px #26dfff)}
 .network-highlight-line.hookshot{stroke:#b6c8d6;stroke-width:2.5;stroke-dasharray:6 4;filter:drop-shadow(0 0 5px #7b9aaa)}
 .network-highlight-node{fill:#fff0ca;stroke:#0be5ff;stroke-width:2;filter:drop-shadow(0 0 7px #00caff)}
+.network-severed-line{stroke:#ffcb89;stroke-width:2.5;stroke-dasharray:5 7;opacity:.95;pointer-events:none;filter:drop-shadow(0 0 4px #c89a59)}
 .network-path-badge-text{font:700 10px var(--mono);fill:#041521;text-anchor:middle;dominant-baseline:central}
 .network-path-badge-circle{fill:#6ae6ff;stroke:#041724;stroke-width:1.5}
 @media(max-width:850px){

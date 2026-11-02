@@ -134,3 +134,16 @@ Implementation commit: e8ba3499731cd1d042c7aa7471e25cd07c8ae4ab (five uplift pas
 - Hosted [run 39557325046](https://github.com/westkitty/Starsilk_Map_of_the_All/actions/runs/39557325046) verified **lostNamedDraft=true**, **lostEraSuppression=true**, **currentReaderRejected=false**, i.e. silent loss in otherwise accepted legacy JSON v1. This is a blocking defect, not evidence of safe cutover. No personal browser or production Pages used.
 - Independently built Planner read-only at exact `dc3c7427`: TypeScript, 239/239 native tests, build and PWA/bundle checks PASS. Its verified baseline cannot substitute for retiring the old writer. Dedicated Atlas original 14-suite hosted acceptance pending at this entry.
 - Release gate and manifests stay **blocked**. Owner must independently back up/restore real drafts and separately authorize actual Planner legacy-writer shutdown before any Atlas stack merge/deployment; no schema/key, three eras, War chronology, canonical Dossier, or orbital physics changes were made. See `docs/consolidation/PHASE_06_TWO_CLIENT_REPLAY.md`.
+
+
+## 2026-11-02 — AWE / OMNI / QQQ local integration candidate
+
+- Isolated canonical standalone clone: `/Users/bigmac/Projects/map-of-the-all-uplift-20261102` at `c98ff92f98e3c41022711a2804e87aca8e8dee48`, originally clean, with no remote delivery or Planner/Dossier modification.
+- Candidate work: read-only main CI even without Pages permission; 30-sample SwiftShader diagnostics receipts; fail-closed source lookup by reference ID, study annotations always draft; existing era and network labs gain meaningful cause/effect and severance visibility; browser and Node regression fixtures. Documented in `docs/UPLIFT_2026-11-02_CANDIDATE.md`.
+- Status: IMPLEMENTED_UNVERIFIED. Prior green CI (282 Node, 14 Chromium, 223793/225000 gzip) applies only to unchanged production base. No current tests/build, actual FPS proof, commit, push, PR, merge or Pages deployment. Must satisfy 225000-byte cap and correct external Project instructions before considering delivery.
+
+## 2026-11-02 — Uplift source verification for Git delivery
+
+- On the isolated standalone worktree: `npm ci` PASS, `npm run test` 287/287 PASS, `npm run build` 223735/225000 gzip PASS, and focused Phase5 + Phase6 real Chromium acceptances PASS at desktop and emulated mobile.
+- Corrected preexisting time-sensitive release CLI fixture to deny expired October waiver in the real present, while pure historical logic remains covered. Corrected two new Playwright fixtures that had referenced outer variables in page-executed functions. Verified the source-study Undo works in a complete route-edit/Undo/nested-galaxy reproduction.
+- Preserve all 3 eras, original storage key and JSON v1, noncanonical source placement, read-only Dossier, independent Planner and disabled release without new exact-SHA approval. Full 14-suite hosted CI and physical device QA still pending.

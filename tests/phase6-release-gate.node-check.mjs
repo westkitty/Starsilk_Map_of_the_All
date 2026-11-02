@@ -77,16 +77,18 @@ test('one-time throwaway-draft waiver preserves historical blocked proofs and li
   assert.equal(assessDisposableDraftRelease(tampered,args).ready,false);
 });
 
-test('CLI allows only simulated main release of unchanged reviewed Atlas sources',()=>{
+test('CLI denies expired one-time waiver even for unchanged main-branch sources',()=>{
   const env={...process.env,GITHUB_SHA:A,GITHUB_REPOSITORY:'westkitty/Starsilk_Map_of_the_All',
     GITHUB_REF:'refs/heads/main',GITHUB_EVENT_NAME:'push',ATLAS_RELEASE_APPROVED_SHA:'',
     ATLAS_BROWSER_VERIFIED_SHA:''};
   const script=new URL('../scripts/phase6-release-gate.mjs',import.meta.url).pathname;
-  const pass=spawnSync(process.execPath,[script],{env,encoding:'utf8'});
-  assert.equal(pass.status,0,'Authorized disposable draft only: '+pass.stderr);
-  assert.match(pass.stdout,/ATLAS_THROWAWAY_DRAFT_RELEASE_AUTHORIZED/);
-  const blocked=spawnSync(process.execPath,[script],{
+  const blockedMain=spawnSync(process.execPath,[script],{env,encoding:'utf8'});
+  assert.equal(blockedMain.status,1,'Expired release authorization may never publish');
+  assert.match(blockedMain.stderr,/ATLAS_RELEASE_GATE_BLOCKED/);
+  assert.match(blockedMain.stderr,/Owner cutover window expired/);
+  assert.doesNotMatch(blockedMain.stdout,/ATLAS_THROWAWAY_DRAFT_RELEASE_AUTHORIZED/);
+  const blockedBranch=spawnSync(process.execPath,[script],{
     env:{...env,GITHUB_REF:'refs/heads/other'},encoding:'utf8'});
-  assert.equal(blocked.status,1);
-  assert.match(blocked.stderr,/ATLAS_RELEASE_GATE_BLOCKED/);
+  assert.equal(blockedBranch.status,1);
+  assert.match(blockedBranch.stderr,/ATLAS_RELEASE_GATE_BLOCKED/);
 });

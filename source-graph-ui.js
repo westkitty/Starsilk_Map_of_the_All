@@ -7,7 +7,7 @@ const svg=(tag,attrs)=>{const node=document.createElementNS(SVG_NS,tag);for(cons
 const makeSourceLink=(url,label)=>{const a=el('a','source-citation',label);a.href=url;a.target='_blank';a.rel='noopener noreferrer';return a;};
 
 export function initSourceGraph(options={}){
-  const {onInspect3D}=options;
+  const {onInspect3D,onProjectDraft}=options;
   const failures=validateSourceTopology();
   if(failures.length)throw new Error('WorldsVault snapshot rejected: '+failures.join('; '));
   const dialog=$('sourceGraphDialog');if(!dialog)throw new Error('Source graph dialog missing');
@@ -64,10 +64,20 @@ export function initSourceGraph(options={}){
       inspectBtn.type='button';
       inspectBtn.title=`Focus 3D camera on ${n.label} landmark`;
       inspectBtn.addEventListener('click',()=>{
-        dialog.close();
-        onInspect3D(id);
+        if(onInspect3D(id))dialog.close();
+        else{
+          details.querySelector('.source-unplaced-response')?.remove();
+          const notice=el('p','source-caveat source-unplaced-response','This source identity has no authored 3D placement. You may make a separate, explicitly provisional study marker.');
+          notice.setAttribute('role','status');details.append(notice);
+        }
       });
       details.append(inspectBtn);
+    }
+    if(onProjectDraft&&['homeworld','nebula','orbital-station','gas-giant'].includes(n.kind)){
+      const project=el('button','source-handoff-btn','PROJECT HYPOTHETICAL STUDY ◇');
+      project.type='button';project.title='Create a separate, editable draft annotation; never modify or locate the source record';
+      project.addEventListener('click',()=>{if(onProjectDraft({sourceId:n.id,label:n.label}))dialog.close();});
+      details.append(project);
     }
     const matches=linksForNode(id);
     if(!matches.length)details.append(el('p','source-caveat','No published relationship edge is listed for this node. Nothing further should be inferred.'));

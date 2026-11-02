@@ -1,6 +1,9 @@
-name: Atlas Pull Request Verification
+name: Atlas Verification (No Publication)
 
 on:
+  push:
+    branches: [main]
+  workflow_dispatch:
   pull_request:
     branches: [main, consolidation/phase-02-omni-recovery-20261020, feature/phase03-stellar-navigation, feature/phase04-zero-loss-ux, feature/phase05-network-batching, feature/phase05-frame-observability, feature/phase15-provisional-survey-cells, feature/phase16-region-render-economy, feature/phase17-safe-cartography-labels, feature/phase06-release-cutover-safety, feature/phase06-two-client-browser-replay, feature/phase06-external-writer-conflict-fence]
 
@@ -9,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: atlas-pr-${{ github.event.pull_request.number }}
+  group: atlas-readonly-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -18,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: Check out pull request
+      - name: Check out tested revision
         uses: actions/checkout@v4
 
       - name: Install Node.js
@@ -73,15 +76,18 @@ jobs:
             echo "Phase 1 recovery fixture is not present in this branch."
           fi
 
-      - name: Retain browser diagnostic images on failure
-        if: failure()
+      - name: Retain synthetic browser screenshots and frame cadence receipts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: atlas-pr-browser-evidence
-          path: atlas-qa-evidence/*.png
+          name: atlas-verify-browser-evidence
+          path: |
+            atlas-qa-evidence/*.png
+            atlas-qa-evidence/*.json
           if-no-files-found: ignore
           retention-days: 7
   legacy-same-origin:
+    if: github.event_name == 'pull_request'
     name: Pinned Planner collision plus read-only retirement preview
     runs-on: ubuntu-latest
     timeout-minutes: 20

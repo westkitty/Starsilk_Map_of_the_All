@@ -122,7 +122,20 @@ export class TemporalLab {
         });
         filterBar.append(btn);
       }
-      frag.append(filterBar);
+      const sequence=['war','locking','post'];
+      const next=sequence[(sequence.indexOf(state.epoch)+1)%sequence.length];
+      const witness=elem('button','milestone-filter-btn temporal-follow-btn',
+        'FOLLOW CONSEQUENCE → '+labelFor(next).toUpperCase());
+      witness.type='button';
+      witness.title='Compare the current editorial era with the next. This is not a canonical map animation.';
+      witness.addEventListener('click',()=>{
+        const previous=state.epoch;
+        if(this.onSwitch(next)!==true)return;
+        this.baseline=previous;this.showGhosts=true;$('temporalGhost').checked=true;
+        this.sync();
+        this.message('Comparing '+labelFor(previous)+' with '+labelFor(next)+'. Historical milestone order is sourced; all geometry is editorial.');
+      });
+      frag.append(witness,elem('p','temporal-milestone-desc','SOURCE CHRONOLOGY / EDITORIAL SPATIAL SNAPSHOTS. There are no authored historical coordinates.'),filterBar);
 
       const filtered = CANON_CHRONOLOGY_MILESTONES.filter(m => this.milestoneFilter === 'all' || m.eraId === this.milestoneFilter);
       for (const m of filtered) {

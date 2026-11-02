@@ -126,8 +126,9 @@ export class NetworkLab {
     this.$('networkLinks').textContent=String(report.corridorCount);
     this.$('networkIslands').textContent=String(report.componentCount);
     this.$('networkBridgesCount').textContent=String(report.bridgeCount);
+    const before=networkReport(draftNetwork(state,view,{kind:this.kind}));
     this.$('networkOutageInfo').textContent=this.closed.size
-      ? `${this.closed.size} temporarily closed / +${impact.addedComponents} disconnected clusters / ${impact.newlyIsolated.length} newly isolated draft objects`
+      ? `${this.closed.size} temporarily closed / BEFORE ${before.componentCount} → AFTER ${report.componentCount} clusters / ${impact.newlyIsolated.length} newly isolated draft objects / source topology unchanged`
       : 'All saved draft corridors active. Outage switches are temporary.';
     const bridges=new Map(draftNetwork(state,view,{kind:this.kind}).edges.map(e=>[e.id,e]));
     const frag=document.createDocumentFragment();for(const id of report.bridgeIds.slice(0,24)){
@@ -230,10 +231,21 @@ export class NetworkLab {
   }
   projectOverlay(){
     this.overlay.replaceChildren();this.overlay.hidden=true;
-    if(!this.opened||!this.currentPath||!this.engine||this.currentPath.nodes.length<2)return;
+    if(!this.opened||!this.engine)return;
     const rect=this.canvas.getBoundingClientRect();if(rect.width<10||rect.height<10)return;
     this.overlay.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
-    const path=this.currentPath.nodes.map(id=>this.screenOf(id));if(path.some(p=>!p))return;
+    // Keep severed corridors visible even when the simulated cut destroys the selected path.
+    const original=draftNetwork(this.getState(),this.getView(),{kind:this.kind});
+    for(const edge of original.edges){
+      if(!this.closed.has(edge.id))continue;
+      const a=this.screenOf(edge.from),b=this.screenOf(edge.to);if(!a||!b)continue;
+      const severed=svg('line','network-severed-line');
+      for(const [k,v] of Object.entries({x1:a.x,y1:a.y,x2:b.x,y2:b.y}))severed.setAttribute(k,String(v));
+      this.overlay.append(severed);
+    }
+    if(!this.currentPath||this.currentPath.nodes.length<2){this.overlay.hidden=!this.overlay.childNodes.length;return;}
+    const path=this.currentPath.nodes.map(id=>this.screenOf(id));
+    if(path.some(p=>!p)){this.overlay.hidden=!this.overlay.childNodes.length;return;}
     const state=this.getState();
     for(let i=1;i<path.length;i++){
       const a=path[i-1],b=path[i],cx=(a.x+b.x)/2,cy=(a.y+b.y)/2-22;

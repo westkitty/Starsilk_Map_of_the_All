@@ -88,6 +88,17 @@ async function run(){await ready();
  assert.equal(imported.timeline.version,1);
  assert.equal(imported.timeline.snapshots.post.nodes.find(n=>n.id==='worldsvault').status,'draft');
  console.log('PHASE6_STAGE legacy-import-demotion');
+ // AWE: source chronology moves editorial camera eras without changing the snapshots.
+ if(!await page.locator('#temporalPanel').isVisible())await page.locator('[data-drawer="eras"]').click();
+ const beforeWitness=await stored(page);
+ const epochs=['war','locking','post'],nextWitness=epochs[(epochs.indexOf(beforeWitness.epoch)+1)%epochs.length];
+ await page.locator('.temporal-follow-btn').click();
+ await page.waitForFunction(expected=>{const raw=localStorage.getItem('starsilk.map-of-the-all.draft.v1');return raw&&JSON.parse(raw).epoch===expected;},nextWitness,{timeout:18000});
+ const afterWitness=await stored(page);
+ assert.deepEqual(afterWitness.timeline.snapshots[beforeWitness.epoch].nodes,beforeWitness.timeline.snapshots[beforeWitness.epoch].nodes,
+   'Historical transition never rewrites the previous era geometry');
+ assert.equal(await page.locator('#temporalCompare').inputValue(),beforeWitness.epoch);
+ assert.match(await page.locator('#temporalMilestonesList').innerText(),/EDITORIAL SPATIAL SNAPSHOTS/);
  const plannerLink=await page.locator('#handoffOpenPlanner').getAttribute('href');assert.equal(plannerLink,'https://westkitty.github.io/Star_System_Planner/');
  await context.close();
  const mobile=await browser.newContext({viewport:{width:412,height:915},isMobile:true,hasTouch:true,reducedMotion:'reduce'});

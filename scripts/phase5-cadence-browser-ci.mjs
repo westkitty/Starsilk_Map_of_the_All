@@ -2,7 +2,7 @@
  * Runs in isolated, disposable Playwright contexts. No real user drafts.
  */
 import {spawn} from 'node:child_process';
-import {existsSync,mkdirSync} from 'node:fs';
+import {existsSync,mkdirSync,writeFileSync} from 'node:fs';
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 const URL='http://127.0.0.1:4173/Starsilk_Map_of_the_All/?atlasDiagnostics=1';
@@ -11,7 +11,7 @@ if(!binary)throw Error('Chromium binary required for frame-cadence proof');
 mkdirSync('atlas-qa-evidence',{recursive:true});
 const server=spawn(process.execPath,['./node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4173','--strictPort'],{stdio:['ignore','pipe','pipe']});
 let serverLog='';for(const stream of [server.stdout,server.stderr])stream.on('data',d=>serverLog+=String(d).slice(0,1500));
-let browser;
+let browser;const measurements=[];
 const watchdog=setTimeout(()=>{console.error('CADENCE_BROWSER_TIMEOUT');server.kill('SIGTERM');process.exit(124);},220000);watchdog.unref();
 async function ready(){for(let n=0;n<90;n++){if(server.exitCode!==null)throw Error('Preview died '+serverLog);
   try{if((await fetch(URL)).ok)return;}catch{}await new Promise(r=>setTimeout(r,250));}
@@ -21,10 +21,10 @@ const metric=page=>page.evaluate(()=>window.__atlasDiagnostics?.()||null);
 async function sample(page,label,previousFrame=0){
   // A view/era state change is not renderer proof until fresh frames exist.
   await page.waitForFunction(prev=>{const m=window.__atlasDiagnostics?.();
-    return m&&m.renderedFrames>=prev+3&&m.sampleCount>=8&&Number.isFinite(m.fps)&&m.fps>0;
+    return m&&m.renderedFrames>=prev+3&&m.sampleCount>=30&&Number.isFinite(m.fps)&&m.fps>0;
   },previousFrame,{timeout:35000});
   const m=await metric(page);
-  assert.ok(m&&m.sampleCount>=8,label+' requires actual callback timestamp samples');
+  assert.ok(m&&m.sampleCount>=30,label+' requires actual callback timestamp samples');
   assert.equal(Object.hasOwn(m,'nodes'),false,'read-only diagnostics never serialize drafts');
   assert.equal(Object.hasOwn(m,'routes'),false,'read-only diagnostics never return saved routes');
   assert.ok(m.fps>0&&m.fps<300,label+' cadence FPS must be a realistic rate');
@@ -35,12 +35,14 @@ async function sample(page,label,previousFrame=0){
     label+' frame percentiles must be nondecreasing');
   for(const key of ['drawCalls','geometries','textures','triangles'])
     assert.ok(Number.isFinite(m[key])&&m[key]>=0,label+' '+key+' finite');
-  console.log('CADENCE_SAMPLE '+JSON.stringify({label,view:m.viewKind,epoch:m.epoch,
+  const evidence={label,view:m.viewKind,epoch:m.epoch,
     viewport:m.viewport,quality:m.quality,frames:m.sampleCount,renderedFrames:m.renderedFrames,
     fps:m.fps,medianFps:m.medianFps,p50:m.frameP50Ms,p95:m.frameP95Ms,p99:m.frameP99Ms,
     callbackP95:m.callbackP95Ms,slowPct:m.slowFramePct,
     geometries:m.geometries,textures:m.textures,drawCalls:m.drawCalls,
-    resumeCount:m.resumeCount}));
+    resumeCount:m.resumeCount};
+  measurements.push(evidence);
+  console.log('CADENCE_SAMPLE '+JSON.stringify(evidence));
   return m;
 }
 async function desktop(){
@@ -104,5 +106,12 @@ try{await ready();browser=await chromium.launch({headless:true,executablePath:bi
   const d=await desktop();const m=await mobile();
   console.log('PHASE5_CADENCE_BROWSER_PASS '+JSON.stringify({desktop:d,mobile:m,physicalDevice:false}));
 }catch(e){console.error('PHASE5_CADENCE_BROWSER_FAIL',e.stack||e);process.exitCode=1;}
-finally{await browser?.close();server.kill('SIGTERM');clearTimeout(watchdog);}
+finally{
+  if(measurements.length)writeFileSync('atlas-qa-evidence/frame-cadence-samples.json',JSON.stringify({
+    revision:process.env.GITHUB_SHA||'local-uncommitted',
+    environment:'Chromium headless / SwiftShader (software GPU)',physicalDevice:false,
+    minSamplesPerScenario:30,observedAt:new Date().toISOString(),samples:measurements
+  },null,2));
+  await browser?.close();server.kill('SIGTERM');clearTimeout(watchdog);
+}
 process.exit(process.exitCode||0);

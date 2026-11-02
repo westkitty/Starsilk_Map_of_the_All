@@ -471,3 +471,19 @@ See docs/QA_EVIDENCE.md for observed browser paths and evidence limits.
 - The legacy writer in an already-open or offline-cached browser tab cannot be forcibly stopped by static Pages changes. Its last unimportant old-draft edits may be lost; owners should close/reload old tabs/PWAs after deployment. Future Atlas client writes retain conflict detection/session fallback. Old storage key and JSON v1 schema remain unchanged.
 - Source/canon topology and three independent eras remain protected; no invented coordinates, borders, routes, historical positions or Blood Eclipse War chronology changes are introduced.
 - **Evidence state:** old draft recovery explicitly **WAIVED** (not tested/verified); release code committed to an isolated branch; final exact-head CI and Pages publication **pending**. Do not claim Pages deployed before Actions receipts and public URLs confirm.
+
+
+## 2026-11-02 — AWE/OMNI/QQQ isolated candidate (UNVERIFIED; not production state)
+
+- Exact clean-before-edit base: standalone `westkitty/Starsilk_Map_of_the_All` at `c98ff92f98e3c41022711a2804e87aca8e8dee48`. Scratch checkout `/Users/bigmac/Projects/map-of-the-all-uplift-20261102`. Root Planner and Dossier untouched; external ChatGPT Project directive still points to stale embedded path.
+- Source changes in this worktree: independent read-only main verification workflow; richer 30-sample frame-cadence JSON receipts; exact-ID/reference-only canonical placement lookup; explicit draft-only hypothetical annotation; editorial War/Locking/Post causal navigation; visual temporary corridor severance; supporting Node and real-browser test additions.
+- Hard preservation targets: JSON v1, `starsilk.map-of-the-all.draft.v1`, three eras, Undo/autosave, 170-year War, read-only Dossier, separated source topology, independent Planner, original Three.js renderer. Preservation is INTENDED; new-code tests have not yet run.
+- Status: IMPLEMENTED_UNVERIFIED. No build, browser QA, physical S Pen, performance comparison, staged diff, commit, push, PR, merge or Pages release. Baseline `c98ff92` green CI is **not** evidence for this candidate. 225000-byte delivery cap remains locked. One-time cutover waiver expired October 23; release stays blocked.
+- Required next: execute fresh exact-worktree checks and inspect diff, then re-evaluate delivery authority. Full plan: `docs/UPLIFT_2026-11-02_CANDIDATE.md`.
+
+## 2026-11-02 — Verified local checks after bounded candidate repair (no release)
+
+- Exact standalone base `c98ff92f98e3c41022711a2804e87aca8e8dee48`, Big Mac isolated worktree. Verified `npm ci` successful, **287/287 Node tests PASS**, Vite production budget **223735/225000 gzip PASS**.
+- **Phase5 Browser PASS**, **Phase6 Browser PASS** under disposable headless Brave / SwiftShader at desktop and emulated 412px mobile. Source-study Undo, path severance, era compare, three-era snapshots, export/reload and source demotion were checked. An initial browser fixture incorrectly captured Node variables inside a browser-executed function; repaired by explicit argument transfer. Local browser reproduction confirmed genuine Undo works.
+- Still unknown: physical Tab S9 Ultra and S Pen, matched baseline FPS/p95, full 14-suite hosted CI on new commit SHA, deployment. Release waiver expired 2026-10-23; publishing remains default-deny.
+- Allowed scope of next action from owner: stage, commit, push the approved standalone source changes only. No Planner or Dossier mutation and no release gate bypass.
