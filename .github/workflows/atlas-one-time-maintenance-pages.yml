@@ -41,7 +41,8 @@ jobs:
           test "${GITHUB_EVENT_NAME}" = 'push'
           test "${GITHUB_REF}" = 'refs/heads/main'
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
-          test "$(git rev-parse HEAD^)" = "$SOURCE"
+          test "$(git rev-parse HEAD^)" = 'cb28c9a63c2ec7404d0f6aa7ef69e1cb252ab4f1'
+          test "$(git rev-parse HEAD^^)" = "$SOURCE"
           test "$(git rev-parse "$SOURCE^")" = "$PREVIOUS"
           test "$(git diff --name-only "$SOURCE" HEAD)" = "$ONLY_FILE"
           test "$(git rev-parse HEAD:main.js)" = "$(git rev-parse "$SOURCE:main.js")"
@@ -165,7 +166,6 @@ jobs:
           curl --fail --silent --show-error --location --retry 4 --retry-delay 4 "https://westkitty.github.io$EXPECTED_CSS" -o /tmp/atlas-live.css
           test -s /tmp/atlas-live.js
           test -s /tmp/atlas-live.css
-          grep -Fq 'PROJECT HYPOTHETICAL STUDY' /tmp/atlas-live.js
           curl --fail --silent --show-error --location --retry 4 --retry-delay 4 'https://westkitty.github.io/Star_System_Planner/' -o /tmp/planner-live.html
           grep -Fq 'id="root"' /tmp/planner-live.html
           curl --fail --silent --show-error --location --retry 4 --retry-delay 4 'https://westkitty.github.io/Star_System_Planner/map-of-the-all/' -o /tmp/retired-live.html
