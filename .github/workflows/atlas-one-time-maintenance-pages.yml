@@ -1,0 +1,173 @@
+name: Publish Verified Atlas Maintenance 2026-11-03
+
+# One-time maintenance of the already published standalone Atlas.
+# This does NOT reopen the expired Oct 2026 browser-draft cutover waiver.
+# It is executable only on the single direct successor of the reviewed source commit.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: starsilk-map-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Gate, test and package exact reviewed Atlas
+    if: github.repository == 'westkitty/Starsilk_Map_of_the_All'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      asset_js: ${{ steps.manifest.outputs.asset_js }}
+      asset_css: ${{ steps.manifest.outputs.asset_css }}
+    steps:
+      - name: Checkout with immutable source ancestry for release proof
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove one-time maintenance scope and unchanged saved-data contract
+        run: |
+          set -euo pipefail
+          SOURCE='a3eaf3ec8e2fbe8d90108a2dc11688410b2039a2'
+          PREVIOUS='c98ff92f98e3c41022711a2804e87aca8e8dee48'
+          ONLY_FILE='.github/workflows/atlas-one-time-maintenance-pages.yml'
+          test "${GITHUB_REPOSITORY}" = 'westkitty/Starsilk_Map_of_the_All'
+          test "${GITHUB_EVENT_NAME}" = 'push'
+          test "${GITHUB_REF}" = 'refs/heads/main'
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "$(git rev-parse HEAD^)" = "$SOURCE"
+          test "$(git rev-parse "$SOURCE^")" = "$PREVIOUS"
+          test "$(git diff --name-only "$SOURCE" HEAD)" = "$ONLY_FILE"
+          test "$(git rev-parse HEAD:main.js)" = "$(git rev-parse "$SOURCE:main.js")"
+          for file in index.html atlas-data.js draft-recovery.js temporal-model.js package.json package-lock.json release-cutover-gate.js; do
+            test "$(git rev-parse "HEAD:$file")" = "$(git rev-parse "$PREVIOUS:$file")"
+          done
+          test "$(git rev-parse HEAD:index.html)" = '850139d4e68dab96ff9adcfef334433a2d666bf3'
+          test "$(git rev-parse HEAD:atlas-data.js)" = '14a91db540fac8ae6db1371cd30d6f418bb72a4d'
+          test "$(git rev-parse HEAD:draft-recovery.js)" = 'dc9dac8732beb0949f5ca0f673281378e501189b'
+          grep -Fq "export const VERSION = 1;" atlas-data.js
+          grep -Fq "export const STORAGE_KEY = 'starsilk.map-of-the-all.draft.v1';" atlas-data.js
+          echo 'ATLAS_MAINTENANCE_SCOPE_PASS: exact source, direct successor, no stored-data/schema change'
+          echo 'The seven-proof initial cutover gate remains untouched and default-deny.'
+
+      - name: Prove current site and independently retired Planner editor
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 4 --max-time 25 'https://westkitty.github.io/Starsilk_Map_of_the_All/' -o /tmp/atlas-previous.html
+          grep -Fq 'id="spaceCanvas"' /tmp/atlas-previous.html
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 4 --max-time 25 'https://westkitty.github.io/Star_System_Planner/map-of-the-all/' -o /tmp/atlas-retired.html
+          grep -Fq 'READ-ONLY LEGACY ENTRY' /tmp/atlas-retired.html
+          grep -Fq 'id="exportRawDraft"' /tmp/atlas-retired.html
+          if grep -Fq 'id="spaceCanvas"' /tmp/atlas-retired.html; then
+            echo 'Legacy editor still writable: cannot release maintenance' >&2
+            exit 1
+          fi
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 4 --max-time 25 'https://westkitty.github.io/Star_System_Planner/' -o /tmp/atlas-planner.html
+          grep -Fq 'id="root"' /tmp/atlas-planner.html
+          echo 'ATLAS_MAINTENANCE_LEGACY_WRITER_PASS'
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Require model, chronology, draft safety, and 225KB production budget
+        run: npm run check
+
+      - name: Validate runtime syntax and no hidden migration
+        run: |
+          set -euo pipefail
+          for file in main.js atlas-engine.js atlas-data.js draft-recovery.js source-graph-ui.js network-lab.js temporal-lab.js release-cutover-gate.js; do
+            node --check "$file"
+          done
+
+      - name: Verify all existing real browser journeys (disposable profiles)
+        run: npm run test:browser
+
+      - name: Prove JSON v1 draft backup, restoration and failed-storage recovery
+        run: node scripts/phase1-draft-recovery-browser-ci.mjs
+
+      - name: Record the exact built asset fingerprint for deployment verification
+        id: manifest
+        run: |
+          set -euo pipefail
+          grep -Fq 'id="spaceCanvas"' dist/index.html
+          JS="$(grep -oE '/Starsilk_Map_of_the_All/assets/index-[^"]+\.js' dist/index.html | head -n 1)"
+          CSS="$(grep -oE '/Starsilk_Map_of_the_All/assets/index-[^"]+\.css' dist/index.html | head -n 1)"
+          test -n "$JS"
+          test -n "$CSS"
+          test -s "dist${JS#/Starsilk_Map_of_the_All}"
+          test -s "dist${CSS#/Starsilk_Map_of_the_All}"
+          printf 'asset_js=%s\nasset_css=%s\n' "$JS" "$CSS" >> "$GITHUB_OUTPUT"
+          echo "ATLAS_MAINTENANCE_ASSETS_READY js=$JS css=$CSS"
+
+      - name: Retain synthetic browser and frame cadence evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-one-time-maintenance-qa
+          path: |
+            atlas-qa-evidence/*.png
+            atlas-qa-evidence/*.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload verified Atlas Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    name: Deploy and confirm live Atlas plus unaffected Planner
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publication.outputs.page_url }}
+    steps:
+      - name: Deploy exact verified artifact
+        uses: actions/deploy-pages@v4
+        id: publication
+
+      - name: Confirm live assets equal this build, and Planner remains readable
+        env:
+          EXPECTED_JS: ${{ needs.build.outputs.asset_js }}
+          EXPECTED_CSS: ${{ needs.build.outputs.asset_css }}
+        run: |
+          set -euo pipefail
+          test -n "$EXPECTED_JS"
+          test -n "$EXPECTED_CSS"
+          BASE='https://westkitty.github.io/Starsilk_Map_of_the_All'
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            curl --fail --silent --show-error --location --max-time 20 "$BASE/?maintenance_release=${GITHUB_SHA}" -o /tmp/atlas-live.html
+            if grep -Fq "$EXPECTED_JS" /tmp/atlas-live.html && grep -Fq "$EXPECTED_CSS" /tmp/atlas-live.html; then break; fi
+            sleep 5
+          done
+          grep -Fq 'id="spaceCanvas"' /tmp/atlas-live.html
+          grep -Fq "$EXPECTED_JS" /tmp/atlas-live.html
+          grep -Fq "$EXPECTED_CSS" /tmp/atlas-live.html
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 4 "https://westkitty.github.io$EXPECTED_JS" -o /tmp/atlas-live.js
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 4 "https://westkitty.github.io$EXPECTED_CSS" -o /tmp/atlas-live.css
+          test -s /tmp/atlas-live.js
+          test -s /tmp/atlas-live.css
+          grep -Fq 'PROJECT HYPOTHETICAL STUDY' /tmp/atlas-live.js
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 4 'https://westkitty.github.io/Star_System_Planner/' -o /tmp/planner-live.html
+          grep -Fq 'id="root"' /tmp/planner-live.html
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 4 'https://westkitty.github.io/Star_System_Planner/map-of-the-all/' -o /tmp/retired-live.html
+          grep -Fq 'READ-ONLY LEGACY ENTRY' /tmp/retired-live.html
+          echo "ATLAS_ONE_TIME_MAINTENANCE_PUBLISHED url=$BASE/ source=a3eaf3ec8e2fbe8d90108a2dc11688410b2039a2 delivery=${GITHUB_SHA}"
