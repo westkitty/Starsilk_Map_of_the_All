@@ -12,6 +12,6 @@ export function findScaleZoomTarget({viewKind,zooming,blocked,candidates=[],sele
 }
 export const findSystemZoomTarget=findScaleZoomTarget;
 export function scaleEntryFactor(from,to,size=1){
-  return from==='galaxy'&&to==='system'?.22:
+  return from==='galaxy'&&to==='system' ? .22 :
     from==='all'&&to==='galaxy'?Math.max(.18,Math.min(.65,size*.34)):2.6;
 }
