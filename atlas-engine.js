@@ -67,7 +67,7 @@ export function makePlanetSurface(n,info,r,q='standard'){
     rgb[j]=c.r*tone;rgb[j+1]=c.g*tone;rgb[j+2]=c.b*tone;
   }
   g.setAttribute('color',new THREE.BufferAttribute(rgb,3));
-  const planet=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.82}));
+  const planet=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true}));
   planet.name='editorial-planet-surface';return planet;
 }
 function makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity=0.5,speed=2.0,pulseFreq=10.0}){
@@ -1126,7 +1126,6 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const sunEmissive=starInfo.isBlue?0x38bdf8:0xffb45c;
     const sun=sphere(3.6,sunColor,sunEmissive);center.add(sun);
     this.addGlow(center,26,starInfo.coronaColor,.75);
-    this.addGlow(center,12,'#fff0cc',.9);
     this.createPickTarget(4.2,sys,center);
     if(this.labelItems.length)this.labelItems[this.labelItems.length-1].subtitle=starInfo.spectralType;
 
