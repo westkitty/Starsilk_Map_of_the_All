@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {findScaleZoomTarget} from './system-zoom.js';
+import {findSystemZoomTarget} from './system-zoom.js';
 import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -1407,7 +1407,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       const options={viewKind:this.view.kind,zooming:true,
         blocked:this.callbacks.canDollyEnter?!this.callbacks.canDollyEnter():false,
         candidates,selectedId:this.state?.selected};
-      const id=findScaleZoomTarget(options);
+      const id=findSystemZoomTarget(options);
       if(id){this._dollyIntentUntil=0;this.callbacks.onDollyEnter?.(id);}
     }
     this.renderer.render(this.scene,this.camera);
