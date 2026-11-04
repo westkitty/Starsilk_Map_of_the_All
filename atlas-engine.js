@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {findSystemZoomTarget} from './system-zoom.js';
+import {findSystemZoomTarget,findScaleZoomTarget,shouldZoomOut,scaleEntryFactor} from './system-zoom.js';
 import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -154,9 +154,12 @@ export class AtlasEngine {
     this.resizeObserver.observe(canvas.parentElement);
     this.pointerStart=null;
     this.viewMemory=new Map();
-    this.cameraTransition=null;
-    this._lastDollyDistance=null;this._dollyIntentUntil=0;this._activeTouchIds=new Set();
-    this._wheelZoom=ev=>{if(ev.deltaY<0)this._dollyIntentUntil=performance.now()+650;};
+    this.cameraTransition=null;this.scaleTransition=null;
+    this._lastDollyDistance=null;this._dollyIntentUntil=0;this._dollyOutUntil=0;this._activeTouchIds=new Set();
+    this._wheelZoom=ev=>{
+      if(ev.deltaY<0){this._dollyIntentUntil=performance.now()+650;this._dollyOutUntil=0;}
+      else if(ev.deltaY>0){this._dollyOutUntil=performance.now()+650;this._dollyIntentUntil=0;}
+    };
     this._touchZoomStart=ev=>{if(ev.pointerType==='touch')this._activeTouchIds.add(ev.pointerId);};
     this._touchZoomEnd=ev=>{this._activeTouchIds.delete(ev.pointerId);};
     canvas.addEventListener('wheel',this._wheelZoom,{passive:true});
@@ -336,13 +339,35 @@ gl_FragColor=vec4(vColor,alpha);
   setState(state,view=this.view){
     this.state=state;this.view=view;
     this.reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches||(state&&state.motion===false);
-    this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();
+    this.finishScaleTransition();this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();
+  }
+  finishScaleTransition(){
+    const f=this.scaleTransition;
+    if(!f)return;
+    this.scene.remove(f.oldGroup);disposeTree(f.oldGroup);
+    this.group.position.set(0,0,0);this.group.scale.setScalar(1);
+    this.controls.enabled=f.controlsEnabled;
+    this.scaleTransition=null;
   }
   setView(view,smooth=true){
-    const previousKind=this.view.kind;
-    const prevKey=this.view.kind==='all'?'all':`${this.view.kind}:${this.view.id}`;
+    this.finishScaleTransition();
+    const previous=this.view,previousKind=previous.kind;
+    const prevKey=previous.kind==='all'?'all':`${previous.kind}:${previous.id}`;
     this.viewMemory.set(prevKey,{camera:this.camera.position.clone(),target:this.controls.target.clone()});
-    this.view=view;this._dollyIntentUntil=0;this.rebuild();
+    const inbound=previous.kind==='all'&&view.kind==='galaxy'||
+      previous.kind==='galaxy'&&view.kind==='system';
+    const outbound=previous.kind==='system'&&view.kind==='galaxy'||
+      previous.kind==='galaxy'&&view.kind==='all';
+    const sourceNode=nodeById(this.state,inbound?view.id:previous.id);
+    const related=sourceNode&&(inbound?(previous.kind==='all'?sourceNode.kind==='galaxy':sourceNode.parentId===previous.id):
+      previous.kind==='system'?sourceNode.parentId===view.id:sourceNode.kind==='galaxy');
+    const animateScene=Boolean(related&&(inbound||outbound)&&smooth&&!this.reducedMotion);
+    const oldGroup=this.group;
+    const startCamera=this.camera.position.clone();
+    const startTarget=this.controls.target.clone();
+    this.view=view;this._dollyIntentUntil=0;this._dollyOutUntil=0;
+    if(animateScene){this.group=new THREE.Group();this.scene.add(this.group);}
+    this.rebuild();
     const nextKey=view.kind==='all'?'all':`${view.kind}:${view.id}`;
     let targetCamera,targetControls;
     if(this.viewMemory.has(nextKey)){
@@ -353,16 +378,27 @@ gl_FragColor=vec4(vColor,alpha);
       const tgt=view.kind==='all'?[0,-4,-12]:[0,0,0];
       targetCamera=new THREE.Vector3(...cam);targetControls=new THREE.Vector3(...tgt);
     }
+    if(animateScene){
+      const anchor=V(sourceNode.position);
+      const initialScale=scaleEntryFactor(previous.kind,view.kind,sourceNode.size);
+      this.scaleTransition={oldGroup,anchor,inbound,initialScale,
+        controlsEnabled:this.controls.enabled,startTime:performance.now(),
+        duration:view.kind==='system'?850:750};
+      this.controls.enabled=false;
+      this.group.scale.setScalar(initialScale);
+      if(inbound)this.group.position.copy(anchor);
+      else this.group.position.copy(anchor).multiplyScalar(-initialScale);
+      this.camera.position.copy(startCamera);
+      this.controls.target.copy(startTarget);
+    }else if(smooth&&!this.reducedMotion&&previousKind!==view.kind){
+      // Unrelated navigation retains the established destination-frame arrival.
+      const arrival=view.kind==='system'?1.38:view.kind==='galaxy'?1.28:.78;
+      this.camera.position.copy(targetCamera).sub(targetControls).multiplyScalar(arrival).add(targetControls);
+      this.controls.target.copy(targetControls);this.controls.update();
+    }
     if(smooth&&!this.reducedMotion){
-      // Cross-tier geometry changes scale; stage the camera in the NEW coordinate
-      // frame rather than flying through the new scene from the prior tier.
-      if(previousKind!==view.kind){
-        const arrival=view.kind==='system'?1.38:view.kind==='galaxy'?1.28:.78;
-        this.camera.position.copy(targetCamera).sub(targetControls).multiplyScalar(arrival).add(targetControls);
-        this.controls.target.copy(targetControls);
-        this.controls.update();
-      }
-      this.transitionCamera(targetCamera,targetControls,view.kind==='system'?760:650,()=>{
+      this.transitionCamera(targetCamera,targetControls,view.kind==='system'?850:750,()=>{
+        this.finishScaleTransition();
         this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
       });
     }else{
@@ -1323,6 +1359,18 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       const t=easeInOutCubic(progress);
       this.camera.position.lerpVectors(startCam,endCam,t);
       this.controls.target.lerpVectors(startTarget,endTarget,t);
+      if(this.scaleTransition){
+        const f=this.scaleTransition;
+        const scale=f.initialScale+(1-f.initialScale)*t;
+        this.group.scale.setScalar(scale);
+        if(f.inbound)this.group.position.copy(f.anchor).multiplyScalar(1-t);
+        else this.group.position.copy(f.anchor).multiplyScalar(-scale*(1-t));
+        // The old visual frame remains on screen until its successor is visible.
+        const outgoingScale=1-.72*t;
+        f.oldGroup.scale.setScalar(outgoingScale);
+        if(f.inbound)f.oldGroup.position.copy(f.anchor).multiplyScalar(1-outgoingScale);
+        else f.oldGroup.position.set(0,0,0);
+      }
       this.controls.update();
       if(progress>=1){
         this.cameraTransition=null;
@@ -1377,18 +1425,33 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const dolly=this.controls.getDistance();
     const deliberate=(now<this._dollyIntentUntil||this._activeTouchIds.size>=2);
     const inward=this._lastDollyDistance!==null&&dolly<this._lastDollyDistance-.025;
+    const outward=this._lastDollyDistance!==null&&dolly>this._lastDollyDistance+.025;
     this._lastDollyDistance=dolly;
-    if(inward&&deliberate&&!this.cameraTransition&&this.view.kind==='galaxy'){
+    if(inward&&deliberate&&!this.cameraTransition&&['all','galaxy','system'].includes(this.view.kind)){
       const projected=this._zoomProjected||(this._zoomProjected=new THREE.Vector3());
       const world=this._zoomWorld||(this._zoomWorld=new THREE.Vector3());
-      const candidates=this.labelItems.filter(i=>i.node.kind==='system').map(i=>{
+      const targetKind=this.view.kind==='all'?'galaxy':this.view.kind==='system'?'planet':'system';
+      const candidates=this.labelItems.filter(i=>i.node.kind===targetKind).map(i=>{
         i.obj.getWorldPosition(world);projected.copy(world).project(this.camera);
         return {id:i.node.id,kind:i.node.kind,distance:world.distanceTo(this.camera.position),screenX:projected.x,screenY:projected.y,visible:projected.z>=-1&&projected.z<=1};
       });
-      const id=findSystemZoomTarget({viewKind:this.view.kind,zooming:true,
+      const options={viewKind:this.view.kind,zooming:true,
         blocked:this.callbacks.canDollyEnter?!this.callbacks.canDollyEnter():false,
-        candidates,selectedId:this.state?.selected});
-      if(id){this._dollyIntentUntil=0;this.callbacks.onDollyEnter?.(id);}
+        candidates,selectedId:this.state?.selected};
+      const id=this.view.kind==='galaxy'?findSystemZoomTarget(options):findScaleZoomTarget(options);
+      if(id){
+        this._dollyIntentUntil=0;
+        if(this.view.kind==='galaxy')this.callbacks.onDollyEnter?.(id);
+        else if(this.view.kind==='all')this.callbacks.onScaleEnter?.('galaxy',id);
+        else this.callbacks.onPlanetDolly?.(id);
+      }
+    }
+    if(outward&&!this.cameraTransition&&
+      shouldZoomOut({viewKind:this.view.kind,
+        outward:now<this._dollyOutUntil||this._activeTouchIds.size>=2,
+        blocked:this.callbacks.canDollyEnter?!this.callbacks.canDollyEnter():false,
+        distance:dolly})){
+      this._dollyOutUntil=0;this.callbacks.onScaleExit?.();
     }
     this.renderer.render(this.scene,this.camera);
     if(++this.frame%3===0)this.updateLabels();
@@ -1447,7 +1510,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     this.canvas.removeEventListener('dblclick',this._double);
     this.controls.dispose();
     this.viewMemory.clear();
-    this.cameraTransition=null;
+    this.finishScaleTransition();this.cameraTransition=null;
     if(this._sharedPickGeom)this._sharedPickGeom.dispose();
     if(this._sharedPickMat)this._sharedPickMat.dispose();
     for(const tex of _glowTextureCache.values()){tex.dispose?.();}
