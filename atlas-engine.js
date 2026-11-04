@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {findScaleZoomTarget,scaleEntryFactor} from './system-zoom.js';
+import {findScaleZoomTarget} from './system-zoom.js';
 import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -349,9 +349,8 @@ gl_FragColor=vec4(vColor,alpha);
     const old=this.view,from=old.kind,to=view.kind;
     const key=v=>v.kind==='all'?'all':v.kind+':'+v.id;
     this.viewMemory.set(key(old),{camera:this.camera.position.clone(),target:this.controls.target.clone()});
-    const inbound=from==='all'&&to==='galaxy'||from==='galaxy'&&to==='system';
-    const source=inbound?nodeById(this.state,view.id):null;
-    const related=source&&(from==='all'||source.parentId===old.id);
+    const source=from==='galaxy'&&to==='system'?nodeById(this.state,view.id):null;
+    const related=source&&source.parentId===old.id;
     const animate=!!(related&&smooth&&!this.reducedMotion);
     const leaving=this.group;
     this.view=view;this._dollyIntentUntil=0;
@@ -362,7 +361,7 @@ gl_FragColor=vec4(vColor,alpha);
       to==='galaxy'?[0,55,110]:[0,38,82]));
     const targetControls=saved?.target||new THREE.Vector3(0,to==='all'?-4:0,to==='all'?-12:0);
     if(animate){
-      const anchor=V(source.position),initialScale=scaleEntryFactor(from,to,source.size);
+      const anchor=V(source.position),initialScale=.22;
       this.scaleTransition={oldGroup:leaving,anchor,initialScale,
         controlsEnabled:this.controls.enabled};
       this.controls.enabled=false;
