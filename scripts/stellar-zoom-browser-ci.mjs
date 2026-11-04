@@ -175,7 +175,8 @@ async function test(){
  assert.equal(systemArrival.viewKind,'system');
  assert.equal(systemArrival.cameraTransitioning,true,'system approach must interpolate');
  assert.equal(systemArrival.scaleTransitioning,true,'stellar scene arrives within the uninterrupted transition');
- assert.ok(arrivalProof.advancing,'real animation frames advance through a finite intermediate 3D scale');
+ assert.ok(arrivalProof.advancing,'real frames must show intermediate 3D scale: '+JSON.stringify(arrivalProof));
+ assert.ok(arrivalProof.frames>=6,'zoom must be observable across multiple frames: '+JSON.stringify(arrivalProof));
  const spectrum=getStarClassification(expectedSystem);
  assert.equal(systemArrival.stellarLightHex,spectrum.isBlue?'b9edff':spectrum.temperatureK<5300?'ffb879':'ffe2b6');
  assert.equal(systemSettled.scaleTransitioning,false,'completed stellar approach disposes outgoing tier');

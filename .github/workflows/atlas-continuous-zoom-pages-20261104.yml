@@ -2,7 +2,7 @@ name: Publish Verified Continuous Atlas Zoom 2026-11-04
 
 # User-authorized post-cutover maintenance release. This workflow does not alter
 # the initial one-writer release gate or reuse the expired October waiver.
-# It only runs on the one-file direct successor of the reviewed Atlas merge.
+# It only runs on the reviewed three-file frame-cadence repair merge.
 on:
   push:
     branches: [main]
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build:
     name: Verify exact zoom maintenance and package Pages
-    if: github.repository == 'westkitty/Starsilk_Map_of_the_All' && github.event.before == 'e54830a16b391612969453a68e08e02e3c867092'
+    if: github.repository == 'westkitty/Starsilk_Map_of_the_All' && github.event.before == 'aabdffa8e2f9b7e9f779a6eb5ded6f6db939027b'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -31,10 +31,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Require one-file successor, immutable code blobs and protected draft contract
+      - name: Require scoped cadence repair, immutable code blobs and protected draft contract
         run: |
           set -euo pipefail
-          BASE='e54830a16b391612969453a68e08e02e3c867092'
+          BASE='aabdffa8e2f9b7e9f779a6eb5ded6f6db939027b'
           REVIEWED='821e1d54bf3d2580cc647df9d1b12b2eb9350a02'
           test "$GITHUB_REPOSITORY" = 'westkitty/Starsilk_Map_of_the_All'
           test "$GITHUB_EVENT_NAME" = 'push'
@@ -42,25 +42,25 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git rev-parse HEAD^1)" = "$BASE"
           git merge-base --is-ancestor "$REVIEWED" HEAD
-          test "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')" = '2'
+          test "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')" = '3'
           count=0
           while IFS= read -r file; do
             case "$file" in
-              .github/workflows/atlas-continuous-zoom-pages-20261104.yml) count=$((count+1)) ;;
+              .github/workflows/atlas-continuous-zoom-pages-20261104.yml|atlas-engine.js|scripts/stellar-zoom-browser-ci.mjs) count=$((count+1)) ;;
               *) echo "Unexpected source change in zoom release: $file" >&2; exit 1 ;;
             esac
           done < <(git diff --name-only "$BASE" HEAD)
-          test "$count" -eq 1
+          test "$count" -eq 3
           for lock in \
             'index.html:850139d4e68dab96ff9adcfef334433a2d666bf3' \
             'atlas-data.js:14a91db540fac8ae6db1371cd30d6f418bb72a4d' \
             'draft-recovery.js:dc9dac8732beb0949f5ca0f673281378e501189b' \
             'docs/consolidation/RELEASE_READINESS.json:915d5e1cfb00a0bb2e5d1e4cafdeddc643eb7959' \
             'release-cutover-gate.js:0b0b04519747e086871934a80a4dd9b1f6d934d4' \
-            'atlas-engine.js:e4e56c39e45197df6fc2adeb178119d33d4ac253' \
+            'atlas-engine.js:0d8c5f92418bc56b16626a554012475b9205794b' \
             'main.js:d5c31cac9ae71e68e449eca55c8c25ba43d149ed' \
             'system-zoom.js:4da716bc0ce092249cb477ccb817d05160a25dc7' \
-            'scripts/stellar-zoom-browser-ci.mjs:8f88355fbbb78159975462757bd3fcbe31ba44a6' \
+            'scripts/stellar-zoom-browser-ci.mjs:1611b01125c695068c5abfdd6460ad6e9cca161f' \
             'tests/system-zoom.node-check.mjs:2aa5f5cf5d33e9c6a94250846f0086376026b671' \
             'vite.config.js:8ce032bbf757b8236b6c46ef3ad8ab3736aa3424'; do
             file="${lock%%:*}"; expected="${lock#*:}"
