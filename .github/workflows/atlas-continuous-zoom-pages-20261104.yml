@@ -1,0 +1,183 @@
+name: Publish Verified Continuous Atlas Zoom 2026-11-04
+
+# User-authorized post-cutover maintenance release. This workflow does not alter
+# the initial one-writer release gate or reuse the expired October waiver.
+# It only runs on a direct successor merge of the exact known main baseline.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: starsilk-map-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Verify exact zoom maintenance and package Pages
+    if: github.repository == 'westkitty/Starsilk_Map_of_the_All' && github.event.before == '5eed542a1767c3aaf5b6277488aa8a966061508e'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      asset_js: ${{ steps.assets.outputs.asset_js }}
+      asset_css: ${{ steps.assets.outputs.asset_css }}
+    steps:
+      - name: Check out full ancestry of the actual main commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require reviewed zoom merge, immutable code blobs and protected draft contract
+        run: |
+          set -euo pipefail
+          BASE='5eed542a1767c3aaf5b6277488aa8a966061508e'
+          REVIEWED='821e1d54bf3d2580cc647df9d1b12b2eb9350a02'
+          test "$GITHUB_REPOSITORY" = 'westkitty/Starsilk_Map_of_the_All'
+          test "$GITHUB_EVENT_NAME" = 'push'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD^1)" = "$BASE"
+          git merge-base --is-ancestor "$REVIEWED" HEAD
+          test "$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')" = '3'
+          count=0
+          while IFS= read -r file; do
+            case "$file" in
+              .github/workflows/atlas-continuous-zoom-pages-20261104.yml|OPERATIONAL_STATE.md|atlas-engine.js|main.js|scripts/stellar-zoom-browser-ci.mjs|system-zoom.js|tests/system-zoom.node-check.mjs|vite.config.js) count=$((count+1)) ;;
+              *) echo "Unexpected source change in zoom release: $file" >&2; exit 1 ;;
+            esac
+          done < <(git diff --name-only "$BASE" HEAD)
+          test "$count" -eq 8
+          for lock in \
+            'index.html:850139d4e68dab96ff9adcfef334433a2d666bf3' \
+            'atlas-data.js:14a91db540fac8ae6db1371cd30d6f418bb72a4d' \
+            'draft-recovery.js:dc9dac8732beb0949f5ca0f673281378e501189b' \
+            'docs/consolidation/RELEASE_READINESS.json:915d5e1cfb00a0bb2e5d1e4cafdeddc643eb7959' \
+            'release-cutover-gate.js:0b0b04519747e086871934a80a4dd9b1f6d934d4' \
+            'atlas-engine.js:e4e56c39e45197df6fc2adeb178119d33d4ac253' \
+            'main.js:d5c31cac9ae71e68e449eca55c8c25ba43d149ed' \
+            'system-zoom.js:4da716bc0ce092249cb477ccb817d05160a25dc7' \
+            'scripts/stellar-zoom-browser-ci.mjs:8f88355fbbb78159975462757bd3fcbe31ba44a6' \
+            'tests/system-zoom.node-check.mjs:2aa5f5cf5d33e9c6a94250846f0086376026b671' \
+            'vite.config.js:8ce032bbf757b8236b6c46ef3ad8ab3736aa3424'; do
+            file="${lock%%:*}"; expected="${lock#*:}"
+            test "$(git rev-parse "HEAD:$file")" = "$expected"
+          done
+          grep -Fq "export const VERSION = 1;" atlas-data.js
+          grep -Fq "export const STORAGE_KEY = 'starsilk.map-of-the-all.draft.v1';" atlas-data.js
+          echo 'ATLAS_ZOOM_MAINTENANCE_SCOPE_PASS exact reviewed code and unchanged v1 draft storage'
+
+      - name: Require published one-writer Atlas and independent Planner
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 4 --max-time 25 'https://westkitty.github.io/Starsilk_Map_of_the_All/' -o /tmp/atlas-before.html
+          grep -Fq 'id="spaceCanvas"' /tmp/atlas-before.html
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 4 --max-time 25 'https://westkitty.github.io/Star_System_Planner/map-of-the-all/' -o /tmp/retired.html
+          grep -Fq 'READ-ONLY LEGACY ENTRY' /tmp/retired.html
+          grep -Fq 'id="exportRawDraft"' /tmp/retired.html
+          if grep -Fq 'id="spaceCanvas"' /tmp/retired.html; then
+            echo 'Unsafe: retired Atlas writer still live' >&2; exit 1
+          fi
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 4 --max-time 25 'https://westkitty.github.io/Star_System_Planner/' -o /tmp/planner.html
+          grep -Fq 'id="root"' /tmp/planner.html
+          echo 'ATLAS_ZOOM_ONE_WRITER_LIVE_PASS'
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Require all model tests and immutable 225KB compressed limit
+        run: npm run check
+
+      - name: Check code and browser test syntax
+        run: |
+          set -euo pipefail
+          for file in main.js atlas-engine.js atlas-data.js draft-recovery.js system-zoom.js visual-suppression.js scripts/stellar-zoom-browser-ci.mjs scripts/phase6-release-gate.mjs; do
+            node --check "$file"
+          done
+
+      - name: Verify the entire interactive Chromium suite including continuous zoom
+        run: npm run test:browser
+
+      - name: Prove disposable-profile JSON v1 draft backup and restore
+        run: node scripts/phase1-draft-recovery-browser-ci.mjs
+
+      - name: Capture exact verified asset names
+        id: assets
+        run: |
+          set -euo pipefail
+          grep -Fq 'id="spaceCanvas"' dist/index.html
+          JS="$(grep -oE '/Starsilk_Map_of_the_All/assets/index-[^"]+\.js' dist/index.html | head -n 1)"
+          CSS="$(grep -oE '/Starsilk_Map_of_the_All/assets/index-[^"]+\.css' dist/index.html | head -n 1)"
+          test -n "$JS" && test -n "$CSS"
+          test -s "dist${JS#/Starsilk_Map_of_the_All}"
+          test -s "dist${CSS#/Starsilk_Map_of_the_All}"
+          printf 'asset_js=%s\nasset_css=%s\n' "$JS" "$CSS" >> "$GITHUB_OUTPUT"
+          echo "ATLAS_ZOOM_BUILD_ASSETS_PASS js=$JS css=$CSS"
+
+      - name: Retain synthetic Chromium evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-continuous-zoom-20261104-browser-qa
+          path: |
+            atlas-qa-evidence/*.png
+            atlas-qa-evidence/*.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload exact tested Pages bundle
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    name: Deploy and independently verify Atlas plus Planner
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - name: Publish the same tested bundle
+        id: publish
+        uses: actions/deploy-pages@v4
+
+      - name: Verify live hashed assets, retired editor and Planner
+        env:
+          EXPECTED_JS: ${{ needs.build.outputs.asset_js }}
+          EXPECTED_CSS: ${{ needs.build.outputs.asset_css }}
+        run: |
+          set -euo pipefail
+          test -n "$EXPECTED_JS" && test -n "$EXPECTED_CSS"
+          BASE='https://westkitty.github.io/Starsilk_Map_of_the_All'
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            curl --fail --silent --show-error --location --max-time 25 "$BASE/?zoom_release=$GITHUB_SHA" -o /tmp/live-atlas.html
+            if grep -Fq "$EXPECTED_JS" /tmp/live-atlas.html && grep -Fq "$EXPECTED_CSS" /tmp/live-atlas.html; then break; fi
+            sleep 5
+          done
+          grep -Fq 'id="spaceCanvas"' /tmp/live-atlas.html
+          grep -Fq "$EXPECTED_JS" /tmp/live-atlas.html
+          grep -Fq "$EXPECTED_CSS" /tmp/live-atlas.html
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 4 --max-time 25 "https://westkitty.github.io$EXPECTED_JS" -o /tmp/atlas-live.js
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 4 --max-time 25 "https://westkitty.github.io$EXPECTED_CSS" -o /tmp/atlas-live.css
+          test -s /tmp/atlas-live.js && test -s /tmp/atlas-live.css
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 4 --max-time 25 'https://westkitty.github.io/Star_System_Planner/' -o /tmp/planner-live.html
+          grep -Fq 'id="root"' /tmp/planner-live.html
+          curl --fail --silent --show-error --location --retry 4 --retry-delay 4 --max-time 25 'https://westkitty.github.io/Star_System_Planner/map-of-the-all/' -o /tmp/retired-live.html
+          grep -Fq 'READ-ONLY LEGACY ENTRY' /tmp/retired-live.html
+          echo "ATLAS_CONTINUOUS_ZOOM_PUBLISHED url=$BASE/ sha=$GITHUB_SHA js=$EXPECTED_JS css=$EXPECTED_CSS"

@@ -1180,6 +1180,9 @@ function init(){updateUI();bind();
     canDollyEnter,onDollyEnter:id=>{
       const n=nodeById(state,id);
       if(view.kind==='galaxy'&&n?.kind==='system'&&n.parentId===view.id)enter('system',id);
+      else if(view.kind==='system'&&n?.kind==='planet'&&n.parentId===view.id){
+        select(id,false);engine?.focusOn(n,140,true);
+      }
     }});engine.setState(state,view);
     studio=new SpatialStudio({canvas:gui.canvas,labelsRoot:gui.labels,atlas:gui.atlas,panel:$('studioPanel'),
       getState:()=>state,getView:()=>view,onMove:moveDraftNode,onLabelCommit:moveDraftLabel,
@@ -1230,6 +1233,8 @@ if(new URLSearchParams(location.search).get('atlasDiagnostics')==='1'){
       viewport:[innerWidth,innerHeight],
       cameraDistance:engine?.controls.getDistance()??null,
       cameraTransitioning:!!engine?.cameraTransition,
+      scaleTransitioning:!!engine?.scaleTransition,
+      scaleTransitionFactor:engine?.group?.scale?.x??1,
       stellarLightHex:engine?.sunLight.color.getHexString()??null
     })
   });

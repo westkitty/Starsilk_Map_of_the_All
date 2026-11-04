@@ -154,7 +154,7 @@ export class AtlasEngine {
     this.resizeObserver.observe(canvas.parentElement);
     this.pointerStart=null;
     this.viewMemory=new Map();
-    this.cameraTransition=null;
+    this.cameraTransition=null;this.scaleTransition=null;
     this._lastDollyDistance=null;this._dollyIntentUntil=0;this._activeTouchIds=new Set();
     this._wheelZoom=ev=>{if(ev.deltaY<0)this._dollyIntentUntil=performance.now()+650;};
     this._touchZoomStart=ev=>{if(ev.pointerType==='touch')this._activeTouchIds.add(ev.pointerId);};
@@ -336,38 +336,48 @@ gl_FragColor=vec4(vColor,alpha);
   setState(state,view=this.view){
     this.state=state;this.view=view;
     this.reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches||(state&&state.motion===false);
-    this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();
+    this.finishScaleTransition();this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();
+  }
+  finishScaleTransition(){
+    const f=this.scaleTransition;if(!f)return;
+    this.scene.remove(f.oldGroup);disposeTree(f.oldGroup);
+    this.group.position.set(0,0,0);this.group.scale.setScalar(1);
+    this.controls.enabled=f.controlsEnabled;this.scaleTransition=null;
   }
   setView(view,smooth=true){
     const previousKind=this.view.kind;
     const prevKey=this.view.kind==='all'?'all':`${this.view.kind}:${this.view.id}`;
     this.viewMemory.set(prevKey,{camera:this.camera.position.clone(),target:this.controls.target.clone()});
-    this.view=view;this._dollyIntentUntil=0;this.rebuild();
-    const nextKey=view.kind==='all'?'all':`${view.kind}:${view.id}`;
-    let targetCamera,targetControls;
-    if(this.viewMemory.has(nextKey)){
-      const saved=this.viewMemory.get(nextKey);
-      targetCamera=saved.camera;targetControls=saved.target;
-    }else{
-      const cam=view.kind==='all'?[0,215,280]:view.kind==='galaxy'?[0,55,110]:[0,38,82];
-      const tgt=view.kind==='all'?[0,-4,-12]:[0,0,0];
-      targetCamera=new THREE.Vector3(...cam);targetControls=new THREE.Vector3(...tgt);
+    const source=previousKind==='galaxy'&&view.kind==='system'?nodeById(this.state,view.id):null;
+    const seamless=!!(source&&source.parentId===this.view.id&&smooth&&!this.reducedMotion);
+    this.finishScaleTransition();
+    if(seamless){
+      this.scaleTransition={oldGroup:this.group,anchor:V(source.position),controlsEnabled:this.controls.enabled};
+      this.group=new THREE.Group();this.scene.add(this.group);this.controls.enabled=false;
     }
+    this.view=view;this._dollyIntentUntil=0;this.rebuild();
+    if(seamless){this.group.scale.setScalar(.22);this.group.position.copy(this.scaleTransition.anchor);}
+    const nextKey=view.kind==='all'?'all':`${view.kind}:${view.id}`;
+    const saved=this.viewMemory.get(nextKey);
+    const targetCamera=saved?.camera||new THREE.Vector3(...(view.kind==='all'?[0,215,280]:
+      view.kind==='galaxy'?[0,55,110]:[0,38,82]));
+    const targetControls=saved?.target||new THREE.Vector3(0,view.kind==='all'?-4:0,view.kind==='all'?-12:0);
+    const finish=()=>{
+      this.finishScaleTransition();this.camera.updateMatrixWorld();this.updateLabels();
+      this.callbacks.onViewChanged?.(view);
+    };
     if(smooth&&!this.reducedMotion){
-      // Cross-tier geometry changes scale; stage the camera in the NEW coordinate
-      // frame rather than flying through the new scene from the prior tier.
-      if(previousKind!==view.kind){
+      // Stage unrelated tiers in the destination frame; keep stellar zoom anchored.
+      if(previousKind!==view.kind&&!seamless){
         const arrival=view.kind==='system'?1.38:view.kind==='galaxy'?1.28:.78;
         this.camera.position.copy(targetCamera).sub(targetControls).multiplyScalar(arrival).add(targetControls);
         this.controls.target.copy(targetControls);
         this.controls.update();
       }
-      this.transitionCamera(targetCamera,targetControls,view.kind==='system'?760:650,()=>{
-        this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
-      });
+      this.transitionCamera(targetCamera,targetControls,view.kind==='system'?760:650,finish);
     }else{
       this.controls.target.copy(targetControls);this.camera.position.copy(targetCamera);this.controls.update();
-      this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
+      finish();
     }
     this._lastDollyDistance=this.controls.getDistance();
   }
@@ -1206,9 +1216,10 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     hits.sort((a,b)=>a.distance-b.distance);
     const id=hits[0].object.userData.atlasId;if(id)this.callbacks.onSelect?.(id,enter,ev);
   }
-  focusOn(node,durationMs=600){const obj=this.labelItems.find(p=>p.node.id===node.id)?.obj;if(!obj)return;
+  focusOn(node,durationMs=600,keepDistance=false){const obj=this.labelItems.find(p=>p.node.id===node.id)?.obj;if(!obj)return;
     const p=new THREE.Vector3();obj.getWorldPosition(p);
-    const dist=node.kind==='galaxy'?(62*(node.size||1)):node.kind==='system'?26:10;
+    const dist=keepDistance?Math.max(this.controls.minDistance,this.camera.position.distanceTo(p)):
+      node.kind==='galaxy'?(62*(node.size||1)):node.kind==='system'?26:10;
     const dir=this.camera.position.clone().sub(this.controls.target).normalize();
     if(dir.lengthSq()<0.001)dir.set(0,.6,.8).normalize();
     const newCam=p.clone().add(dir.multiplyScalar(dist));
@@ -1323,6 +1334,13 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       const t=easeInOutCubic(progress);
       this.camera.position.lerpVectors(startCam,endCam,t);
       this.controls.target.lerpVectors(startTarget,endTarget,t);
+      if(this.scaleTransition){
+        const f=this.scaleTransition;
+        const scale=.22+.78*t;
+        this.group.scale.setScalar(scale);
+        this.group.position.copy(f.anchor).multiplyScalar(1-t);
+        f.oldGroup.scale.setScalar(1-t);
+      }
       this.controls.update();
       if(progress>=1){
         this.cameraTransition=null;
@@ -1378,16 +1396,18 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const deliberate=(now<this._dollyIntentUntil||this._activeTouchIds.size>=2);
     const inward=this._lastDollyDistance!==null&&dolly<this._lastDollyDistance-.025;
     this._lastDollyDistance=dolly;
-    if(inward&&deliberate&&!this.cameraTransition&&this.view.kind==='galaxy'){
+    if(inward&&deliberate&&!this.cameraTransition&&['galaxy','system'].includes(this.view.kind)){
       const projected=this._zoomProjected||(this._zoomProjected=new THREE.Vector3());
       const world=this._zoomWorld||(this._zoomWorld=new THREE.Vector3());
-      const candidates=this.labelItems.filter(i=>i.node.kind==='system').map(i=>{
+      const targetKind=this.view.kind==='galaxy'?'system':'planet';
+      const candidates=this.labelItems.filter(i=>i.node.kind===targetKind).map(i=>{
         i.obj.getWorldPosition(world);projected.copy(world).project(this.camera);
         return {id:i.node.id,kind:i.node.kind,distance:world.distanceTo(this.camera.position),screenX:projected.x,screenY:projected.y,visible:projected.z>=-1&&projected.z<=1};
       });
-      const id=findSystemZoomTarget({viewKind:this.view.kind,zooming:true,
+      const options={viewKind:this.view.kind,zooming:true,
         blocked:this.callbacks.canDollyEnter?!this.callbacks.canDollyEnter():false,
-        candidates,selectedId:this.state?.selected});
+        candidates,selectedId:this.state?.selected};
+      const id=findSystemZoomTarget(options);
       if(id){this._dollyIntentUntil=0;this.callbacks.onDollyEnter?.(id);}
     }
     this.renderer.render(this.scene,this.camera);
@@ -1447,7 +1467,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     this.canvas.removeEventListener('dblclick',this._double);
     this.controls.dispose();
     this.viewMemory.clear();
-    this.cameraTransition=null;
+    this.finishScaleTransition();this.cameraTransition=null;
     if(this._sharedPickGeom)this._sharedPickGeom.dispose();
     if(this._sharedPickMat)this._sharedPickMat.dispose();
     for(const tex of _glowTextureCache.values()){tex.dispose?.();}

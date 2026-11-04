@@ -148,30 +148,60 @@ async function test(){
  assert.equal(galaxyArrival.viewKind,'galaxy');
  assert.equal(galaxyArrival.stellarLightHex,'d9edff');
  assert.equal(galaxyArrival.cameraTransitioning,true,'galaxy entrance must interpolate');
+ assert.equal(galaxyArrival.scaleTransitioning,false,'galaxy entry uses the existing smooth camera flight');
  await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
  const galaxySettled=await fly.evaluate(()=>window.__atlasDiagnostics());
- assert.ok(galaxyArrival.cameraDistance>galaxySettled.cameraDistance+12,'cross-tier camera starts inside the destination coordinate frame');
+ assert.equal(galaxySettled.scaleTransitioning,false,'galaxy flight completed without scale overlay');
+ assert.ok(galaxyArrival.cameraDistance>galaxySettled.cameraDistance+12,'galaxy camera travels smoothly to the new view');
+ assert.equal(galaxySettled.scaleTransitionFactor,1,'galaxy entry restores unscaled geometry');
  await fly.locator('.world-label[data-atlas-id="perseus-confluence-system-1"]').click();
- const systemArrival=await fly.evaluate(()=>{
+ const arrivalProof=await fly.evaluate(async()=>{
    document.querySelector('#stellarDiveButton').click();
-   return window.__atlasDiagnostics();
+   const arrival=window.__atlasDiagnostics();
+   let advancing=false,frames=0;
+   await new Promise(resolve=>{
+     const sample=()=>{
+       const d=window.__atlasDiagnostics();
+       if(d.scaleTransitioning&&Number.isFinite(d.scaleTransitionFactor)&&
+         d.scaleTransitionFactor>.25&&d.scaleTransitionFactor<.98)advancing=true;
+       if(!d.cameraTransitioning||++frames>1000)resolve();
+       else requestAnimationFrame(sample);
+     };
+     requestAnimationFrame(sample);
+   });
+   return {arrival,settled:window.__atlasDiagnostics(),advancing,frames};
  });
+ const systemArrival=arrivalProof.arrival,systemSettled=arrivalProof.settled;
  assert.equal(systemArrival.viewKind,'system');
  assert.equal(systemArrival.cameraTransitioning,true,'system approach must interpolate');
+ assert.equal(systemArrival.scaleTransitioning,true,'stellar scene arrives within the uninterrupted transition');
+ assert.ok(arrivalProof.advancing,'real animation frames advance through a finite intermediate 3D scale');
  const spectrum=getStarClassification(expectedSystem);
  assert.equal(systemArrival.stellarLightHex,spectrum.isBlue?'b9edff':spectrum.temperatureK<5300?'ffb879':'ffe2b6');
- await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
- const systemSettled=await fly.evaluate(()=>window.__atlasDiagnostics());
- assert.ok(systemArrival.cameraDistance>systemSettled.cameraDistance+12,'system entrance must feel deeper without crossing stale global coordinates');
+ assert.equal(systemSettled.scaleTransitioning,false,'completed stellar approach disposes outgoing tier');
+ assert.equal(systemSettled.scaleTransitionFactor,1,'stellar scene resolves to native model geometry');
  assert.ok(systemSettled.drawCalls>0,'3D system survives animated transition');
  await fly.screenshot({path:'atlas-qa-evidence/cross-scale-approach-desktop.png'});
+ // Continue the SAME physical wheel journey to a saved planet without snapping outward.
+ await fly.locator('.world-label[data-atlas-id="perseus-confluence-system-1-planet-1"]').click();
+ await fly.keyboard.press('f');
+ await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
+ const beforePlanetWheel=(await fly.evaluate(()=>window.__atlasDiagnostics())).cameraDistance;
+ const canvasBox=await fly.locator('#spaceCanvas').boundingBox();
+ await fly.mouse.move(canvasBox.x+canvasBox.width/2,canvasBox.y+canvasBox.height/2);
+ await fly.mouse.wheel(0,-250);
+ await fly.waitForTimeout(500);
+ const afterPlanetWheel=(await fly.evaluate(()=>window.__atlasDiagnostics())).cameraDistance;
+ assert.ok(afterPlanetWheel<beforePlanetWheel-.25,
+   'dolly into a planet must retain closer camera framing, not reset to default focus');
+ await fly.locator('#stellarBackButton').click();
  await fly.locator('#stellarBackButton').click();
  await fly.waitForFunction(()=>window.__atlasDiagnostics().viewKind==='galaxy');
  await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
  assert.equal((await fly.evaluate(()=>window.__atlasDiagnostics())).stellarLightHex,'d9edff','galaxy lighting restored on exit');
  await flight.close();
  assert.equal(errors.length,0,'animated approach page errors: '+errors.join('; '));
- console.log('CROSS_SCALE_BROWSER_PASS galaxy_to_system=true ease=true stellar_color=true return=true');
+ console.log('CROSS_SCALE_BROWSER_PASS galaxy_to_system=true continuous_scene=true ease=true stellar_color=true return=true');
  console.log('STELLAR_BROWSER_PASS deliberate_inward_dolly=true label_forwarding=true edit_guard=true noncanon_hud=true touch_hud=true');
 }
 try{await test();}catch(e){console.error('STELLAR_BROWSER_FAIL',e.stack||e);process.exitCode=1;}

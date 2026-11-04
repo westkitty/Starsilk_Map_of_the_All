@@ -1,14 +1,16 @@
-/** Semantic inward-dolly threshold for provisional stellar system inspection. No physics. */
+/** Proximity in illustrative display units; never a physical distance. */
 export const SYSTEM_ZOOM_RADIUS=17;
 export function findSystemZoomTarget({viewKind,zooming,blocked,candidates=[],selectedId=null}){
-  if(viewKind!=='galaxy'||!zooming||blocked)return null;
-  const eligible=candidates.filter(c=>c.kind==='system'&&c.visible!==false&&
-    Number.isFinite(c.distance)&&c.distance<SYSTEM_ZOOM_RADIUS&&
-    Number.isFinite(c.screenX)&&Number.isFinite(c.screenY)&&
-    Math.abs(c.screenX)<.88&&Math.abs(c.screenY)<.88);
-  eligible.sort((a,b)=>{
-    if((a.id===selectedId)!==(b.id===selectedId))return a.id===selectedId?-1:1;
-    return a.distance-b.distance;
-  });
-  return eligible[0]?.id||null;
+  if(!zooming||blocked||(viewKind!=='galaxy'&&viewKind!=='system'))return null;
+  const kind=viewKind==='galaxy'?'system':'planet';
+  const radius=viewKind==='galaxy'?SYSTEM_ZOOM_RADIUS:12;
+  let best=null;
+  for(const c of candidates){
+    if(c.kind!==kind||c.visible===false||!Number.isFinite(c.distance)||
+      c.distance>=radius||!Number.isFinite(c.screenX)||!Number.isFinite(c.screenY)||
+      Math.abs(c.screenX)>=.88||Math.abs(c.screenY)>=.88)continue;
+    if(!best||(c.id===selectedId&&best.id!==selectedId)||
+      (best.id!==selectedId&&c.distance<best.distance))best=c;
+  }
+  return best?.id||null;
 }

@@ -28,3 +28,12 @@ test('prefer selected eligible system; otherwise choose nearest eligible',()=>{
  assert.equal(findSystemZoomTarget({viewKind:'galaxy',zooming:true,blocked:false,candidates,selectedId:'b'}),'b');
  assert.equal(findSystemZoomTarget({viewKind:'galaxy',zooming:true,blocked:false,candidates,selectedId:'outside'}),'c');
 });
+
+test('continuous zoom descends from galaxy toward planets without accidental entry',()=>{
+  const c=(id,kind,distance)=>({id,kind,distance,screenX:0,screenY:0,visible:true});
+  assert.equal(findSystemZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',50)]}),null);
+  assert.equal(findSystemZoomTarget({viewKind:'system',zooming:true,candidates:[c('p','planet',8)]}),'p');
+  assert.equal(findSystemZoomTarget({viewKind:'system',zooming:true,blocked:true,candidates:[c('p','planet',8)]}),null);
+  assert.equal(findSystemZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',60)]}),null);
+  assert.equal(findSystemZoomTarget({viewKind:'system',zooming:true,candidates:[{...c('p','planet',8),screenX:1}]}),null);
+});
