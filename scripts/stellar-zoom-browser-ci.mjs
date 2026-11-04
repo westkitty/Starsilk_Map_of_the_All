@@ -148,10 +148,11 @@ async function test(){
  assert.equal(galaxyArrival.viewKind,'galaxy');
  assert.equal(galaxyArrival.stellarLightHex,'d9edff');
  assert.equal(galaxyArrival.cameraTransitioning,true,'galaxy entrance must interpolate');
- assert.equal(galaxyArrival.scaleTransitioning,true,'outgoing galactic map remains during entry');
+ assert.equal(galaxyArrival.scaleTransitioning,false,'galaxy entry uses the existing smooth camera flight');
  await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
  const galaxySettled=await fly.evaluate(()=>window.__atlasDiagnostics());
- assert.equal(galaxySettled.scaleTransitioning,false,'completed galaxy entry disposes old scene');
+ assert.equal(galaxySettled.scaleTransitioning,false,'galaxy flight completed without scale overlay');
+ assert.ok(galaxyArrival.cameraDistance>galaxySettled.cameraDistance+12,'galaxy camera travels smoothly to the new view');
  assert.equal(galaxySettled.scaleTransitionFactor,1,'galaxy entry restores unscaled geometry');
  await fly.locator('.world-label[data-atlas-id="perseus-confluence-system-1"]').click();
  const systemArrival=await fly.evaluate(()=>{
@@ -175,7 +176,7 @@ async function test(){
  assert.equal((await fly.evaluate(()=>window.__atlasDiagnostics())).stellarLightHex,'d9edff','galaxy lighting restored on exit');
  await flight.close();
  assert.equal(errors.length,0,'animated approach page errors: '+errors.join('; '));
- console.log('CROSS_SCALE_BROWSER_PASS galaxy_to_system=true continuous_scene=true easing=true stellar_color=true return=true');
+ console.log('CROSS_SCALE_BROWSER_PASS galaxy_to_system=true continuous_scene=true ease=true stellar_color=true return=true');
  console.log('STELLAR_BROWSER_PASS deliberate_inward_dolly=true label_forwarding=true edit_guard=true noncanon_hud=true touch_hud=true');
 }
 try{await test();}catch(e){console.error('STELLAR_BROWSER_FAIL',e.stack||e);process.exitCode=1;}
