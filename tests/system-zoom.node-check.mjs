@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SYSTEM_ZOOM_RADIUS,findSystemZoomTarget,findScaleZoomTarget} from '../system-zoom.js';
+import {SYSTEM_ZOOM_RADIUS,findSystemZoomTarget} from '../system-zoom.js';
 const good=(id='sys-a',distance=8)=>({id,kind:'system',visible:true,distance,screenX:.1,screenY:-.1});
 test('stellar inward-dolly limit never infers physical distance',()=>assert.equal(SYSTEM_ZOOM_RADIUS,17));
 test('no automatic descent outside galaxy tier, outward zoom, or blocked editors',()=>{
@@ -31,9 +31,9 @@ test('prefer selected eligible system; otherwise choose nearest eligible',()=>{
 
 test('continuous zoom descends from galaxy toward planets without accidental entry',()=>{
   const c=(id,kind,distance)=>({id,kind,distance,screenX:0,screenY:0,visible:true});
-  assert.equal(findScaleZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',50)]}),null);
-  assert.equal(findScaleZoomTarget({viewKind:'system',zooming:true,candidates:[c('p','planet',8)]}),'p');
-  assert.equal(findScaleZoomTarget({viewKind:'system',zooming:true,blocked:true,candidates:[c('p','planet',8)]}),null);
-  assert.equal(findScaleZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',60)]}),null);
-  assert.equal(findScaleZoomTarget({viewKind:'system',zooming:true,candidates:[{...c('p','planet',8),screenX:1}]}),null);
+  assert.equal(findSystemZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',50)]}),null);
+  assert.equal(findSystemZoomTarget({viewKind:'system',zooming:true,candidates:[c('p','planet',8)]}),'p');
+  assert.equal(findSystemZoomTarget({viewKind:'system',zooming:true,blocked:true,candidates:[c('p','planet',8)]}),null);
+  assert.equal(findSystemZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',60)]}),null);
+  assert.equal(findSystemZoomTarget({viewKind:'system',zooming:true,candidates:[{...c('p','planet',8),screenX:1}]}),null);
 });
