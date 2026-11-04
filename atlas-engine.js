@@ -345,42 +345,43 @@ gl_FragColor=vec4(vColor,alpha);
     this.controls.enabled=f.controlsEnabled;this.scaleTransition=null;
   }
   setView(view,smooth=true){
+    const previousKind=this.view.kind;
+    const prevKey=this.view.kind==='all'?'all':`${this.view.kind}:${this.view.id}`;
+    this.viewMemory.set(prevKey,{camera:this.camera.position.clone(),target:this.controls.target.clone()});
+    const source=previousKind==='galaxy'&&view.kind==='system'?nodeById(this.state,view.id):null;
+    const seamless=!!(source&&source.parentId===this.view.id&&smooth&&!this.reducedMotion);
     this.finishScaleTransition();
-    const old=this.view,from=old.kind,to=view.kind;
-    const key=v=>v.kind==='all'?'all':v.kind+':'+v.id;
-    this.viewMemory.set(key(old),{camera:this.camera.position.clone(),target:this.controls.target.clone()});
-    const source=from==='galaxy'&&to==='system'?nodeById(this.state,view.id):null;
-    const related=source&&source.parentId===old.id;
-    const animate=!!(related&&smooth&&!this.reducedMotion);
-    const leaving=this.group;
-    this.view=view;this._dollyIntentUntil=0;
-    if(animate){this.group=new THREE.Group();this.scene.add(this.group);}
-    this.rebuild();
-    const saved=this.viewMemory.get(key(view));
-    const targetCamera=saved?.camera||new THREE.Vector3(...(to==='all'?[0,215,280]:
-      to==='galaxy'?[0,55,110]:[0,38,82]));
-    const targetControls=saved?.target||new THREE.Vector3(0,to==='all'?-4:0,to==='all'?-12:0);
-    if(animate){
-      const anchor=V(source.position),initialScale=.22;
-      this.scaleTransition={oldGroup:leaving,anchor,initialScale,
-        controlsEnabled:this.controls.enabled};
-      this.controls.enabled=false;
-      this.group.scale.setScalar(initialScale);
-      this.group.position.copy(anchor);
-    }else if(smooth&&!this.reducedMotion&&from!==to){
-      const arrival=to==='system'?1.38:to==='galaxy'?1.28:.78;
-      this.camera.position.copy(targetCamera).sub(targetControls).multiplyScalar(arrival).add(targetControls);
-      this.controls.target.copy(targetControls);this.controls.update();
+    if(seamless){
+      this.scaleTransition={oldGroup:this.group,anchor:V(source.position),controlsEnabled:this.controls.enabled};
+      this.group=new THREE.Group();this.scene.add(this.group);this.controls.enabled=false;
     }
-    const finish=()=>{
-      this.finishScaleTransition();this.camera.updateMatrixWorld();this.updateLabels();
-      this.callbacks.onViewChanged?.(view);
-    };
-    if(smooth&&!this.reducedMotion)
-      this.transitionCamera(targetCamera,targetControls,to==='system'?850:750,finish);
-    else{
-      this.controls.target.copy(targetControls);this.camera.position.copy(targetCamera);
-      this.controls.update();finish();
+    this.view=view;this._dollyIntentUntil=0;this.rebuild();
+    if(seamless){this.group.scale.setScalar(.22);this.group.position.copy(this.scaleTransition.anchor);}
+    const nextKey=view.kind==='all'?'all':`${view.kind}:${view.id}`;
+    let targetCamera,targetControls;
+    if(this.viewMemory.has(nextKey)){
+      const saved=this.viewMemory.get(nextKey);
+      targetCamera=saved.camera;targetControls=saved.target;
+    }else{
+      const cam=view.kind==='all'?[0,215,280]:view.kind==='galaxy'?[0,55,110]:[0,38,82];
+      const tgt=view.kind==='all'?[0,-4,-12]:[0,0,0];
+      targetCamera=new THREE.Vector3(...cam);targetControls=new THREE.Vector3(...tgt);
+    }
+    if(smooth&&!this.reducedMotion){
+      // Cross-tier geometry changes scale; stage the camera in the NEW coordinate
+      // frame rather than flying through the new scene from the prior tier.
+      if(previousKind!==view.kind&&!seamless){
+        const arrival=view.kind==='system'?1.38:view.kind==='galaxy'?1.28:.78;
+        this.camera.position.copy(targetCamera).sub(targetControls).multiplyScalar(arrival).add(targetControls);
+        this.controls.target.copy(targetControls);
+        this.controls.update();
+      }
+      this.transitionCamera(targetCamera,targetControls,view.kind==='system'?760:650,()=>{
+        this.finishScaleTransition();this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
+      });
+    }else{
+      this.controls.target.copy(targetControls);this.camera.position.copy(targetCamera);this.controls.update();
+      this.finishScaleTransition();this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
     }
     this._lastDollyDistance=this.controls.getDistance();
   }
