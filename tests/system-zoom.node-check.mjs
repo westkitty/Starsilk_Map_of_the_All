@@ -29,9 +29,9 @@ test('prefer selected eligible system; otherwise choose nearest eligible',()=>{
  assert.equal(findSystemZoomTarget({viewKind:'galaxy',zooming:true,blocked:false,candidates,selectedId:'outside'}),'c');
 });
 
-test('continuous zoom descends from all and toward planets without accidental entry',()=>{
+test('continuous zoom descends from galaxy toward planets without accidental entry',()=>{
   const c=(id,kind,distance)=>({id,kind,distance,screenX:0,screenY:0,visible:true});
-  assert.equal(findScaleZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',50)]}),'g');
+  assert.equal(findScaleZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',50)]}),null);
   assert.equal(findScaleZoomTarget({viewKind:'system',zooming:true,candidates:[c('p','planet',8)]}),'p');
   assert.equal(findScaleZoomTarget({viewKind:'system',zooming:true,blocked:true,candidates:[c('p','planet',8)]}),null);
   assert.equal(findScaleZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',60)]}),null);
