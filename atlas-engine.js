@@ -1414,12 +1414,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         blocked:this.callbacks.canDollyEnter?!this.callbacks.canDollyEnter():false,
         candidates,selectedId:this.state?.selected};
       const id=findScaleZoomTarget(options);
-      if(id){
-        this._dollyIntentUntil=0;
-        if(this.view.kind==='galaxy')this.callbacks.onDollyEnter?.(id);
-        else if(this.view.kind==='all')this.callbacks.onScaleEnter?.('galaxy',id);
-        else this.callbacks.onPlanetDolly?.(id);
-      }
+      if(id){this._dollyIntentUntil=0;this.callbacks.onDollyEnter?.(id);}
     }
     this.renderer.render(this.scene,this.camera);
     if(++this.frame%3===0)this.updateLabels();
