@@ -358,30 +358,26 @@ gl_FragColor=vec4(vColor,alpha);
     this.view=view;this._dollyIntentUntil=0;this.rebuild();
     if(seamless){this.group.scale.setScalar(.22);this.group.position.copy(this.scaleTransition.anchor);}
     const nextKey=view.kind==='all'?'all':`${view.kind}:${view.id}`;
-    let targetCamera,targetControls;
-    if(this.viewMemory.has(nextKey)){
-      const saved=this.viewMemory.get(nextKey);
-      targetCamera=saved.camera;targetControls=saved.target;
-    }else{
-      const cam=view.kind==='all'?[0,215,280]:view.kind==='galaxy'?[0,55,110]:[0,38,82];
-      const tgt=view.kind==='all'?[0,-4,-12]:[0,0,0];
-      targetCamera=new THREE.Vector3(...cam);targetControls=new THREE.Vector3(...tgt);
-    }
+    const saved=this.viewMemory.get(nextKey);
+    const targetCamera=saved?.camera||new THREE.Vector3(...(view.kind==='all'?[0,215,280]:
+      view.kind==='galaxy'?[0,55,110]:[0,38,82]));
+    const targetControls=saved?.target||new THREE.Vector3(0,view.kind==='all'?-4:0,view.kind==='all'?-12:0);
+    const finish=()=>{
+      this.finishScaleTransition();this.camera.updateMatrixWorld();this.updateLabels();
+      this.callbacks.onViewChanged?.(view);
+    };
     if(smooth&&!this.reducedMotion){
-      // Cross-tier geometry changes scale; stage the camera in the NEW coordinate
-      // frame rather than flying through the new scene from the prior tier.
+      // Stage unrelated tiers in the destination frame; keep stellar zoom anchored.
       if(previousKind!==view.kind&&!seamless){
         const arrival=view.kind==='system'?1.38:view.kind==='galaxy'?1.28:.78;
         this.camera.position.copy(targetCamera).sub(targetControls).multiplyScalar(arrival).add(targetControls);
         this.controls.target.copy(targetControls);
         this.controls.update();
       }
-      this.transitionCamera(targetCamera,targetControls,view.kind==='system'?760:650,()=>{
-        this.finishScaleTransition();this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
-      });
+      this.transitionCamera(targetCamera,targetControls,view.kind==='system'?760:650,finish);
     }else{
       this.controls.target.copy(targetControls);this.camera.position.copy(targetCamera);this.controls.update();
-      this.finishScaleTransition();this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
+      finish();
     }
     this._lastDollyDistance=this.controls.getDistance();
   }
@@ -1339,7 +1335,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       this.controls.target.lerpVectors(startTarget,endTarget,t);
       if(this.scaleTransition){
         const f=this.scaleTransition;
-        const scale=f.initialScale+(1-f.initialScale)*t;
+        const scale=.22+.78*t;
         this.group.scale.setScalar(scale);
         this.group.position.copy(f.anchor).multiplyScalar(1-t);
         f.oldGroup.scale.setScalar(1-t);
