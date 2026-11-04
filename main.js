@@ -1227,7 +1227,10 @@ if(new URLSearchParams(location.search).get('atlasDiagnostics')==='1'){
       regionObjects:engine?.group.getObjectByName('editorial-draft-regions')?.children.length??0,
       regionPins:engine?.group.getObjectByName('editorial-draft-regions')?.children.filter(o=>o.name==='editorial-sector-pin').length??0,
       regionRebuilds:strategy?.regionRebuilds??0,
-      viewport:[innerWidth,innerHeight]
+      viewport:[innerWidth,innerHeight],
+      cameraDistance:engine?.controls.getDistance()??null,
+      cameraTransitioning:!!engine?.cameraTransition,
+      stellarLightHex:engine?.sunLight.color.getHexString()??null
     })
   });
 }

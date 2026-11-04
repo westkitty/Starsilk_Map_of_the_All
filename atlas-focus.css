@@ -192,3 +192,9 @@
 .stellar-mini-hud button:hover{border-color:#b5ebff;background:#134c67}
 .atlas.focus-view .stellar-mini-hud{opacity:0;pointer-events:none}
 @media(max-width:620px){.stellar-mini-hud{bottom:74px;padding:10px;max-width:calc(100vw - 92px)}.stellar-mini-hud strong{font-size:15px}}
+
+/* Stellar acquisition clarity: preserve user-authored label colors over luminous arms. */
+.atlas.atlas-minimal .world-label[data-kind="system"] .label-name{
+  padding:2px 5px;background:rgba(1,7,16,.82);
+  box-shadow:0 1px 8px rgba(0,0,0,.7);border-bottom:1px solid rgba(110,202,231,.42)
+}
