@@ -1330,7 +1330,13 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     this.elapsed+=elapsed;
     if(this.cameraTransition){
       const {startTime,duration,startCam,endCam,startTarget,endTarget,onComplete}=this.cameraTransition;
-      const progress=Math.min(1,Math.max(0,(performance.now()-startTime)/duration));
+      let progress=Math.min(1,Math.max(0,(performance.now()-startTime)/duration));
+      if(this.scaleTransition){
+        const flight=this.scaleTransition;
+        // A slow WebGL frame must not skip the entire cross-scale journey.
+        progress=Math.min(progress,(flight.frameProgress||0)+.16);
+        flight.frameProgress=progress;
+      }
       const t=easeInOutCubic(progress);
       this.camera.position.lerpVectors(startCam,endCam,t);
       this.controls.target.lerpVectors(startTarget,endTarget,t);
