@@ -1171,7 +1171,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       group.add(makePlanetSurface(n,pInfo,radius,s.quality));
       if(s.quality!=='battery')this.addGlow(group,radius*3.2,n.color,.18);
       if(pInfo?.hasRings){
-        const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.24,radius*1.9,48),new THREE.MeshBasicMaterial({color:0x97b9cc,side:THREE.DoubleSide,opacity:.45,transparent:true,depthWrite:false}));
+        const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.24,radius*1.9,48),new THREE.MeshBasicMaterial({color:0x97b9cc,side:THREE.DoubleSide,opacity:.45,transparent:true}));
         ring.rotation.x=-.29;group.add(ring);
       }
       if(pInfo?.hasMoons){
