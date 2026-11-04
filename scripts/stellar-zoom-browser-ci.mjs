@@ -175,6 +175,19 @@ async function test(){
  assert.equal(systemSettled.scaleTransitionFactor,1,'stellar scene resolves to native model geometry');
  assert.ok(systemSettled.drawCalls>0,'3D system survives animated transition');
  await fly.screenshot({path:'atlas-qa-evidence/cross-scale-approach-desktop.png'});
+ // Continue the SAME physical wheel journey to a saved planet without snapping outward.
+ await fly.locator('.world-label[data-atlas-id="perseus-confluence-system-1-planet-1"]').click();
+ await fly.keyboard.press('f');
+ await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
+ const beforePlanetWheel=(await fly.evaluate(()=>window.__atlasDiagnostics())).cameraDistance;
+ const canvasBox=await fly.locator('#spaceCanvas').boundingBox();
+ await fly.mouse.move(canvasBox.x+canvasBox.width/2,canvasBox.y+canvasBox.height/2);
+ await fly.mouse.wheel(0,-250);
+ await fly.waitForTimeout(500);
+ const afterPlanetWheel=(await fly.evaluate(()=>window.__atlasDiagnostics())).cameraDistance;
+ assert.ok(afterPlanetWheel<beforePlanetWheel-.25,
+   'dolly into a planet must retain closer camera framing, not reset to default focus');
+ await fly.locator('#stellarBackButton').click();
  await fly.locator('#stellarBackButton').click();
  await fly.waitForFunction(()=>window.__atlasDiagnostics().viewKind==='galaxy');
  await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
