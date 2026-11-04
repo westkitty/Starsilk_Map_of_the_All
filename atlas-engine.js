@@ -1339,7 +1339,6 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         this.group.scale.setScalar(scale);
         this.group.position.copy(f.anchor).multiplyScalar(1-t);
         f.oldGroup.scale.setScalar(1-t);
-        f.oldGroup.position.copy(f.anchor).multiplyScalar(t);
       }
       this.controls.update();
       if(progress>=1){
