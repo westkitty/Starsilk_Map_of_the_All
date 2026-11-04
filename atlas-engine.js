@@ -352,8 +352,8 @@ gl_FragColor=vec4(vColor,alpha);
     const inbound=from==='all'&&to==='galaxy'||from==='galaxy'&&to==='system';
     const outbound=from==='system'&&to==='galaxy'||from==='galaxy'&&to==='all';
     const source=nodeById(this.state,inbound?view.id:old.id);
-    const related=source&&(inbound?(from==='all'||source.parentId===old.id):
-      outbound&&(from==='galaxy'||source.parentId===view.id));
+    const related=source&&(inbound||outbound)&&
+      (!old.id||!view.id||source.parentId===(inbound?old.id:view.id));
     const animate=!!(related&&smooth&&!this.reducedMotion);
     const leaving=this.group;
     this.view=view;this._dollyIntentUntil=0;
