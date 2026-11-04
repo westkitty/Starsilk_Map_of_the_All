@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {findScaleZoomTarget,shouldZoomOut,scaleEntryFactor} from './system-zoom.js';
+import {findScaleZoomTarget,scaleEntryFactor} from './system-zoom.js';
 import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -155,11 +155,8 @@ export class AtlasEngine {
     this.pointerStart=null;
     this.viewMemory=new Map();
     this.cameraTransition=null;this.scaleTransition=null;
-    this._lastDollyDistance=null;this._dollyIntentUntil=0;this._dollyOutUntil=0;this._activeTouchIds=new Set();
-    this._wheelZoom=ev=>{
-      if(ev.deltaY<0){this._dollyIntentUntil=performance.now()+650;this._dollyOutUntil=0;}
-      else if(ev.deltaY>0){this._dollyOutUntil=performance.now()+650;this._dollyIntentUntil=0;}
-    };
+    this._lastDollyDistance=null;this._dollyIntentUntil=0;this._activeTouchIds=new Set();
+    this._wheelZoom=ev=>{if(ev.deltaY<0)this._dollyIntentUntil=performance.now()+650;};
     this._touchZoomStart=ev=>{if(ev.pointerType==='touch')this._activeTouchIds.add(ev.pointerId);};
     this._touchZoomEnd=ev=>{this._activeTouchIds.delete(ev.pointerId);};
     canvas.addEventListener('wheel',this._wheelZoom,{passive:true});
@@ -359,7 +356,7 @@ gl_FragColor=vec4(vColor,alpha);
       outbound&&(from==='galaxy'||source.parentId===view.id));
     const animate=!!(related&&smooth&&!this.reducedMotion);
     const leaving=this.group;
-    this.view=view;this._dollyIntentUntil=0;this._dollyOutUntil=0;
+    this.view=view;this._dollyIntentUntil=0;
     if(animate){this.group=new THREE.Group();this.scene.add(this.group);}
     this.rebuild();
     const saved=this.viewMemory.get(key(view));
@@ -1404,7 +1401,6 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const dolly=this.controls.getDistance();
     const deliberate=(now<this._dollyIntentUntil||this._activeTouchIds.size>=2);
     const inward=this._lastDollyDistance!==null&&dolly<this._lastDollyDistance-.025;
-    const outward=this._lastDollyDistance!==null&&dolly>this._lastDollyDistance+.025;
     this._lastDollyDistance=dolly;
     if(inward&&deliberate&&!this.cameraTransition&&['all','galaxy','system'].includes(this.view.kind)){
       const projected=this._zoomProjected||(this._zoomProjected=new THREE.Vector3());
@@ -1424,13 +1420,6 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         else if(this.view.kind==='all')this.callbacks.onScaleEnter?.('galaxy',id);
         else this.callbacks.onPlanetDolly?.(id);
       }
-    }
-    if(outward&&!this.cameraTransition&&
-      shouldZoomOut({viewKind:this.view.kind,
-        outward:now<this._dollyOutUntil||this._activeTouchIds.size>=2,
-        blocked:this.callbacks.canDollyEnter?!this.callbacks.canDollyEnter():false,
-        distance:dolly})){
-      this._dollyOutUntil=0;this.callbacks.onScaleExit?.();
     }
     this.renderer.render(this.scene,this.camera);
     if(++this.frame%3===0)this.updateLabels();
