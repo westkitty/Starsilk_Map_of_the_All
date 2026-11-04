@@ -63,8 +63,7 @@ export function makePlanetSurface(n,info,r,q='standard'){
   const gas=info?.badge==='GAS GIANT',seed=hash(n.id||'planet')%1024/160;
   for(let i=0;i<p.count;i++){
     const x=p.getX(i)/r,y=p.getY(i)/r,z=p.getZ(i)/r;
-    const band=Math.sin(y*(gas?42:13)+Math.sin(x*9+z*7+seed)*1.6);
-    const tone=.92+band*.2+Math.sin(x*24+z*29+seed)*.1,j=i*3;
+    const tone=.92+.2*Math.sin(y*(gas?42:13)+Math.sin(x*9+z*7+seed))+.1*Math.sin(x*24+z*29+seed),j=i*3;
     rgb[j]=c.r*tone;rgb[j+1]=c.g*tone;rgb[j+2]=c.b*tone;
   }
   g.setAttribute('color',new THREE.BufferAttribute(rgb,3));
@@ -1125,7 +1124,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const center=new THREE.Group();this.group.add(center);
     const sunColor=starInfo.isBlue?0xa5f3fc:0xffdfae;
     const sunEmissive=starInfo.isBlue?0x38bdf8:0xffb45c;
-    const sun=sphere(3.6,sunColor,sunEmissive);sun.material.emissiveIntensity=1.8;sun.material.roughness=.35;center.add(sun);
+    const sun=sphere(3.6,sunColor,sunEmissive);center.add(sun);
     this.addGlow(center,26,starInfo.coronaColor,.75);
     this.addGlow(center,12,'#fff0cc',.9);
     this.addRing(center,4.4,starInfo.coronaColor,.38,0);
