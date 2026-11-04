@@ -1127,8 +1127,6 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const sun=sphere(3.6,sunColor,sunEmissive);center.add(sun);
     this.addGlow(center,26,starInfo.coronaColor,.75);
     this.addGlow(center,12,'#fff0cc',.9);
-    this.addRing(center,4.4,starInfo.coronaColor,.38,0);
-    this.addRing(center,5.4,starInfo.coronaColor,.22,Math.PI/6);
     this.createPickTarget(4.2,sys,center);
     if(this.labelItems.length)this.labelItems[this.labelItems.length-1].subtitle=starInfo.spectralType;
 
