@@ -155,7 +155,7 @@ async function test(){
  assert.ok(galaxyArrival.cameraDistance>galaxySettled.cameraDistance+12,'galaxy camera travels smoothly to the new view');
  assert.equal(galaxySettled.scaleTransitionFactor,1,'galaxy entry restores unscaled geometry');
  await fly.locator('.world-label[data-atlas-id="perseus-confluence-system-1"]').click();
- const flight=await fly.evaluate(async()=>{
+ const arrivalProof=await fly.evaluate(async()=>{
    document.querySelector('#stellarDiveButton').click();
    const arrival=window.__atlasDiagnostics();
    let advancing=false,frames=0;
@@ -171,11 +171,11 @@ async function test(){
    });
    return {arrival,settled:window.__atlasDiagnostics(),advancing,frames};
  });
- const systemArrival=flight.arrival,systemSettled=flight.settled;
+ const systemArrival=arrivalProof.arrival,systemSettled=arrivalProof.settled;
  assert.equal(systemArrival.viewKind,'system');
  assert.equal(systemArrival.cameraTransitioning,true,'system approach must interpolate');
  assert.equal(systemArrival.scaleTransitioning,true,'stellar scene arrives within the uninterrupted transition');
- assert.ok(flight.advancing,'real animation frames advance through a finite intermediate 3D scale');
+ assert.ok(arrivalProof.advancing,'real animation frames advance through a finite intermediate 3D scale');
  const spectrum=getStarClassification(expectedSystem);
  assert.equal(systemArrival.stellarLightHex,spectrum.isBlue?'b9edff':spectrum.temperatureK<5300?'ffb879':'ffe2b6');
  assert.equal(systemSettled.scaleTransitioning,false,'completed stellar approach disposes outgoing tier');
