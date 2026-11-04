@@ -14,8 +14,7 @@ export function findScaleZoomTarget({viewKind,zooming,blocked,candidates=[],sele
   eligible.sort((a,b)=>(a.id===selectedId?-1:0)-(b.id===selectedId?-1:0)||a.distance-b.distance);
   return eligible[0]?.id||null;
 }
-export const findSystemZoomTarget=options=>viewSafeSystemTarget(options);
-function viewSafeSystemTarget(options){return findScaleZoomTarget(options);}
+export const findSystemZoomTarget=findScaleZoomTarget;
 export function scaleEntryFactor(from,to,size=1){
   if(from==='galaxy'&&to==='system')return .22;
   if(from==='system'&&to==='galaxy')return 2.6;
