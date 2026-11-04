@@ -1,6 +1,6 @@
 /** Semantic zoom operates in editorial display units, never physical distances. */
 export const SYSTEM_ZOOM_RADIUS=17;
-const targets={all:['galaxy',57],galaxy:['system',SYSTEM_ZOOM_RADIUS],system:['planet',12]};
+const targets={galaxy:['system',SYSTEM_ZOOM_RADIUS],system:['planet',12]};
 export function findScaleZoomTarget({viewKind,zooming,blocked,candidates=[],selectedId=null}){
   if(!zooming||blocked)return null;
   const [kind,radius]=targets[viewKind]||[];
