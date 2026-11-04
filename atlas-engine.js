@@ -1216,9 +1216,10 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     hits.sort((a,b)=>a.distance-b.distance);
     const id=hits[0].object.userData.atlasId;if(id)this.callbacks.onSelect?.(id,enter,ev);
   }
-  focusOn(node,durationMs=600){const obj=this.labelItems.find(p=>p.node.id===node.id)?.obj;if(!obj)return;
+  focusOn(node,durationMs=600,keepDistance=false){const obj=this.labelItems.find(p=>p.node.id===node.id)?.obj;if(!obj)return;
     const p=new THREE.Vector3();obj.getWorldPosition(p);
-    const dist=node.kind==='galaxy'?(62*(node.size||1)):node.kind==='system'?26:10;
+    const dist=keepDistance?Math.max(this.controls.minDistance,this.camera.position.distanceTo(p)):
+      node.kind==='galaxy'?(62*(node.size||1)):node.kind==='system'?26:10;
     const dir=this.camera.position.clone().sub(this.controls.target).normalize();
     if(dir.lengthSq()<0.001)dir.set(0,.6,.8).normalize();
     const newCam=p.clone().add(dir.multiplyScalar(dist));
