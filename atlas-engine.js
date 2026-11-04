@@ -819,7 +819,6 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     this.group.add(curtain);
 
     const debris=[];
-    const latticeNodes=[];
     for(let i=0;i<220;i++){
       const seg=rnd()*(coords.length-1);
       const k=Math.floor(seg);
@@ -828,19 +827,11 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       const py=rnd()*16-6;
       const z=a[1]+(b[1]-a[1])*t+(rnd()-.5)*10;
       debris.push(x,py,z);
-      if(i%2===0){
-        latticeNodes.push(x+(rnd()-.5)*4,py+(rnd()-.5)*6,z+(rnd()-.5)*4);
-      }
     }
     if(!this.hidden('wall:debris')){
       const p=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
       p.computeBoundingSphere();
       this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0x475569,size:0.75,transparent:true,opacity:0.75})));
-    }
-    if(!this.hidden('wall:lattice')){
-      const lp=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(latticeNodes,3));
-      lp.computeBoundingSphere();
-      this.group.add(new THREE.Points(lp,new THREE.PointsMaterial({color:0x38bdf8,size:0.85,transparent:true,opacity:0.65})));
     }
 
     const wallLabel={id:'wall-concept',name:'THE SIEGE WALL',status:'reference',label:{show:true,size:19,color:'#d1d6de',family:'display'}};

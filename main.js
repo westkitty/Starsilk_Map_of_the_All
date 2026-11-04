@@ -46,11 +46,11 @@ function bootstrapState(){
   if(result.rejectedRaw!==null){
     rejectedDraftRaw=result.rejectedRaw;
     $('savedStatus').textContent='RECOVERY REQUIRED';
-    message('Unreadable saved JSON retained unchanged. Download the original before replacing it.',true);
+    message('Unreadable JSON is unchanged. Download before replacing.',true);
   }else if(result.source==='session'){
     sessionRecovered=true;
     $('savedStatus').textContent='SESSION RECOVERED / EXPORT';
-    message('Recovered newer session draft; local copy may be stale. Export a JSON backup.',true);
+    message('Newer session draft recovered; export JSON to preserve it.',true);
   }
   return result.state;
 }
@@ -63,10 +63,10 @@ function preserveConflictedSession(){
     sessionStorage.setItem(SESSION_FALLBACK_KEY,'1');
     sessionRecovered=true;
     $('savedStatus').textContent='EXTERNAL WRITE / SESSION BACKUP';
-    message('Another Atlas tab changed your saved draft. This tab is preserved in session storage. Export both versions before continuing.',true);
+    message('Another tab changed this draft. Your copy is in session storage. Export both before editing.',true);
   }catch(error){
     $('savedStatus').textContent='EXTERNAL WRITE / EXPORT REQUIRED';
-    message('Another Atlas tab changed your saved draft. Export this open draft now; session backup failed.',true);
+    message('Draft conflict: session backup failed. Export this open draft now.',true);
   }
 }
 // A cached legacy editor can silently replace valid v1 JSON on the shared origin.
@@ -116,11 +116,11 @@ function writeDraftNow(requireLocal=false){
       try{sessionStorage.setItem(SESSION_FALLBACK_KEY,'1');}
       catch(e){console.warn('Session fallback marker unavailable; timestamp recovery remains active:',e);}
       $('savedStatus').textContent='SESSION SAVED / EXPORT';
-      message('Local storage unavailable. Session draft saved; export a backup before closing the browser.',true);
+      message('Local storage failed. Session draft is saved; export before closing.',true);
       return true;
     }catch(sessionError){
       $('savedStatus').textContent='EXPORT REQUIRED';
-      message('Both browser storage locations refused the edit. Export your draft.',true);
+      message('Draft save failed in both locations. Export now.',true);
       return false;
     }
   }
@@ -147,21 +147,21 @@ function downloadRejectedDraft(){
   const url=URL.createObjectURL(blob),a=el('a');
   a.href=url;a.download='starsilk-map-rejected-local-draft.json.txt';
   document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-  message('Exact rejected saved JSON offered for download. Stored original remains intact.');
+  message('Original JSON remains intact; download offered.');
 }
 function setupRecoveryUI(){
   if(rejectedDraftRaw===null)return;
   const tools=el('section','atlas-recovery-tools');tools.id='atlasRecoveryTools';
   tools.setAttribute('aria-label','Unreadable saved draft');
-  const note=el('p','small-note','A previous browser draft could not be loaded. Its exact bytes remain untouched. Download the original before approving a replacement.');
+  const note=el('p','small-note','Unreadable saved draft; its original bytes are intact. Download before replacement.');
   const download=button('DOWNLOAD ORIGINAL JSON','button-outline',downloadRejectedDraft);
   const replaceDraft=button('REPLACE WITH NEW DRAFT','button-outline',()=>{
-    if(!confirm('Replace the unreadable saved draft with the currently open draft? Download the original first if you need recovery.'))return;
+    if(!confirm('Replace unreadable saved draft with this one? Download the original first.'))return;
     const previous=rejectedDraftRaw;rejectedDraftRaw=null;
     if(!persist(true,true)){
       rejectedDraftRaw=previous;
       $('savedStatus').textContent='RECOVERY REQUIRED';
-      message('Original retained. Cannot replace until storage becomes available.',true);
+      message('Original intact; replacement needs storage access.',true);
       return;
     }
     tools.remove();message('New draft saved. Original JSON was replaced after your confirmation.');
@@ -173,7 +173,7 @@ function setupSessionRecoveryUI(){
   if(!sessionRecovered||rejectedDraftRaw!==null)return;
   const tools=el('section','atlas-recovery-tools');tools.id='atlasSessionRecovery';
   tools.setAttribute('aria-label','Recover draft from temporary session storage');
-  const note=el('p','small-note','A newer session draft is open instead of an older device copy. Save it locally, or export JSON before closing this session.');
+  const note=el('p','small-note','A newer session draft is open. Save or export it before closing.');
   const retry=button('SAVE RECOVERED DRAFT LOCALLY','button-outline',()=>{
     if(writeDraftNow()&&!sessionRecovered)message('Recovered session draft saved locally.');
   });
@@ -513,8 +513,8 @@ function updateSources(){
     ),
     el('div','source-integrity-notice',
       isRef
-        ? 'HONEST CARTOGRAPHY: Canonical entities possess published relationships in the Dossier, but zero canonical 3D coordinates. Display pins are illustrative.'
-        : 'HONEST CARTOGRAPHY: Draft objects are provisional sandboxes. They can be freely edited, repositioned, or exported without mutating canonical lore.'
+        ? 'CANON TOPOLOGY: Sources define relationships, not 3D positions. Map pins are illustrative.'
+        : 'DRAFT CARTOGRAPHY: Edit, move or export freely. Nothing here changes canon.'
     )
   );
   frag.append(integrityCard);
@@ -653,7 +653,7 @@ function inspectCanonEntity(c){
   fillInspector();
   $('inspectorTitle').textContent=c.name;
   $('inspectorKind').textContent=c.group.toUpperCase()+' / CANON DOSSIER IDENTIFIER';
-  $('inspectorDescription').textContent='Canonical figure/record from '+c.sourcePath+'. As an authoritative identity, it possesses no authored map coordinates in Starsilk canon.';
+  $('inspectorDescription').textContent='Canonical figure/record from '+c.sourcePath+'. No canonical map coordinates are authored.';
   $('inspectorStatus').textContent='CANONICAL IDENTITY / UNPLACED RECORD';
   $('objectSigil').style.borderColor='#8beaff';
   $('objectSigil').innerHTML=getNodeSigilSvg({id:c.id,kind:c.group==='drakken'?'drakken':'reference',color:'#52deff'});
@@ -663,7 +663,7 @@ function inspectCanonEntity(c){
   const unplacedCard=el('div','unplaced-warning-card');
   unplacedCard.append(
     el('div','unplaced-warning-header','🔒 UNPLACED CANONICAL RECORD'),
-    el('div','unplaced-warning-body','Authoritative identity from Starsilk Dossier (127 Stable IDs). Coordinates remain strictly unauthored in canon; no fictional spatial coordinates or star-chart positions are inferred or invented.')
+    el('div','unplaced-warning-body','Dossier identity. Canon supplies relationships, not coordinates. This map pin is illustrative.')
   );
   frag.append(unplacedCard);
 
@@ -909,7 +909,7 @@ function removeOrFork(){
   if(n.status==='reference'){
     let id;
     if(change(()=>{id=uniqueId(state,'draft-reference');state.nodes.push({...structuredClone(n),id,name:n.name+' / DRAFT',status:'draft',sourceUrl:null});})){
-      select(id);message('Created an editable draft. The source reference remains protected.');
+      select(id);message('Editable draft created; source remains protected.');
     }
     return;
   }
@@ -998,7 +998,7 @@ function executeImport(){
     state=JSON.parse(previous);rejectedDraftRaw=priorRejection;
     if(externalDraftConflict)preserveConflictedSession();
     $('savedStatus').textContent=priorRejection!==null?'RECOVERY REQUIRED':'EXPORT REQUIRED';
-    message('Import not applied: neither local nor session storage accepted it. Original retained.',true);
+    message('Import not saved by either storage location. Original retained.',true);
     return;
   }
   history.push(previous);if(history.length>30)history.shift();
@@ -1119,7 +1119,7 @@ function bind(){
       ev.preventDefault();
       const selected=nodeById(state,state.selected);
       if(selected?.status==='draft')removeOrFork();
-      else message('This source identity is immutable. Use FORK AS DRAFT instead.',true);
+      else message('Source is immutable. Use FORK AS DRAFT.',true);
     }
     else if(ev.key==='Backspace'){ev.preventDefault();up();}
     else if(ev.key==='0'){ev.preventDefault();engine?.resetViewCamera(true);message('Camera reset to default.');}
@@ -1154,24 +1154,24 @@ function init(){updateUI();bind();
           }
           return true;
         }
-        message('Source '+id+' is unplaced. No 3D coordinates exist in the published evidence.');
+        message('Source '+id+' is unplaced; no sourced 3D coordinates exist.');
         return false;
       },
       onProjectDraft:({sourceId,label})=>{
         const spatial=TOPOLOGY.nodes.find(n=>n.id===sourceId&&n.label===label&&['homeworld','nebula','orbital-station','gas-giant'].includes(n.kind));
         if(!spatial){message('This source is not a placeable astronomical study.',true);return false;}
         if(!engine){message('3D Atlas is unavailable; no draft was created.',true);return false;}
-        if(!confirm('Create an editable, PROVISIONAL spatial study for '+label+'? The position is randomly illustrative and NOT a canonical location.'))return false;
+        if(!confirm('Create an editable draft study for '+label+'? Its position is illustrative, never canon.'))return false;
         let id;
         const ok=change(()=>{
           const n=addNode(state,'annotation',null);
           n.name=('STUDY / '+label).slice(0,100);
-          n.description='Hypothetical reader-authored annotation for '+label+' ('+sourceId+'). Spatial position, distance, era placement and all implied routes are NOT sourced or canonical.';
+          n.description='Draft study of '+label+' ('+sourceId+'). Position, distance, era and routes are illustrative, not canon.';
           n.status='draft';n.sourceUrl=null;id=n.id;
         });
         if(!ok)return false;
         enter('all',null);select(id);focusSelected();drawerController?.open('inspect');
-        message('Created a provisional study marker for '+label+'. Edit or Undo freely; the source record was not changed.');
+        message('Created an editable study marker for '+label+'. Undo is available; the source stays unchanged.');
         return true;
       }
     });
@@ -1200,11 +1200,11 @@ function init(){updateUI();bind();
     temporal.attachEngine(engine);updateUI();
     $('loading').style.opacity='0';setTimeout(()=>$('loading').remove(),900);
     setInterval(()=>{if(engine&&document.visibilityState==='visible')$('drawCalls').textContent=String(engine.info().drawCalls).padStart(2,'0');},1000);
-    message('The All is ready. All starting coordinates remain provisional.');
+    message('The All is ready. All coordinates remain provisional.');
   }catch(e){
     $('loading').replaceChildren(
       el('h2','','3D WEBGL ACCELERATION UNAVAILABLE'),
-      el('p','','WebGL hardware acceleration is required to render the 3D cosmological atlas. You can still explore canonical source records, analyze network topology, or download your saved map draft.'),
+      el('p','','WebGL is unavailable. Canon records, network analysis and draft export remain accessible.'),
       button('EXPORT ATLAS JSON ↗','primary-button',exportAtlas),
       button('OPEN CANON REGISTRY ◆','button-outline',()=>{if(gui.left)gui.left.classList.add('expanded');}),
       button('RETRY INITIALIZATION ↻','button-outline faint',()=>{location.reload();})
