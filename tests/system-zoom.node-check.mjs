@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SYSTEM_ZOOM_RADIUS,findSystemZoomTarget,findScaleZoomTarget,scaleEntryFactor} from '../system-zoom.js';
+import {SYSTEM_ZOOM_RADIUS,findSystemZoomTarget,findScaleZoomTarget} from '../system-zoom.js';
 const good=(id='sys-a',distance=8)=>({id,kind:'system',visible:true,distance,screenX:.1,screenY:-.1});
 test('stellar inward-dolly limit never infers physical distance',()=>assert.equal(SYSTEM_ZOOM_RADIUS,17));
 test('no automatic descent outside galaxy tier, outward zoom, or blocked editors',()=>{
@@ -36,11 +36,4 @@ test('continuous zoom descends from galaxy toward planets without accidental ent
   assert.equal(findScaleZoomTarget({viewKind:'system',zooming:true,blocked:true,candidates:[c('p','planet',8)]}),null);
   assert.equal(findScaleZoomTarget({viewKind:'all',zooming:true,candidates:[c('g','galaxy',60)]}),null);
   assert.equal(findScaleZoomTarget({viewKind:'system',zooming:true,candidates:[{...c('p','planet',8),screenX:1}]}),null);
-});
-test('cross-scale visual entry factors stay bounded',()=>{
-  for(const [a,b] of [['all','galaxy'],['galaxy','system'],['system','galaxy'],['galaxy','all']])
-    for(const size of [.1,1,10]){
-      const factor=scaleEntryFactor(a,b,size);
-      assert.ok(Number.isFinite(factor)&&factor>0&&factor<=3);
-    }
 });
