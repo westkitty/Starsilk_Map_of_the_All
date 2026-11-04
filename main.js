@@ -1179,8 +1179,7 @@ function init(){updateUI();bind();
   try{engine=new AtlasEngine(gui.canvas,gui.labels,{onSelect:select,onViewChanged:updateUI,
     canDollyEnter,onDollyEnter:id=>{
       const n=nodeById(state,id);
-      if(view.kind==='all'&&n?.kind==='galaxy')enter('galaxy',id);
-      else if(view.kind==='galaxy'&&n?.kind==='system'&&n.parentId===view.id)enter('system',id);
+      if(view.kind==='galaxy'&&n?.kind==='system'&&n.parentId===view.id)enter('system',id);
       else if(view.kind==='system'&&n?.kind==='planet'&&n.parentId===view.id){
         select(id,false);engine?.focusOn(n);
       }
