@@ -1181,13 +1181,11 @@ function init(){updateUI();bind();
       const n=nodeById(state,id);
       if(view.kind==='galaxy'&&n?.kind==='system'&&n.parentId===view.id)enter('system',id);
     },
-    onScaleEnter:(kind,id)=>{
-      if(view.kind==='all'&&kind==='galaxy'&&nodeById(state,id)?.kind==='galaxy')enter('galaxy',id);
-    },
+    onScaleEnter:(kind,id)=>{if(view.kind==='all')enter(kind,id);},
     onPlanetDolly:id=>{
       const n=nodeById(state,id);
       if(view.kind==='system'&&n?.kind==='planet'&&n.parentId===view.id){
-        select(id,false);engine?.focusOn(n);engine.trackingNodeId=id;updateUI();
+        select(id,false);engine?.focusOn(n);
       }
     }});engine.setState(state,view);
     studio=new SpatialStudio({canvas:gui.canvas,labelsRoot:gui.labels,atlas:gui.atlas,panel:$('studioPanel'),
