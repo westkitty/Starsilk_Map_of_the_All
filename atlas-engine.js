@@ -55,28 +55,24 @@ function disposeTree(root){
 }
 const sphere = (radius,color,emissive=0x000000) => new THREE.Mesh(new THREE.SphereGeometry(radius,24,16),new THREE.MeshStandardMaterial({color,emissive,roughness:.7,metalness:.12}));
 
-/** Non-canonical deterministic planet bands and terrain; no textures. */
+/** Deterministic editorial surface material, not canonical geography. */
 export function makePlanetSurface(n,info,r,q='standard'){
   const seg=q==='battery'?16:q==='cinematic'?40:24;
-  const g=new THREE.SphereGeometry(r,seg,Math.round(seg*.7)),p=g.getAttribute('position');
+  const g=new THREE.SphereGeometry(r,seg,seg*.7|0),p=g.getAttribute('position');
   const rgb=new Float32Array(p.count*3),c=new THREE.Color(n.color);
-  const gas=info?.badge==='GAS GIANT',ice=info?.badge==='ICE GIANT'||info?.badge==='CRYO WORLD';
-  const seed=(hash(n.id||'planet')%1024)/160;
+  const gas=info?.badge==='GAS GIANT',ice=/ICE GIANT|CRYO WORLD/.test(info?.badge||'');
+  const seed=hash(n.id||'planet')%1024/160;
   for(let i=0;i<p.count;i++){
     const x=p.getX(i)/r,y=p.getY(i)/r,z=p.getZ(i)/r;
-    const wave=Math.sin(x*9+z*7+seed),band=Math.sin(y*(gas?42:13)+wave*1.6);
+    const band=Math.sin(y*(gas?42:13)+Math.sin(x*9+z*7+seed)*1.6);
     const grain=Math.sin((x+y)*24+seed)*Math.cos(z*29-y*19);
-    const tone=.9+band*.23+grain*.13;
-    const frost=ice?.18*Math.abs(y):gas?.07:0;
-    rgb[i*3]=Math.max(0,c.r*tone+frost);
-    rgb[i*3+1]=Math.max(0,c.g*tone+frost);
-    rgb[i*3+2]=Math.max(0,c.b*tone+frost);
+    const tone=.9+band*.23+grain*.13,frost=ice?.18*Math.abs(y):gas?.07:0,j=i*3;
+    rgb[j]=c.r*tone+frost;rgb[j+1]=c.g*tone+frost;rgb[j+2]=c.b*tone+frost;
     if(!gas){const s=r*(1+grain*.006);p.setXYZ(i,x*s,y*s,z*s);}
   }
   g.setAttribute('color',new THREE.BufferAttribute(rgb,3));g.computeVertexNormals();
-  const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:ice?.62:.85});
-  const planet=new THREE.Mesh(g,m);planet.rotation.y=seed;planet.name='editorial-planet-surface';
-  return planet;
+  const planet=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:ice?.62:.85}));
+  planet.name='editorial-planet-surface';return planet;
 }
 function makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity=0.5,speed=2.0,pulseFreq=10.0}){
   return new THREE.ShaderMaterial({
