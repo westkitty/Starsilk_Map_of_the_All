@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { frameDelta,wrapCurvePhase,easeInOutCubic } from './frame-clock.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {findSystemZoomTarget,findScaleZoomTarget,shouldZoomOut,scaleEntryFactor} from './system-zoom.js';
+import {findScaleZoomTarget,shouldZoomOut,scaleEntryFactor} from './system-zoom.js';
 import { childNodes, nodeById } from './atlas-data.js';
 import { getGalaxyMorphology } from './galaxy-morphology.js';
 import { getStarClassification, getPlanetClassification } from './stellar-telemetry.js';
@@ -363,8 +363,6 @@ gl_FragColor=vec4(vColor,alpha);
       previous.kind==='system'?sourceNode.parentId===view.id:sourceNode.kind==='galaxy');
     const animateScene=Boolean(related&&(inbound||outbound)&&smooth&&!this.reducedMotion);
     const oldGroup=this.group;
-    const startCamera=this.camera.position.clone();
-    const startTarget=this.controls.target.clone();
     this.view=view;this._dollyIntentUntil=0;this._dollyOutUntil=0;
     if(animateScene){this.group=new THREE.Group();this.scene.add(this.group);}
     this.rebuild();
@@ -388,8 +386,6 @@ gl_FragColor=vec4(vColor,alpha);
       this.group.scale.setScalar(initialScale);
       if(inbound)this.group.position.copy(anchor);
       else this.group.position.copy(anchor).multiplyScalar(-initialScale);
-      this.camera.position.copy(startCamera);
-      this.controls.target.copy(startTarget);
     }else if(smooth&&!this.reducedMotion&&previousKind!==view.kind){
       // Unrelated navigation retains the established destination-frame arrival.
       const arrival=view.kind==='system'?1.38:view.kind==='galaxy'?1.28:.78;
@@ -1363,13 +1359,9 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         const f=this.scaleTransition;
         const scale=f.initialScale+(1-f.initialScale)*t;
         this.group.scale.setScalar(scale);
-        if(f.inbound)this.group.position.copy(f.anchor).multiplyScalar(1-t);
-        else this.group.position.copy(f.anchor).multiplyScalar(-scale*(1-t));
-        // The old visual frame remains on screen until its successor is visible.
-        const outgoingScale=1-.72*t;
-        f.oldGroup.scale.setScalar(outgoingScale);
-        if(f.inbound)f.oldGroup.position.copy(f.anchor).multiplyScalar(1-outgoingScale);
-        else f.oldGroup.position.set(0,0,0);
+        this.group.position.copy(f.anchor).multiplyScalar(f.inbound?1-t:-scale*(1-t));
+        f.oldGroup.scale.setScalar(1-t);
+        if(f.inbound)f.oldGroup.position.copy(f.anchor).multiplyScalar(t);
       }
       this.controls.update();
       if(progress>=1){
@@ -1438,7 +1430,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       const options={viewKind:this.view.kind,zooming:true,
         blocked:this.callbacks.canDollyEnter?!this.callbacks.canDollyEnter():false,
         candidates,selectedId:this.state?.selected};
-      const id=this.view.kind==='galaxy'?findSystemZoomTarget(options):findScaleZoomTarget(options);
+      const id=findScaleZoomTarget(options);
       if(id){
         this._dollyIntentUntil=0;
         if(this.view.kind==='galaxy')this.callbacks.onDollyEnter?.(id);
