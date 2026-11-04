@@ -1189,13 +1189,6 @@ function init(){updateUI();bind();
       if(view.kind==='system'&&n?.kind==='planet'&&n.parentId===view.id){
         select(id,false);engine?.focusOn(n);engine.trackingNodeId=id;updateUI();
       }
-    },
-    onScaleExit:()=>{
-      // Returning through the orbital overview must not silently erase selection.
-      if(view.kind==='system'){
-        const sys=nodeById(state,view.id);
-        if(sys?.parentId)enter('galaxy',sys.parentId,sys.id);
-      }else if(view.kind==='galaxy')enter('all',null,view.id);
     }});engine.setState(state,view);
     studio=new SpatialStudio({canvas:gui.canvas,labelsRoot:gui.labels,atlas:gui.atlas,panel:$('studioPanel'),
       getState:()=>state,getView:()=>view,onMove:moveDraftNode,onLabelCommit:moveDraftLabel,
