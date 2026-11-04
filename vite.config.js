@@ -8,7 +8,7 @@ export default defineConfig({
   build: {
     // Compress the Three.js renderer deterministically within the 225 KB cap.
     minify: 'terser',
-    terserOptions: {compress: {passes: 3}},
+    terserOptions: {module: true, compress: {passes: 3, toplevel: true}},
     // Atlas targets browsers with native modulepreload and ES2022 support.
     // Keep Three.js separately cached while avoiding unused compatibility payload.
     target: 'es2022',
