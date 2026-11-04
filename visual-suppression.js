@@ -16,14 +16,13 @@ const GROUPS=[
   ['flow:nodes','Flow rings'],
   ['flow:pulses','Flow pulses'],
   ['wall:debris','Wall debris'],
-  ['wall:lattice','Wall nodes'],
   ['routes:halos','Corridor halos'],
   ['galaxy:ornaments','Galaxy ornaments'],
   ['nebula:bed','Continental dust'],
   ['system:asteroids','Asteroid belt'],
   ['system:comet','Comet trail']
 ];
-const GROUP_IDS=new Set(GROUPS.map(g=>g[0]));
+const GROUP_IDS=new Set([...GROUPS.map(g=>g[0]),'wall:lattice']); // Accept legacy JSON v1 ID without displaying an inert control.
 const stable=/^[a-z][a-z0-9_-]{0,89}$/;
 export function validVisualId(id){
   if(typeof id!=='string'||id.length>200)return false;

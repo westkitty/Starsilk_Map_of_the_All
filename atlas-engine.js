@@ -54,6 +54,22 @@ function disposeTree(root){
   root.clear();
 }
 const sphere = (radius,color,emissive=0x000000) => new THREE.Mesh(new THREE.SphereGeometry(radius,24,16),new THREE.MeshStandardMaterial({color,emissive,roughness:.7,metalness:.12}));
+
+/** Deterministic, non-canonical gas and terrestrial surface bands. */
+export function makePlanetSurface(n,info,r,q='standard'){
+  const seg=q==='battery'?16:q==='cinematic'?40:24;
+  const g=new THREE.SphereGeometry(r,seg,seg*.7|0),p=g.getAttribute('position');
+  const rgb=new Float32Array(p.count*3),c=new THREE.Color(n.color);
+  const gas=info?.badge==='GAS GIANT',seed=hash(n.id||'planet')%1024/160;
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i)/r,y=p.getY(i)/r,z=p.getZ(i)/r;
+    const tone=.92+.25*Math.sin(y*(gas?42:13)+x*9+z*7+seed),j=i*3;
+    rgb[j]=c.r*tone;rgb[j+1]=c.g*tone;rgb[j+2]=c.b*tone;
+  }
+  g.setAttribute('color',new THREE.BufferAttribute(rgb,3));
+  const planet=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true}));
+  return planet;
+}
 function makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity=0.5,speed=2.0,pulseFreq=10.0}){
   return new THREE.ShaderMaterial({
     uniforms:{
@@ -323,6 +339,7 @@ gl_FragColor=vec4(vColor,alpha);
     this.resize();this.rebuild();this.camera.updateMatrixWorld();this.updateLabels();
   }
   setView(view,smooth=true){
+    const previousKind=this.view.kind;
     const prevKey=this.view.kind==='all'?'all':`${this.view.kind}:${this.view.id}`;
     this.viewMemory.set(prevKey,{camera:this.camera.position.clone(),target:this.controls.target.clone()});
     this.view=view;this._dollyIntentUntil=0;this.rebuild();
@@ -337,7 +354,15 @@ gl_FragColor=vec4(vColor,alpha);
       targetCamera=new THREE.Vector3(...cam);targetControls=new THREE.Vector3(...tgt);
     }
     if(smooth&&!this.reducedMotion){
-      this.transitionCamera(targetCamera,targetControls,650,()=>{
+      // Cross-tier geometry changes scale; stage the camera in the NEW coordinate
+      // frame rather than flying through the new scene from the prior tier.
+      if(previousKind!==view.kind){
+        const arrival=view.kind==='system'?1.38:view.kind==='galaxy'?1.28:.78;
+        this.camera.position.copy(targetCamera).sub(targetControls).multiplyScalar(arrival).add(targetControls);
+        this.controls.target.copy(targetControls);
+        this.controls.update();
+      }
+      this.transitionCamera(targetCamera,targetControls,view.kind==='system'?760:650,()=>{
         this.camera.updateMatrixWorld();this.updateLabels();this.callbacks.onViewChanged?.(view);
       });
     }else{
@@ -426,7 +451,7 @@ gl_FragColor=vec4(vColor,alpha);
     ringMesh.position.set(x,gridY+.05,z);
     parent.add(ringMesh);
   }
-  galaxyDisk(parent,seed,rad,color,morphology=null){
+  galaxyDisk(parent,seed,rad,color,morphology=null,opacity=1){
     const arms = morphology ? morphology.arms : 4.0;
     const pitch = morphology ? morphology.pitch : 14.0;
     const bar = morphology ? morphology.barStrength : 0.0;
@@ -437,6 +462,7 @@ gl_FragColor=vec4(vColor,alpha);
         arms:{value:arms},
         pitch:{value:pitch},
         bar:{value:bar},
+        depthOpacity:{value:opacity},
       },
       vertexShader: String.raw`
 varying vec2 vUv;
@@ -451,6 +477,7 @@ uniform float phase;
 uniform float arms;
 uniform float pitch;
 uniform float bar;
+uniform float depthOpacity;
 varying vec2 vUv;
 float noise(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 void main(){
@@ -472,7 +499,7 @@ float blue=exp(-radius*radius*3.0)*.075;
 vec3 innerColor=vec3(1.0,.75,.47);
 vec3 color=mix(tint,innerColor,clamp(inner*1.9,0.0,1.0));
 float alpha=min(.76,dust+inner*.38+blue);
-gl_FragColor=vec4(color,alpha);
+gl_FragColor=vec4(color,alpha*depthOpacity);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
 }
@@ -490,7 +517,7 @@ gl_FragColor=vec4(color,alpha);
     mesh2.position.y=.35;
     parent.add(mesh2);
   }
-  starCloud(parent,seed,count,rad,flatten=.22,spiral=true,arms=4){
+  starCloud(parent,seed,count,rad,flatten=.22,spiral=true,arms=4,lightScale=1){
     if(!this.state.layers.stars)return;
     const rnd=rng(hash(seed)),p=[],col=[],sizes=[],intensities=[];
     const armCount = Math.max(1, arms);
@@ -514,7 +541,7 @@ gl_FragColor=vec4(color,alpha);
       color.multiplyScalar(.75+rnd()*.5);
       col.push(color.r,color.g,color.b);
       sizes.push(.75+Math.pow(rnd(),4)*1.85);
-      intensities.push((r/rad<.25?.78:.54)+rnd()*.32);
+      intensities.push(((r/rad<.25?.78:.54)+rnd()*.32)*lightScale);
     }
     const g=new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
@@ -562,6 +589,8 @@ gl_FragColor=vec4(vColor*1.1,alpha);
     this.motionObjects.push({obj:pts,speed:.000006+rnd()*.000003});
   }
   buildAll(){const s=this.state;
+    this.sunLight.color.setHex(0xffe0b8);
+    this.sunLight.position.set(0,35,20);
     this.controls.minDistance=45;this.controls.maxDistance=900;
     if(s.layers.territories)this.makeTerritories();
     if(s.layers.grid)this.makeGrid(360,24);
@@ -790,7 +819,6 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     this.group.add(curtain);
 
     const debris=[];
-    const latticeNodes=[];
     for(let i=0;i<220;i++){
       const seg=rnd()*(coords.length-1);
       const k=Math.floor(seg);
@@ -799,19 +827,11 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       const py=rnd()*16-6;
       const z=a[1]+(b[1]-a[1])*t+(rnd()-.5)*10;
       debris.push(x,py,z);
-      if(i%2===0){
-        latticeNodes.push(x+(rnd()-.5)*4,py+(rnd()-.5)*6,z+(rnd()-.5)*4);
-      }
     }
     if(!this.hidden('wall:debris')){
       const p=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(debris,3));
       p.computeBoundingSphere();
       this.group.add(new THREE.Points(p,new THREE.PointsMaterial({color:0x475569,size:0.75,transparent:true,opacity:0.75})));
-    }
-    if(!this.hidden('wall:lattice')){
-      const lp=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(latticeNodes,3));
-      lp.computeBoundingSphere();
-      this.group.add(new THREE.Points(lp,new THREE.PointsMaterial({color:0x38bdf8,size:0.85,transparent:true,opacity:0.65})));
     }
 
     const wallLabel={id:'wall-concept',name:'THE SIEGE WALL',status:'reference',label:{show:true,size:19,color:'#d1d6de',family:'display'}};
@@ -1084,18 +1104,21 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const o=new THREE.Mesh(new THREE.OctahedronGeometry(1.8),new THREE.MeshBasicMaterial({color:n.color,wireframe:true}));g.add(o);this.hitTarget(n,o);
   }}
   buildGalaxy(){const s=this.state,g=nodeById(s,this.view.id);if(!g)return;
+    this.sunLight.color.setHex(0xd9edff);
+    this.sunLight.position.set(0,28,18);
     this.controls.minDistance=12;this.controls.maxDistance=350;
     const morph=getGalaxyMorphology(g);
-    this.galaxyDisk(this.group,g.id+'-interior',68,g.color,morph);
-    this.starCloud(this.group,g.id+'-interior',s.quality==='cinematic'?8500:s.quality==='battery'?1300:4100,70,.23,true,morph?morph.arms:4);
+    this.galaxyDisk(this.group,g.id+'-interior',68,g.color,morph,.42);
+    this.starCloud(this.group,g.id+'-interior',s.quality==='cinematic'?8500:s.quality==='battery'?1300:4100,70,.30,true,morph?morph.arms:4,.38);
     this.addGlow(this.group,37,'#fbe6cc',.38);
     this.addGlow(this.group,12,g.color,.7);
     if(s.layers.grid)this.makeGrid(190,12);
     for(const n of childNodes(s,g.id,'system')){
       const pg=new THREE.Group();pg.position.copy(V(n.position));this.group.add(pg);
       if(s.layers.grid)this.makeDropStem(this.group,n.position,-19,0x3d7499,1.0,n.status==='reference');
+      const spectral=getStarClassification(n);
       this.addGlow(pg,15,n.color,.8);
-      const core=sphere(.9,0xffffff,0x4488ff);pg.add(core);
+      const core=sphere(.9,spectral.isBlue?0xcaf4ff:0xffe6c2,spectral.isBlue?0x4b9dff:0xffa048);pg.add(core);
       this.createPickTarget(3.5,n,pg);
       if(s.layers.routes){this.addRing(pg,3.8,n.color,.42);}
     }
@@ -1105,14 +1128,12 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
   buildSystem(){const s=this.state,sys=nodeById(s,this.view.id);if(!sys)return;
     this.controls.minDistance=5;this.controls.maxDistance=280;this.sunLight.position.set(0,0,0);
     const starInfo=getStarClassification(sys);
+    this.sunLight.color.setHex(starInfo.isBlue?0xb9edff:starInfo.temperatureK<5300?0xffb879:0xffe2b6);
     const center=new THREE.Group();this.group.add(center);
     const sunColor=starInfo.isBlue?0xa5f3fc:0xffdfae;
     const sunEmissive=starInfo.isBlue?0x38bdf8:0xffb45c;
     const sun=sphere(3.6,sunColor,sunEmissive);center.add(sun);
     this.addGlow(center,26,starInfo.coronaColor,.75);
-    this.addGlow(center,12,'#fff0cc',.9);
-    this.addRing(center,4.4,starInfo.coronaColor,.38,0);
-    this.addRing(center,5.4,starInfo.coronaColor,.22,Math.PI/6);
     this.createPickTarget(4.2,sys,center);
     if(this.labelItems.length)this.labelItems[this.labelItems.length-1].subtitle=starInfo.spectralType;
 
@@ -1154,14 +1175,13 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       const orbit=[];for(let k=0;k<=120;k++){const angle=k/120*Math.PI*2;orbit.push(new THREE.Vector3(Math.cos(angle)*r,0,Math.sin(angle)*r));}
       if(s.layers.routes)this.group.add(lines(orbit,0x5e87b2,.24));
       const group=new THREE.Group();group.position.copy(V(n.position));this.group.add(group);
-      const planet=sphere(1.2+n.size,n.color);group.add(planet);
-
-      const atmoGeom=new THREE.SphereGeometry((1.2+n.size)*1.06,20,14);
-      const atmoMat=new THREE.MeshBasicMaterial({color:n.color,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false});
-      group.add(new THREE.Mesh(atmoGeom,atmoMat));
-
-      const pInfo=getPlanetClassification(n,idx);
-      if(pInfo?.hasRings){const ring=new THREE.Mesh(new THREE.RingGeometry(2.45,3.55,50),new THREE.MeshBasicMaterial({color:0x87a8bd,side:THREE.DoubleSide,opacity:.4,transparent:true}));ring.rotation.x=-.25;group.add(ring);}
+      const pInfo=getPlanetClassification(n,idx),radius=1.2+n.size;
+      group.add(makePlanetSurface(n,pInfo,radius,s.quality));
+      if(s.quality!=='battery')this.addGlow(group,radius*3.2,n.color,.18);
+      if(pInfo?.hasRings){
+        const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.24,radius*1.9,48),new THREE.MeshBasicMaterial({color:0x97b9cc,side:THREE.DoubleSide,opacity:.45,transparent:true}));
+        ring.rotation.x=-.29;group.add(ring);
+      }
       if(pInfo?.hasMoons){
         const moonRadius=(1.2+n.size)*1.75;
         const moonGroup=new THREE.Group();group.add(moonGroup);

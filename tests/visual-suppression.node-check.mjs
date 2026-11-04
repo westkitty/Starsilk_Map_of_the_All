@@ -118,3 +118,14 @@ test('Phase 14: literal suppression reset does not destroy eras or node geometri
   assert.deepEqual(validateAtlas(s),[]);
   assert.deepEqual(s.suppressedVisuals,[]);
 });
+
+test('legacy Wall-node suppression remains schema-valid without an inert visual control',()=>{
+  const state=fresh();
+  assert.equal(validVisualId('wall:lattice'),true);
+  assert.equal(listVisualTargets(state).some(([id])=>id==='wall:lattice'),false);
+  setSuppressed(state,'wall:lattice',true);
+  assert.deepEqual(validateSuppressed(state.suppressedVisuals),[]);
+  assert.equal(isSuppressed(state,'wall:lattice'),true);
+  syncEra(state);
+  assert.deepEqual(validateAtlas(state),[]);
+});

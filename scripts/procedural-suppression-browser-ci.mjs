@@ -113,9 +113,10 @@ async function run(){
   const control=await phone.locator('#visualTarget').boundingBox();
   assert.ok(control.height>=42,'touch target should not be tiny');
   await suppress(phone,'wall:debris');
-  await suppress(phone,'wall:lattice');
+  assert.equal(await phone.locator('#visualTarget option[value="wall:lattice"]').count(),0,'retired Wall nodes must not appear as an inert option');
+  await suppress(phone,'routes:halos');
   await phone.reload({waitUntil:'domcontentloaded'});
-  assert.deepEqual(new Set((await saved(phone)).suppressedVisuals),new Set(['wall:debris','wall:lattice']));
+  assert.deepEqual(new Set((await saved(phone)).suppressedVisuals),new Set(['wall:debris','routes:halos']));
   assert.equal(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   console.log('SUPPRESSION_BROWSER_STAGE mobile-touch-persistent-subtraction');
   await mobile.close();

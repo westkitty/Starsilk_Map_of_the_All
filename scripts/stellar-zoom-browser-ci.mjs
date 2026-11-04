@@ -4,6 +4,7 @@ import {existsSync,mkdirSync} from 'node:fs';
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 import {seedAtlas} from '../atlas-data.js';
+import {getStarClassification} from '../stellar-telemetry.js';
 const URL='http://127.0.0.1:4173/Starsilk_Map_of_the_All/';
 const binary=['/usr/bin/google-chrome','/usr/bin/chromium','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'].find(existsSync);
 if(!binary)throw Error('Chromium binary missing');
@@ -34,6 +35,7 @@ async function test(){
  await page.locator('#stellarDiveButton').click();
  await page.locator('#stellarHud').waitFor({state:'visible'});
  assert.match(await page.locator('#stellarHudInfo').textContent(),/3 DRAFT PLANETS/);
+ await page.screenshot({path:'atlas-qa-evidence/premium-planets-desktop.png'});
  await page.locator('#stellarOverviewButton').click();
  assert.equal(await page.locator('#stellarHud').isVisible(),true);
  // Planet inspection and stepwise ascent must coexist with the new HUD.
@@ -129,6 +131,47 @@ async function test(){
  assert.equal(mobileErrors.length,0,'No mobile JS errors: '+mobileErrors.join('; '));
  await phone.screenshot({path:'atlas-qa-evidence/stellar-zoom-mobile.png'});
  await mobile.close();
+
+ // The real 3D cross-scale arrival path must stay playable with motion enabled.
+ const flight=await browser.newContext({viewport:{width:1280,height:800},reducedMotion:'no-preference'});
+ const fly=await flight.newPage();
+ fly.on('pageerror',e=>errors.push('arrival: '+e.message));
+ await fly.goto(URL+'?atlasDiagnostics=1',{waitUntil:'domcontentloaded'});
+ await fly.locator('.world-label').first().waitFor();
+ await fly.locator('[data-drawer="nav"]').click();
+ await fly.locator('.node-btn').filter({hasText:'PERSEUS CONFLUENCE'}).click();
+ await fly.locator('[data-drawer="inspect"]').click();
+ const galaxyArrival=await fly.evaluate(()=>{
+   document.querySelector('#enterBtn').click();
+   return window.__atlasDiagnostics();
+ });
+ assert.equal(galaxyArrival.viewKind,'galaxy');
+ assert.equal(galaxyArrival.stellarLightHex,'d9edff');
+ assert.equal(galaxyArrival.cameraTransitioning,true,'galaxy entrance must interpolate');
+ await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
+ const galaxySettled=await fly.evaluate(()=>window.__atlasDiagnostics());
+ assert.ok(galaxyArrival.cameraDistance>galaxySettled.cameraDistance+12,'cross-tier camera starts inside the destination coordinate frame');
+ await fly.locator('.world-label[data-atlas-id="perseus-confluence-system-1"]').click();
+ const systemArrival=await fly.evaluate(()=>{
+   document.querySelector('#stellarDiveButton').click();
+   return window.__atlasDiagnostics();
+ });
+ assert.equal(systemArrival.viewKind,'system');
+ assert.equal(systemArrival.cameraTransitioning,true,'system approach must interpolate');
+ const spectrum=getStarClassification(expectedSystem);
+ assert.equal(systemArrival.stellarLightHex,spectrum.isBlue?'b9edff':spectrum.temperatureK<5300?'ffb879':'ffe2b6');
+ await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
+ const systemSettled=await fly.evaluate(()=>window.__atlasDiagnostics());
+ assert.ok(systemArrival.cameraDistance>systemSettled.cameraDistance+12,'system entrance must feel deeper without crossing stale global coordinates');
+ assert.ok(systemSettled.drawCalls>0,'3D system survives animated transition');
+ await fly.screenshot({path:'atlas-qa-evidence/cross-scale-approach-desktop.png'});
+ await fly.locator('#stellarBackButton').click();
+ await fly.waitForFunction(()=>window.__atlasDiagnostics().viewKind==='galaxy');
+ await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
+ assert.equal((await fly.evaluate(()=>window.__atlasDiagnostics())).stellarLightHex,'d9edff','galaxy lighting restored on exit');
+ await flight.close();
+ assert.equal(errors.length,0,'animated approach page errors: '+errors.join('; '));
+ console.log('CROSS_SCALE_BROWSER_PASS galaxy_to_system=true ease=true stellar_color=true return=true');
  console.log('STELLAR_BROWSER_PASS deliberate_inward_dolly=true label_forwarding=true edit_guard=true noncanon_hud=true touch_hud=true');
 }
 try{await test();}catch(e){console.error('STELLAR_BROWSER_FAIL',e.stack||e);process.exitCode=1;}
