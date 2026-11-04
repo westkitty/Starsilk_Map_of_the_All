@@ -68,7 +68,7 @@ export function makePlanetSurface(n,info,r,q='standard'){
   }
   g.setAttribute('color',new THREE.BufferAttribute(rgb,3));
   const planet=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true}));
-  planet.name='editorial-planet-surface';return planet;
+  return planet;
 }
 function makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity=0.5,speed=2.0,pulseFreq=10.0}){
   return new THREE.ShaderMaterial({

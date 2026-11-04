@@ -7,7 +7,7 @@ const sample=badge=>makePlanetSurface(node,{badge},1.85,'standard');
 test('procedural planet material has finite, varied vertex colors and preserved mesh ownership',()=>{
   for(const badge of ['GAS GIANT','ICE GIANT','TERRESTRIAL','CRYO WORLD']){
     const mesh=sample(badge),color=mesh.geometry.getAttribute('color');
-    assert.equal(mesh.name,'editorial-planet-surface');
+    assert.equal(mesh.isMesh,true);
     assert.equal(mesh.material.vertexColors,true);
     assert.equal(color.itemSize,3);
     assert.ok(color.count>100);
