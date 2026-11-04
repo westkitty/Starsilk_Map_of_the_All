@@ -1402,10 +1402,10 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const deliberate=(now<this._dollyIntentUntil||this._activeTouchIds.size>=2);
     const inward=this._lastDollyDistance!==null&&dolly<this._lastDollyDistance-.025;
     this._lastDollyDistance=dolly;
-    if(inward&&deliberate&&!this.cameraTransition&&['all','galaxy','system'].includes(this.view.kind)){
+    if(inward&&deliberate&&!this.cameraTransition&&['galaxy','system'].includes(this.view.kind)){
       const projected=this._zoomProjected||(this._zoomProjected=new THREE.Vector3());
       const world=this._zoomWorld||(this._zoomWorld=new THREE.Vector3());
-      const targetKind=this.view.kind==='all'?'galaxy':this.view.kind==='system'?'planet':'system';
+      const targetKind=this.view.kind==='galaxy'?'system':'planet';
       const candidates=this.labelItems.filter(i=>i.node.kind===targetKind).map(i=>{
         i.obj.getWorldPosition(world);projected.copy(world).project(this.camera);
         return {id:i.node.id,kind:i.node.kind,distance:world.distanceTo(this.camera.position),screenX:projected.x,screenY:projected.y,visible:projected.z>=-1&&projected.z<=1};
