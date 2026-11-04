@@ -350,10 +350,8 @@ gl_FragColor=vec4(vColor,alpha);
     const key=v=>v.kind==='all'?'all':v.kind+':'+v.id;
     this.viewMemory.set(key(old),{camera:this.camera.position.clone(),target:this.controls.target.clone()});
     const inbound=from==='all'&&to==='galaxy'||from==='galaxy'&&to==='system';
-    const outbound=from==='system'&&to==='galaxy'||from==='galaxy'&&to==='all';
-    const source=nodeById(this.state,inbound?view.id:old.id);
-    const related=source&&(inbound||outbound)&&
-      (!old.id||!view.id||source.parentId===(inbound?old.id:view.id));
+    const source=inbound?nodeById(this.state,view.id):null;
+    const related=source&&(from==='all'||source.parentId===old.id);
     const animate=!!(related&&smooth&&!this.reducedMotion);
     const leaving=this.group;
     this.view=view;this._dollyIntentUntil=0;
@@ -365,11 +363,11 @@ gl_FragColor=vec4(vColor,alpha);
     const targetControls=saved?.target||new THREE.Vector3(0,to==='all'?-4:0,to==='all'?-12:0);
     if(animate){
       const anchor=V(source.position),initialScale=scaleEntryFactor(from,to,source.size);
-      this.scaleTransition={oldGroup:leaving,anchor,inbound,initialScale,
+      this.scaleTransition={oldGroup:leaving,anchor,initialScale,
         controlsEnabled:this.controls.enabled};
       this.controls.enabled=false;
       this.group.scale.setScalar(initialScale);
-      this.group.position.copy(anchor).multiplyScalar(inbound?1:-initialScale);
+      this.group.position.copy(anchor);
     }else if(smooth&&!this.reducedMotion&&from!==to){
       const arrival=to==='system'?1.38:to==='galaxy'?1.28:.78;
       this.camera.position.copy(targetCamera).sub(targetControls).multiplyScalar(arrival).add(targetControls);
@@ -1343,9 +1341,9 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         const f=this.scaleTransition;
         const scale=f.initialScale+(1-f.initialScale)*t;
         this.group.scale.setScalar(scale);
-        this.group.position.copy(f.anchor).multiplyScalar(f.inbound?1-t:-scale*(1-t));
+        this.group.position.copy(f.anchor).multiplyScalar(1-t);
         f.oldGroup.scale.setScalar(1-t);
-        if(f.inbound)f.oldGroup.position.copy(f.anchor).multiplyScalar(t);
+        f.oldGroup.position.copy(f.anchor).multiplyScalar(t);
       }
       this.controls.update();
       if(progress>=1){
