@@ -55,33 +55,30 @@ function disposeTree(root){
 }
 const sphere = (radius,color,emissive=0x000000) => new THREE.Mesh(new THREE.SphereGeometry(radius,24,16),new THREE.MeshStandardMaterial({color,emissive,roughness:.7,metalness:.12}));
 
-/** Deterministic vertex-color terrain. Editorial material, never canon geography. */
+/** Deterministic editorial planet relief; color bands never imply sourced geography. */
 export function makePlanetSurface(node,classification,radius,quality='standard'){
-  const steps=quality==='cinematic'?48:quality==='battery'?18:32;
-  const geometry=new THREE.SphereGeometry(radius,steps,quality==='cinematic'?32:quality==='battery'?12:22);
-  const position=geometry.getAttribute('position'),colors=new Float32Array(position.count*3);
+  const segments=quality==='cinematic'?[48,32]:quality==='battery'?[18,12]:[32,22];
+  const geometry=new THREE.SphereGeometry(radius,...segments);
+  const positions=geometry.getAttribute('position'),colors=new Float32Array(positions.count*3);
   const gas=classification?.badge==='GAS GIANT';
   const ice=classification?.badge==='ICE GIANT'||classification?.badge==='CRYO WORLD';
-  const seed=(hash(String(node.id||'planet'))%2048)/2048*Math.PI*2;
-  const base=new THREE.Color(node.color),frost=new THREE.Color('#d9edff'),rock=new THREE.Color('#304054'),ink=new THREE.Color();
-  for(let i=0;i<position.count;i++){
-    const x=position.getX(i)/radius,y=position.getY(i)/radius,z=position.getZ(i)/radius;
-    const curl=Math.sin(x*8+z*7+Math.cos(y*11+seed)*1.7);
-    const grain=Math.sin(x*32+z*25+y*21+seed)*Math.cos(z*27-y*18);
-    const band=Math.sin(y*(gas?35:16)+curl*(gas?1.4:.9)+seed);
-    const signal=gas?band*.6+curl*.3+grain*.1:curl*.55+grain*.3+band*.15;
-    ink.copy(base).multiplyScalar(clamp(.91+signal*(gas?.36:.32),.55,1.34));
-    if(gas)ink.lerp(frost,.05+(band+1)*.05);
-    else if(ice)ink.lerp(frost,.13+.3*Math.max(0,(Math.abs(y)-.53)/.47));
-    else ink.lerp(rock,.08+Math.max(0,-signal)*.28);
-    colors[i*3]=ink.r;colors[i*3+1]=ink.g;colors[i*3+2]=ink.b;
-    if(!gas){const relief=1+clamp((curl*.65+grain*.35)*.008,-.009,.009);
-      position.setXYZ(i,x*radius*relief,y*radius*relief,z*radius*relief);}
+  const phase=(hash(String(node.id||'planet'))%2048)/326,base=new THREE.Color(node.color);
+  const blend=new THREE.Color(gas?'#cce8f3':ice?'#d9edff':'#304054'),pixel=new THREE.Color();
+  for(let i=0;i<positions.count;i++){
+    const x=positions.getX(i)/radius,y=positions.getY(i)/radius,z=positions.getZ(i)/radius;
+    const wave=Math.sin(x*8+z*7+Math.cos(y*11+phase)*1.7);
+    const grain=Math.sin(x*32+z*25+y*21+phase)*Math.cos(z*27-y*18);
+    const stripe=Math.sin(y*(gas?35:16)+wave*(gas?1.4:.9)+phase);
+    const relief=gas?stripe*.6+wave*.3+grain*.1:wave*.55+grain*.3+stripe*.15;
+    pixel.copy(base).multiplyScalar(clamp(.91+relief*.34,.55,1.34));
+    pixel.lerp(blend,gas?.08:ice?.16+.25*Math.max(0,Math.abs(y)-.5):.1+Math.max(0,-relief)*.22);
+    colors.set(pixel.toArray(),i*3);
+    if(!gas){const scale=1+relief*.008;positions.setXYZ(i,x*radius*scale,y*radius*scale,z*radius*scale);}
   }
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
   geometry.computeVertexNormals();
   const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:gas?.92:ice?.63:.82,metalness:gas?0:.055});
-  const mesh=new THREE.Mesh(geometry,material);mesh.rotation.y=seed;mesh.name='editorial-planet-surface';
+  const mesh=new THREE.Mesh(geometry,material);mesh.rotation.y=phase;mesh.name='editorial-planet-surface';
   return mesh;
 }
 function makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity=0.5,speed=2.0,pulseFreq=10.0}){
