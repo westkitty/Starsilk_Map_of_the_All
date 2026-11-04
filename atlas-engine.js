@@ -63,7 +63,7 @@ export function makePlanetSurface(n,info,r,q='standard'){
   const gas=info?.badge==='GAS GIANT',seed=hash(n.id||'planet')%1024/160;
   for(let i=0;i<p.count;i++){
     const x=p.getX(i)/r,y=p.getY(i)/r,z=p.getZ(i)/r;
-    const tone=.92+.2*Math.sin(y*(gas?42:13)+Math.sin(x*9+z*7+seed))+.1*Math.sin(x*24+z*29+seed),j=i*3;
+    const tone=.92+.25*Math.sin(y*(gas?42:13)+x*9+z*7+seed),j=i*3;
     rgb[j]=c.r*tone;rgb[j+1]=c.g*tone;rgb[j+2]=c.b*tone;
   }
   g.setAttribute('color',new THREE.BufferAttribute(rgb,3));
@@ -1174,9 +1174,8 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       group.add(makePlanetSurface(n,pInfo,radius,s.quality));
       if(s.quality!=='battery')this.addGlow(group,radius*3.2,n.color,.18);
       if(pInfo?.hasRings){
-        const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.24,radius*1.9,64),
-          new THREE.MeshBasicMaterial({color:0x97b9cc,side:THREE.DoubleSide,opacity:.45,transparent:true,depthWrite:false}));
-        ring.rotation.set(-.29,0,.18);group.add(ring);
+        const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.24,radius*1.9,48),new THREE.MeshBasicMaterial({color:0x97b9cc,side:THREE.DoubleSide,opacity:.45,transparent:true,depthWrite:false}));
+        ring.rotation.x=-.29;group.add(ring);
       }
       if(pInfo?.hasMoons){
         const moonRadius=(1.2+n.size)*1.75;
