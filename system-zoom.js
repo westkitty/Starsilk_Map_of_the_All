@@ -2,8 +2,6 @@
 export const SYSTEM_ZOOM_RADIUS=17;
 export const GALAXY_ZOOM_RADIUS=57;
 export const PLANET_ZOOM_RADIUS=12;
-export const SYSTEM_EXIT_RADIUS=230;
-export const GALAXY_EXIT_RADIUS=290;
 export function findScaleZoomTarget({viewKind,zooming,blocked,candidates=[],selectedId=null}){
   if(!zooming||blocked)return null;
   const kind={all:'galaxy',galaxy:'system',system:'planet'}[viewKind];
@@ -18,11 +16,6 @@ export function findScaleZoomTarget({viewKind,zooming,blocked,candidates=[],sele
 }
 export const findSystemZoomTarget=options=>viewSafeSystemTarget(options);
 function viewSafeSystemTarget(options){return findScaleZoomTarget(options);}
-export function shouldZoomOut({viewKind,outward,blocked,distance}){
-  return !!(outward&&!blocked&&Number.isFinite(distance)&&
-    (viewKind==='system'&&distance>=SYSTEM_EXIT_RADIUS||
-     viewKind==='galaxy'&&distance>=GALAXY_EXIT_RADIUS));
-}
 export function scaleEntryFactor(from,to,size=1){
   if(from==='galaxy'&&to==='system')return .22;
   if(from==='system'&&to==='galaxy')return 2.6;
