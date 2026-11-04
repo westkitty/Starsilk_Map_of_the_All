@@ -1179,13 +1179,8 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       if(s.layers.routes)this.group.add(lines(orbit,0x5e87b2,.24));
       const group=new THREE.Group();group.position.copy(V(n.position));this.group.add(group);
       const pInfo=getPlanetClassification(n,idx),radius=1.2+n.size;
-      const planet=makePlanetSurface(n,pInfo,radius,s.quality);group.add(planet);
-      this.motionObjects.push({obj:planet,speed:.000012+idx*.000003});
-      if(s.quality!=='battery'){
-        const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(radius*1.085,20,14),
-          new THREE.MeshBasicMaterial({color:n.color,transparent:true,opacity:.27,blending:THREE.AdditiveBlending,side:THREE.BackSide,depthWrite:false}));
-        group.add(atmosphere);
-      }
+      group.add(makePlanetSurface(n,pInfo,radius,s.quality));
+      if(s.quality!=='battery')this.addGlow(group,radius*3.2,n.color,.18);
       if(pInfo?.hasRings){
         const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.24,radius*1.9,64),
           new THREE.MeshBasicMaterial({color:0x97b9cc,side:THREE.DoubleSide,opacity:.45,transparent:true,depthWrite:false}));
