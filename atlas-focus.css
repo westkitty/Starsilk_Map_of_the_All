@@ -192,8 +192,3 @@
 .stellar-mini-hud button:hover{border-color:#b5ebff;background:#134c67}
 .atlas.focus-view .stellar-mini-hud{opacity:0;pointer-events:none}
 @media(max-width:620px){.stellar-mini-hud{bottom:74px;padding:10px;max-width:calc(100vw - 92px)}.stellar-mini-hud strong{font-size:15px}}
-
-/* Instrument-grade focus and orientation, visible over luminous geometry. */
-.atlas-pull-tab:focus-visible,.world-label:focus-visible{outline:2px solid #bcefff;outline-offset:3px}
-.world-label.selected .label-name{color:#fff;text-shadow:0 1px 3px #000,0 0 12px rgba(82,222,255,.52)}
-.atlas-pull-tab.active{box-shadow:inset 0 -2px 0 rgba(156,239,255,.7)}

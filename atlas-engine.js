@@ -1133,8 +1133,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const sunColor=starInfo.isBlue?0xa5f3fc:0xffdfae;
     const sunEmissive=starInfo.isBlue?0x38bdf8:0xffb45c;
     const sun=sphere(3.6,sunColor,sunEmissive);sun.material.emissiveIntensity=1.8;sun.material.roughness=.35;center.add(sun);
-    const corona=this.addGlow(center,26,starInfo.coronaColor,.75);
-    if(s.quality!=='battery')this.motionObjects.push({obj:corona,breath:26,speed:.0011});
+    this.addGlow(center,26,starInfo.coronaColor,.75);
     this.addGlow(center,12,'#fff0cc',.9);
     this.addRing(center,4.4,starInfo.coronaColor,.38,0);
     this.addRing(center,5.4,starInfo.coronaColor,.22,Math.PI/6);
@@ -1375,7 +1374,6 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         if(m.isComet){
           const a=m.phase+this.elapsed*m.speed;
           m.obj.position.set(Math.cos(a)*m.a+m.cx,Math.sin(a)*m.cy,Math.sin(a)*m.b);
-        }else if(m.breath){const size=m.breath*(1+Math.sin(this.elapsed*m.speed)*.045);m.obj.scale.set(size,size,1);
         }else if(m.orbit){
           const a=m.phase+this.elapsed*m.speed;
           m.obj.position.set(Math.cos(a)*m.orbit,0,Math.sin(a)*m.orbit);
