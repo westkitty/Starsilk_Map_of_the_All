@@ -162,6 +162,11 @@ async function test(){
  assert.equal(systemArrival.viewKind,'system');
  assert.equal(systemArrival.cameraTransitioning,true,'system approach must interpolate');
  assert.equal(systemArrival.scaleTransitioning,true,'stellar scene arrives within the uninterrupted transition');
+ await fly.waitForFunction(()=>{
+   const d=window.__atlasDiagnostics();
+   return d.scaleTransitioning&&Number.isFinite(d.scaleTransitionFactor)&&
+     d.scaleTransitionFactor>.25&&d.scaleTransitionFactor<.98;
+ },null,{timeout:5000});
  const spectrum=getStarClassification(expectedSystem);
  assert.equal(systemArrival.stellarLightHex,spectrum.isBlue?'b9edff':spectrum.temperatureK<5300?'ffb879':'ffe2b6');
  await fly.waitForFunction(()=>!window.__atlasDiagnostics().cameraTransitioning);
