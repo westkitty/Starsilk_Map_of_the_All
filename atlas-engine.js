@@ -54,6 +54,36 @@ function disposeTree(root){
   root.clear();
 }
 const sphere = (radius,color,emissive=0x000000) => new THREE.Mesh(new THREE.SphereGeometry(radius,24,16),new THREE.MeshStandardMaterial({color,emissive,roughness:.7,metalness:.12}));
+
+/** Deterministic vertex-color terrain. Editorial material, never canon geography. */
+export function makePlanetSurface(node,classification,radius,quality='standard'){
+  const steps=quality==='cinematic'?48:quality==='battery'?18:32;
+  const geometry=new THREE.SphereGeometry(radius,steps,quality==='cinematic'?32:quality==='battery'?12:22);
+  const position=geometry.getAttribute('position'),colors=new Float32Array(position.count*3);
+  const gas=classification?.badge==='GAS GIANT';
+  const ice=classification?.badge==='ICE GIANT'||classification?.badge==='CRYO WORLD';
+  const seed=(hash(String(node.id||'planet'))%2048)/2048*Math.PI*2;
+  const base=new THREE.Color(node.color),frost=new THREE.Color('#d9edff'),rock=new THREE.Color('#304054'),ink=new THREE.Color();
+  for(let i=0;i<position.count;i++){
+    const x=position.getX(i)/radius,y=position.getY(i)/radius,z=position.getZ(i)/radius;
+    const curl=Math.sin(x*8+z*7+Math.cos(y*11+seed)*1.7);
+    const grain=Math.sin(x*32+z*25+y*21+seed)*Math.cos(z*27-y*18);
+    const band=Math.sin(y*(gas?35:16)+curl*(gas?1.4:.9)+seed);
+    const signal=gas?band*.6+curl*.3+grain*.1:curl*.55+grain*.3+band*.15;
+    ink.copy(base).multiplyScalar(clamp(.91+signal*(gas?.36:.32),.55,1.34));
+    if(gas)ink.lerp(frost,.05+(band+1)*.05);
+    else if(ice)ink.lerp(frost,.13+.3*Math.max(0,(Math.abs(y)-.53)/.47));
+    else ink.lerp(rock,.08+Math.max(0,-signal)*.28);
+    colors[i*3]=ink.r;colors[i*3+1]=ink.g;colors[i*3+2]=ink.b;
+    if(!gas){const relief=1+clamp((curl*.65+grain*.35)*.008,-.009,.009);
+      position.setXYZ(i,x*radius*relief,y*radius*relief,z*radius*relief);}
+  }
+  geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  geometry.computeVertexNormals();
+  const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:gas?.92:ice?.63:.82,metalness:gas?0:.055});
+  const mesh=new THREE.Mesh(geometry,material);mesh.rotation.y=seed;mesh.name='editorial-planet-surface';
+  return mesh;
+}
 function makeStarsilkShaderMaterial({colorCore,colorBody,colorGlow,opacity=0.5,speed=2.0,pulseFreq=10.0}){
   return new THREE.ShaderMaterial({
     uniforms:{
@@ -466,7 +496,8 @@ spiral=mix(spiral,1.0,clamp(barGlow,0.0,1.0));
 }
 float radial=1.0-smoothstep(.32,1.0,radius);
 float cloud=noise(floor(q*130.0))+noise(floor(q*48.0))*.45;
-float dust=radial*(.17+.78*spiral)*(.52+.42*cloud);
+float lane=sin(arms*angle-pitch*radius+phase+1.2);
+float dust=radial*(.17+.78*spiral)*(.52+.42*cloud)*(.84+.16*lane);
 float inner=exp(-radius*radius*23.0);
 float blue=exp(-radius*radius*3.0)*.075;
 vec3 innerColor=vec3(1.0,.75,.47);
@@ -1108,8 +1139,9 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
     const center=new THREE.Group();this.group.add(center);
     const sunColor=starInfo.isBlue?0xa5f3fc:0xffdfae;
     const sunEmissive=starInfo.isBlue?0x38bdf8:0xffb45c;
-    const sun=sphere(3.6,sunColor,sunEmissive);center.add(sun);
-    this.addGlow(center,26,starInfo.coronaColor,.75);
+    const sun=sphere(3.6,sunColor,sunEmissive);sun.material.emissiveIntensity=1.8;sun.material.roughness=.35;center.add(sun);
+    const corona=this.addGlow(center,26,starInfo.coronaColor,.75);
+    if(s.quality!=='battery')this.motionObjects.push({obj:corona,breath:26,speed:.0011});
     this.addGlow(center,12,'#fff0cc',.9);
     this.addRing(center,4.4,starInfo.coronaColor,.38,0);
     this.addRing(center,5.4,starInfo.coronaColor,.22,Math.PI/6);
@@ -1154,14 +1186,19 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
       const orbit=[];for(let k=0;k<=120;k++){const angle=k/120*Math.PI*2;orbit.push(new THREE.Vector3(Math.cos(angle)*r,0,Math.sin(angle)*r));}
       if(s.layers.routes)this.group.add(lines(orbit,0x5e87b2,.24));
       const group=new THREE.Group();group.position.copy(V(n.position));this.group.add(group);
-      const planet=sphere(1.2+n.size,n.color);group.add(planet);
-
-      const atmoGeom=new THREE.SphereGeometry((1.2+n.size)*1.06,20,14);
-      const atmoMat=new THREE.MeshBasicMaterial({color:n.color,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false});
-      group.add(new THREE.Mesh(atmoGeom,atmoMat));
-
-      const pInfo=getPlanetClassification(n,idx);
-      if(pInfo?.hasRings){const ring=new THREE.Mesh(new THREE.RingGeometry(2.45,3.55,50),new THREE.MeshBasicMaterial({color:0x87a8bd,side:THREE.DoubleSide,opacity:.4,transparent:true}));ring.rotation.x=-.25;group.add(ring);}
+      const pInfo=getPlanetClassification(n,idx),radius=1.2+n.size;
+      const planet=makePlanetSurface(n,pInfo,radius,s.quality);group.add(planet);
+      this.motionObjects.push({obj:planet,speed:.000012+idx*.000003});
+      if(s.quality!=='battery'){
+        const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(radius*1.085,20,14),
+          new THREE.MeshBasicMaterial({color:n.color,transparent:true,opacity:.27,blending:THREE.AdditiveBlending,side:THREE.BackSide,depthWrite:false}));
+        group.add(atmosphere);
+      }
+      if(pInfo?.hasRings){
+        const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.24,radius*1.9,64),
+          new THREE.MeshBasicMaterial({color:0x97b9cc,side:THREE.DoubleSide,opacity:.45,transparent:true,depthWrite:false}));
+        ring.rotation.set(-.29,0,.18);group.add(ring);
+      }
       if(pInfo?.hasMoons){
         const moonRadius=(1.2+n.size)*1.75;
         const moonGroup=new THREE.Group();group.add(moonGroup);
@@ -1345,6 +1382,7 @@ gl_FragColor=vec4(vColor,halo*vAlpha);
         if(m.isComet){
           const a=m.phase+this.elapsed*m.speed;
           m.obj.position.set(Math.cos(a)*m.a+m.cx,Math.sin(a)*m.cy,Math.sin(a)*m.b);
+        }else if(m.breath){const size=m.breath*(1+Math.sin(this.elapsed*m.speed)*.045);m.obj.scale.set(size,size,1);
         }else if(m.orbit){
           const a=m.phase+this.elapsed*m.speed;
           m.obj.position.set(Math.cos(a)*m.orbit,0,Math.sin(a)*m.orbit);

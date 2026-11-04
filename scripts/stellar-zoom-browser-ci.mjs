@@ -34,6 +34,7 @@ async function test(){
  await page.locator('#stellarDiveButton').click();
  await page.locator('#stellarHud').waitFor({state:'visible'});
  assert.match(await page.locator('#stellarHudInfo').textContent(),/3 DRAFT PLANETS/);
+ await page.screenshot({path:'atlas-qa-evidence/premium-planets-desktop.png'});
  await page.locator('#stellarOverviewButton').click();
  assert.equal(await page.locator('#stellarHud').isVisible(),true);
  // Planet inspection and stepwise ascent must coexist with the new HUD.
